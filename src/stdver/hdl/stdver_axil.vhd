@@ -11,8 +11,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library axi_lite;
-use axi_lite.axi_lite_pkg.all;
+use work.axi_lite_pkg.all;
 use work.util_pkg.all;
 use work.conv_pkg.all;
 use work.stdver_regs_pkg.all;

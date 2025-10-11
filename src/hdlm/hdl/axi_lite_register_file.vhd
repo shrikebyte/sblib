@@ -48,11 +48,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library axi_lite;
-use axi_lite.axi_lite_pkg.all;
-
+use work.axi_lite_pkg.all;
 use work.register_file_pkg.all;
-
 
 entity axi_lite_register_file is
   generic (

@@ -1,5 +1,6 @@
-# VHDL Language server
+# VHDL language server config
 
+# Use VHDL'08
 standard = "2008"
 
 [libraries]
@@ -7,18 +8,9 @@ standard = "2008"
 # Regular files
 lib.files = [
   'src/**/hdl/*.vhd',
+  'lib/**/src/**/hdl/*.vhd',
   'build/regs_out/**/hdl/*.vhd',
   'test/**/*.vhd',
-]
-
-# HDLM files
-axi_lite.files = [
-  'src/hdlm/hdl/axi_lite_pkg.vhd',
-]
-
-register_file.files = [
-  'src/hdlm/hdl/axi_lite_register_file.vhd',
-  'src/hdlm/hdl/register_file_pkg.vhd',
 ]
 
 # Vunit library files
@@ -89,6 +81,7 @@ osvvm.is_third_party = true
 JSON.files = [
   '$VUNIT_ROOTDIR/vhdl/JSON-for-VHDL/src/*.vhdl',
 ]
+JSON.is_third_party = true
 
 [lint]
 unnecessary_work_library = false # Disable linting for the 'library work;' statement

@@ -19,10 +19,62 @@ from hdl_registers.generator.html.register_table import HtmlRegisterTableGenerat
 from hdl_registers.generator.python.accessor import PythonAccessorGenerator
 from hdl_registers.generator.python.pickle import PythonPickleGenerator
 
-
 THIS_DIR = Path(__file__).parent
 
+################################################################################
+# Register generator text replacement
+################################################################################
+def replace_first_occurrence(file_path, old_text, new_text):
+    path = Path(file_path)
+    text = path.read_text()
 
+    # Replace only the first occurrence
+    new_content = text.replace(old_text, new_text, 1)
+
+    if new_content == text:
+        #print("No match found.")
+        return
+
+    path.write_text(new_content)
+    #print(f"Replaced first occurrence of:\n{old_text}\nwith:\n{new_text} in file:\n{path}")
+
+OLD_TEXT_AXI_LITE_1 = """-- This VHDL file is a required dependency:
+-- https://github.com/hdl-modules/hdl-modules/blob/main/modules/axi_lite/src/axi_lite_pkg.vhd
+-- See https://hdl-registers.com/rst/generator/generator_vhdl.html for dependency details.
+library axi_lite;
+use axi_lite.axi_lite_pkg.all;
+
+-- This VHDL file is a required dependency:
+-- https://github.com/hdl-modules/hdl-modules/blob/main/modules/register_file/src/axi_lite_register_file.vhd
+-- See https://hdl-registers.com/rst/generator/generator_vhdl.html for dependency details.
+library register_file;"""
+
+NEW_TEXT_AXI_LITE_1 = "use work.axi_lite_pkg.all;"
+
+
+OLD_TEXT_AXI_LITE_2 = """  -- https://github.com/hdl-modules/hdl-modules/blob/main/modules/register_file/src/axi_lite_register_file.vhd
+  -- See https://hdl-registers.com/rst/generator/generator_vhdl.html for dependency details.
+  axi_lite_register_file_inst : entity register_file.axi_lite_register_file"""
+
+NEW_TEXT_AXI_LITE_2 = "  axi_lite_register_file_inst : entity work.axi_lite_register_file"
+
+
+
+OLD_TEXT_RECORD_PKG = """library register_file;
+use register_file.register_file_pkg.register_t;"""
+
+NEW_TEXT_RECORD_PKG = "use work.register_file_pkg.register_t;"
+
+
+OLD_TEXT_REGS_PKG = """library register_file;
+use register_file.register_file_pkg.all;"""
+
+NEW_TEXT_REGS_PKG = "use work.register_file_pkg.all;"
+
+
+################################################################################
+# Main
+################################################################################
 def main(toml_files: list[Path]):
     """
     Create register artifacts from a toml file
@@ -39,9 +91,12 @@ def main(toml_files: list[Path]):
         VhdlRegisterPackageGenerator(register_list=register_list, output_folder=hdl_output_dir).create_if_needed()
         VhdlRecordPackageGenerator(register_list=register_list, output_folder=hdl_output_dir).create_if_needed()
         VhdlAxiLiteWrapperGenerator(register_list=register_list, output_folder=hdl_output_dir).create_if_needed()
-        # VhdlSimulationReadWritePackageGenerator(register_list=register_list, output_folder=output_dir).create_if_needed()
-        # VhdlSimulationCheckPackageGenerator(register_list=register_list, output_folder=output_dir).create_if_needed()
-        # VhdlSimulationWaitUntilPackageGenerator(register_list=register_list, output_folder=output_dir).create_if_needed()
+        # We make some small edits to the generated VHDL so that it does not
+        # depend on pre-defined VHDL namespaces
+        replace_first_occurrence(Path(hdl_output_dir / f"{name}_register_file_axi_lite.vhd"), OLD_TEXT_AXI_LITE_1, NEW_TEXT_AXI_LITE_1)
+        replace_first_occurrence(Path(hdl_output_dir / f"{name}_register_file_axi_lite.vhd"), OLD_TEXT_AXI_LITE_2, NEW_TEXT_AXI_LITE_2)
+        replace_first_occurrence(Path(hdl_output_dir / f"{name}_register_record_pkg.vhd"), OLD_TEXT_RECORD_PKG, NEW_TEXT_RECORD_PKG)
+        replace_first_occurrence(Path(hdl_output_dir / f"{name}_regs_pkg.vhd"), OLD_TEXT_REGS_PKG, NEW_TEXT_REGS_PKG)
 
         # C Header
         CHeaderGenerator(register_list=register_list, output_folder=output_dir).create_if_needed()

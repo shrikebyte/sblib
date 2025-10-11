@@ -14,7 +14,6 @@ use ieee.math_real.all;
 use ieee.numeric_std.all;
 use ieee.std_logic_1164.all;
 
-
 package register_file_pkg is
 
   constant register_width : positive := 32;
