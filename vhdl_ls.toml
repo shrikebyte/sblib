@@ -13,12 +13,12 @@ lib.files = [
 
 # HDLM files
 axi_lite.files = [
-  'lib/hdlm/hdlm/hdl/axi_lite_pkg.vhd',
+  'src/hdlm/hdl/axi_lite_pkg.vhd',
 ]
 
 register_file.files = [
-  'lib/hdlm/hdlm/hdl/axi_lite_register_file.vhd',
-  'lib/hdlm/hdlm/hdl/register_file_pkg.vhd',
+  'src/hdlm/hdl/axi_lite_register_file.vhd',
+  'src/hdlm/hdl/register_file_pkg.vhd',
 ]
 
 # Vunit library files

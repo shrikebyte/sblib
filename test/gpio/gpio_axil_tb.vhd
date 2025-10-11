@@ -16,6 +16,7 @@ library vunit_lib;
 use vunit_lib.axi_lite_master_pkg.all;
 use work.util_pkg.all;
 use work.gpio_regs_pkg.all;
+use work.gpio_pkg.all;
 
 entity gpio_axil_tb is
   generic (
@@ -28,37 +29,22 @@ architecture tb of gpio_axil_tb is
   -- Clock period
   constant CLK_PERIOD : time := 10 ns;
   constant CLK_TO_Q   : time := 1 ns;
+
   -- Generics
-  constant G_CH_0_WIDTH  : positive range 1 to 32                      := 8;
-  constant G_CH_0_MODE   : string                                      := "OUT";
-  constant G_CH_0_SYNC   : boolean                                     := false;
-  constant G_CH_0_DFLT_O : std_logic_vector(G_CH_0_WIDTH - 1 downto 0) := x"AA";
-  constant G_CH_0_DFLT_T : std_logic_vector(G_CH_0_WIDTH - 1 downto 0) := x"BB";
-  constant G_CH_1_WIDTH  : positive range 1 to 32                      := 16;
-  constant G_CH_1_MODE   : string                                      := "IN";
-  constant G_CH_1_SYNC   : boolean                                     := true;
-  constant G_CH_1_DFLT_O : std_logic_vector(G_CH_1_WIDTH - 1 downto 0) := x"CCDD";
-  constant G_CH_1_DFLT_T : std_logic_vector(G_CH_1_WIDTH - 1 downto 0) := x"EEFF";
-  constant G_CH_2_WIDTH  : positive range 1 to 32                      := 24;
-  constant G_CH_2_MODE   : string                                      := "INOUT";
-  constant G_CH_2_SYNC   : boolean                                     := true;
-  constant G_CH_2_DFLT_O : std_logic_vector(G_CH_2_WIDTH - 1 downto 0) := x"112233";
-  constant G_CH_2_DFLT_T : std_logic_vector(G_CH_2_WIDTH - 1 downto 0) := x"445566";
+  constant G_CH_MODE   : gpio_mode_arr_t(gpio_range)                 := (GPIO_MODE_OUT, GPIO_MODE_IN, GPIO_MODE_INOUT);
+  constant G_CH_SYNC   : bool_arr_t                                  := (false, true, true);
+  constant G_CH_DFLT_O : slv_arr_t(gpio_chan_range)(axil_data_range) := (x"000000AA", x"0000CCDD", x"00112233");
+  constant G_CH_DFLT_T : slv_arr_t(gpio_chan_range)(axil_data_range) := (x"000000BB", x"0000EEFF", x"00445566");
+
   -- Ports
   signal clk        : std_logic := '1';
   signal srst       : std_logic := '1';
   signal irq        : std_logic;
   signal s_axil_req : axil_req_t;
   signal s_axil_rsp : axil_rsp_t;
-  signal gpio_0_i   : std_logic_vector(G_CH_0_WIDTH - 1 downto 0);
-  signal gpio_0_o   : std_logic_vector(G_CH_0_WIDTH - 1 downto 0);
-  signal gpio_0_t   : std_logic_vector(G_CH_0_WIDTH - 1 downto 0);
-  signal gpio_1_i   : std_logic_vector(G_CH_1_WIDTH - 1 downto 0);
-  signal gpio_1_o   : std_logic_vector(G_CH_1_WIDTH - 1 downto 0);
-  signal gpio_1_t   : std_logic_vector(G_CH_1_WIDTH - 1 downto 0);
-  signal gpio_2_i   : std_logic_vector(G_CH_2_WIDTH - 1 downto 0);
-  signal gpio_2_o   : std_logic_vector(G_CH_2_WIDTH - 1 downto 0);
-  signal gpio_2_t   : std_logic_vector(G_CH_2_WIDTH - 1 downto 0);
+  signal gpio_i     : slv_arr_t(gpio_chan_range)(axil_data_range);
+  signal gpio_o     : slv_arr_t(gpio_chan_range)(axil_data_range);
+  signal gpio_t     : slv_arr_t(gpio_chan_range)(axil_data_range);
 
   constant AXIM : bus_master_t := new_bus(
       data_length => AXIL_DATA_WIDTH, address_length => AXIL_ADDR_WIDTH
@@ -67,7 +53,7 @@ architecture tb of gpio_axil_tb is
   function fn_addr (
     idx : natural
   ) return std_logic_vector is begin
-    return std_logic_vector(to_unsigned(idx * 4, 32));
+    return std_logic_vector(to_unsigned(idx * 4, AXIL_ADDR_WIDTH));
   end function;
 
 begin
@@ -84,7 +70,7 @@ begin
       end loop;
     end procedure;
 
-    variable axil_data : std_logic_vector(31 downto 0) := (others => '0');
+    variable axil_data : std_logic_vector(axil_data_range) := (others => '0');
 
   begin
 
@@ -100,21 +86,19 @@ begin
       if run("test_0") then
         info("test_0");
 
-        gpio_0_i <= x"00";
-        gpio_1_i <= x"0000";
-        gpio_2_i <= x"000000";
+        gpio_i <= (others => (others => '0'));
 
         prd_cycle(4);
 
         -- ---------------------------------------------------------------------
         info("Test channel 0");
         info("Check ch0 defaults");
-        axil_data := x"000000" & G_CH_0_DFLT_O;
+        axil_data := G_CH_DFLT_O(0);
         check_axi_lite(net, AXIM, fn_addr(gpio_chan_dout(0)), AXI_RSP_OKAY,
                        axil_data, "Check ch0 default out reg.");
 
         prd_cycle;
-        check_equal(gpio_0_o, G_CH_0_DFLT_O,
+        check_equal(gpio_o(0), G_CH_DFLT_O(0),
                     "Check ch0 default out sig.");
 
         axil_data := x"00000000";
@@ -122,7 +106,7 @@ begin
                        axil_data, "Check ch0 default tri reg.");
 
         prd_cycle;
-        check_equal(gpio_0_t, axil_data(7 downto 0),
+        check_equal(gpio_t(0), axil_data,
                     "Check ch0 default tri sig.");
 
         check_axi_lite(net, AXIM, fn_addr(gpio_chan_din(0)), AXI_RSP_OKAY,
@@ -147,12 +131,12 @@ begin
         write_axi_lite(net, AXIM, fn_addr(gpio_chan_dout(0)), axil_data,
                        AXI_RSP_OKAY, x"F");
 
-        axil_data := x"00000044";
+        axil_data := x"11223344";
         check_axi_lite(net, AXIM, fn_addr(gpio_chan_dout(0)), AXI_RSP_OKAY,
                        axil_data, "Check ch0 out reg after writing to it.");
 
         prd_cycle;
-        check_equal(gpio_0_o, axil_data(7 downto 0),
+        check_equal(gpio_o(0), axil_data,
                     "Check ch0 out sig after writing to it.");
 
         check_equal(irq, '0',
@@ -168,7 +152,7 @@ begin
                        axil_data, "Check ch0 tri reg after writing to it.");
 
         prd_cycle;
-        check_equal(gpio_0_t, axil_data(7 downto 0),
+        check_equal(gpio_t(0), axil_data,
                     "Check ch0 tri sig after writing to it.");
 
         -- ---------------------------------------------------------------------
@@ -179,15 +163,15 @@ begin
                        axil_data, "Check ch1 default out reg.");
 
         prd_cycle;
-        check_equal(gpio_1_o, axil_data(15 downto 0),
+        check_equal(gpio_o(1), axil_data,
                     "Check ch1 default out sig.");
 
-        axil_data := x"0000FFFF";
+        axil_data := x"FFFFFFFF";
         check_axi_lite(net, AXIM, fn_addr(gpio_chan_tri(1)), AXI_RSP_OKAY,
                        axil_data, "Check ch1 default tri reg.");
 
         prd_cycle;
-        check_equal(gpio_1_t, axil_data(15 downto 0),
+        check_equal(gpio_t(1), axil_data,
                     "Check ch1 default tri sig.");
 
         axil_data := x"00000000";
@@ -201,7 +185,7 @@ begin
                        axil_data, "Check ch1 irq sts reg.");
 
         prd_cycle;
-        gpio_1_i <= x"FFFF";
+        gpio_i(1) <= x"0000FFFF";
         prd_cycle;
 
         axil_data := x"0000FFFF";
@@ -230,14 +214,14 @@ begin
 
         info("Change the state of some of the ch1 GPIO inputs.");
         prd_cycle;
-        gpio_1_i <= x"F0FE";
+        gpio_i(1) <= x"0000F0FE";
         prd_cycle;
 
-        axil_data := x"0000" & gpio_1_i;
+        axil_data := gpio_i(1);
         check_axi_lite(net, AXIM, fn_addr(gpio_chan_din(1)), AXI_RSP_OKAY,
                        axil_data, "Check ch1 input register after updating the value of the input signal.");
 
-        axil_data := x"0000" & not gpio_1_i;
+        axil_data := x"0000" & not gpio_i(1)(15 downto 0);
         check_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(1)), AXI_RSP_OKAY,
                        axil_data, "Verify that the expected interrupts were caught on ch1.");
 
@@ -249,7 +233,7 @@ begin
         write_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(1)), axil_data,
                        AXI_RSP_OKAY, x"F");
 
-        axil_data := x"000000" & not gpio_1_i(7 downto 0);
+        axil_data := x"000000" & not gpio_i(1)(7 downto 0);
         check_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(1)), AXI_RSP_OKAY,
                        axil_data, "Verify that the expected interrupts were cleared on ch1 (1).");
 
@@ -271,20 +255,20 @@ begin
         -- ---------------------------------------------------------------------
         info("Test channel 2");
         info("Check ch2 defaults");
-        axil_data := x"00" & G_CH_2_DFLT_O;
+        axil_data := G_CH_DFLT_O(2);
         check_axi_lite(net, AXIM, fn_addr(gpio_chan_dout(2)), AXI_RSP_OKAY,
                        axil_data, "Check ch2 default out reg.");
 
         prd_cycle;
-        check_equal(gpio_2_o, axil_data(23 downto 0),
+        check_equal(gpio_o(2), axil_data,
                     "Check ch2 default out signal.");
 
-        axil_data := x"00" & G_CH_2_DFLT_T;
+        axil_data := G_CH_DFLT_T(2);
         check_axi_lite(net, AXIM, fn_addr(gpio_chan_tri(2)), AXI_RSP_OKAY,
                        axil_data, "Check ch2 default tri reg.");
 
         prd_cycle;
-        check_equal(gpio_2_t, axil_data(23 downto 0), "Check ch2 default tri signal.");
+        check_equal(gpio_t(2), axil_data, "Check ch2 default tri signal.");
 
         axil_data := x"00000000";
         check_axi_lite(net, AXIM, fn_addr(gpio_chan_din(2)), AXI_RSP_OKAY,
@@ -298,7 +282,7 @@ begin
 
         info("Change the state of all the ch2 GPIO inputs.");
         prd_cycle;
-        gpio_2_i <= x"FFFFFF";
+        gpio_i(2) <= x"00FFFFFF";
         prd_cycle;
 
         axil_data := x"00FFFFFF";
@@ -327,14 +311,14 @@ begin
 
         info("Change the state of some of the ch2 GPIO inputs.");
         prd_cycle;
-        gpio_2_i <= x"ABF0FE";
+        gpio_i(2) <= x"00ABF0FE";
         prd_cycle;
 
-        axil_data := x"00" & gpio_2_i;
+        axil_data := gpio_i(2);
         check_axi_lite(net, AXIM, fn_addr(gpio_chan_din(2)), AXI_RSP_OKAY,
                        axil_data, "Check ch2 input register after updating value on wire.");
 
-        axil_data := x"00" & not gpio_2_i;
+        axil_data := x"00" & not gpio_i(2)(23 downto 0);
         check_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(2)), AXI_RSP_OKAY,
                        axil_data, "Verify that the expected interrupts were caught on ch2.");
 
@@ -345,7 +329,7 @@ begin
         write_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(2)), axil_data,
                        AXI_RSP_OKAY, x"F");
 
-        axil_data := x"00000" & not gpio_2_i(11 downto 0);
+        axil_data := x"00000" & not gpio_i(2)(11 downto 0);
         check_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(2)), AXI_RSP_OKAY,
                        axil_data, "Verify that the expected interrupts were cleared on ch2 (1).");
 
@@ -367,24 +351,24 @@ begin
         write_axi_lite(net, AXIM, fn_addr(gpio_chan_dout(2)), axil_data,
                        AXI_RSP_OKAY, x"F");
 
-        axil_data := x"00667788";
+        axil_data := x"55667788";
         check_axi_lite(net, AXIM, fn_addr(gpio_chan_dout(2)), AXI_RSP_OKAY,
                        axil_data, "Check ch2 out reg after writing to it.");
 
         prd_cycle;
-        check_equal(gpio_2_o, axil_data(23 downto 0),
+        check_equal(gpio_o(2), axil_data,
                     "Check ch2 out signal after writing to it.");
 
         axil_data := x"44556677";
         write_axi_lite(net, AXIM, fn_addr(gpio_chan_tri(2)), axil_data,
                        AXI_RSP_OKAY, x"0");
 
-        axil_data := x"00556677";
+        axil_data := x"44556677";
         check_axi_lite(net, AXIM, fn_addr(gpio_chan_tri(2)), AXI_RSP_OKAY,
                        axil_data, "Check ch2 tri reg after writing to it.");
 
         prd_cycle;
-        check_equal(gpio_2_t, axil_data(23 downto 0),
+        check_equal(gpio_t(2), axil_data,
                     "Check ch2 tri signal after writing to it.");
 
       end if;
@@ -400,21 +384,10 @@ begin
   -- ---------------------------------------------------------------------------
   u_gpio_axil : entity work.gpio_axil
   generic map (
-    G_CH_0_WIDTH  => G_CH_0_WIDTH,
-    G_CH_0_MODE   => G_CH_0_MODE,
-    G_CH_0_SYNC   => G_CH_0_SYNC,
-    G_CH_0_DFLT_O => G_CH_0_DFLT_O,
-    G_CH_0_DFLT_T => G_CH_0_DFLT_T,
-    G_CH_1_WIDTH  => G_CH_1_WIDTH,
-    G_CH_1_MODE   => G_CH_1_MODE,
-    G_CH_1_SYNC   => G_CH_1_SYNC,
-    G_CH_1_DFLT_O => G_CH_1_DFLT_O,
-    G_CH_1_DFLT_T => G_CH_1_DFLT_T,
-    G_CH_2_WIDTH  => G_CH_2_WIDTH,
-    G_CH_2_MODE   => G_CH_2_MODE,
-    G_CH_2_SYNC   => G_CH_2_SYNC,
-    G_CH_2_DFLT_O => G_CH_2_DFLT_O,
-    G_CH_2_DFLT_T => G_CH_2_DFLT_T
+    G_CH_MODE   => G_CH_MODE,
+    G_CH_SYNC   => G_CH_SYNC,
+    G_CH_DFLT_O => G_CH_DFLT_O,
+    G_CH_DFLT_T => G_CH_DFLT_T
   )
   port map (
     clk        => clk,
@@ -422,15 +395,9 @@ begin
     irq        => irq,
     s_axil_req => s_axil_req,
     s_axil_rsp => s_axil_rsp,
-    gpio_0_i   => gpio_0_i,
-    gpio_0_o   => gpio_0_o,
-    gpio_0_t   => gpio_0_t,
-    gpio_1_i   => gpio_1_i,
-    gpio_1_o   => gpio_1_o,
-    gpio_1_t   => gpio_1_t,
-    gpio_2_i   => gpio_2_i,
-    gpio_2_o   => gpio_2_o,
-    gpio_2_t   => gpio_2_t
+    gpio_i     => gpio_i,
+    gpio_o     => gpio_o,
+    gpio_t     => gpio_t
   );
 
   -- ---------------------------------------------------------------------------

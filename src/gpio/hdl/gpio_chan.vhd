@@ -9,12 +9,13 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use work.util_pkg.axil_data_width;
+use work.gpio_pkg.gpio_mode_t;
 
 entity gpio_chan is
   generic (
-    G_CH_WIDTH : positive range 1 to 32 := 32;
-    -- "IN", "OUT", "INOUT", "DISABLE"
-    G_CH_MODE   : string                                    := "INOUT";
+    G_CH_WIDTH  : positive range 1 to AXIL_DATA_WIDTH       := 32;
+    G_CH_MODE   : gpio_mode_t                               := GPIO_MODE_INOUT;
     G_CH_SYNC   : boolean                                   := true;
     G_CH_DFLT_O : std_logic_vector(G_CH_WIDTH - 1 downto 0) := (others => '0');
     G_CH_DFLT_T : std_logic_vector(G_CH_WIDTH - 1 downto 0) := (others => '1')
@@ -76,25 +77,25 @@ begin
   gpio_t <= regi_tri;
 
   -- ---------------------------------------------------------------------------
-  gen_mode : if G_CH_MODE = "IN" generate
+  gen_mode : if G_CH_MODE = GPIO_MODE_IN generate
 
     regi_din  <= gpio_in;
     regi_dout <= (others => '0');
     regi_tri  <= (others => '1');
 
-  elsif G_CH_MODE = "OUT" generate
+  elsif G_CH_MODE = GPIO_MODE_OUT generate
 
     regi_din  <= (others => '0');
     regi_dout <= gpio_out;
     regi_tri  <= (others => '0');
 
-  elsif G_CH_MODE = "INOUT" generate
+  elsif G_CH_MODE = GPIO_MODE_INOUT generate
 
     regi_din  <= gpio_in;
     regi_dout <= gpio_out;
     regi_tri  <= gpio_tri;
 
-  elsif G_CH_MODE = "DISABLE" generate
+  elsif G_CH_MODE = GPIO_MODE_DISABLE generate
 
     regi_din  <= (others => '0');
     regi_dout <= (others => '0');
@@ -103,7 +104,7 @@ begin
   else generate
 
     assert false
-      report "ERROR: gpio_chan G_CH_MODE = [ IN | OUT | INOUT | DISABLE ]"
+      report "ERROR: gpio_chan G_CH_MODE = [ GPIO_MODE_IN | GPIO_MODE_OUT | GPIO_MODE_INOUT | GPIO_MODE_DISABLE ]"
       severity error;
 
     regi_din  <= (others => '0');
