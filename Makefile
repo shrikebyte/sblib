@@ -35,8 +35,11 @@ TEST_DIR := $(MAKEFILE_DIR)test
 BUILD_DIR := $(MAKEFILE_DIR)build
 BUILD_NAME := $(PRJ_NAME)_v$(VER_MAJOR)_$(VER_MINOR)_$(VER_PATCH)
 RELEASE_DIR := $(BUILD_DIR)/$(BUILD_NAME)
+
 REGS_SRC := $(SRC_DIR)/**/regs/*.toml
-STYLE_SRC := $(SRC_DIR)/**/hdl/*.vhd $(TEST_DIR)/**/*.vhd
+REGS_SRC := $(shell find $(SRC_DIR) -type f -name "*.toml")
+STYLE_SRC := $(shell find $(SRC_DIR) $(TEST_DIR) -type f -name "*.vhd" -not -path "$(SRC_DIR)/hdlm/hdl/*")
+
 NEW_TAG := v$(VER_MAJOR).$(VER_MINOR).$(VER_PATCH)
 
 .PHONY: package build release sim regs style style-fix tool-check clean

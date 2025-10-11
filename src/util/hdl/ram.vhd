@@ -14,7 +14,7 @@ use work.util_pkg.all;
 
 entity ram is
   generic (
-    --! Number of "bytes" per addressable ram element; Each "byte" can be 
+    --! Number of "bytes" per addressable ram element; Each "byte" can be
     --! exclusively written; Set to 1 if individual bytes within each memory
     --! word do not need to be exclusively written.
     --! Typically this generic is set in conjunction with G_BYTE_WIDTH when
@@ -70,14 +70,16 @@ end entity;
 architecture rtl of ram is
 
   -- ---------------------------------------------------------------------------
-  constant DATA_WIDTH : integer := G_BYTES_PER_ROW * G_BYTE_WIDTH;
+  constant DW : integer := G_BYTES_PER_ROW * G_BYTE_WIDTH;
+  constant AW : integer := G_ADDR_WIDTH;
+  constant BW : integer := G_BYTE_WIDTH;
 
   -- ---------------------------------------------------------------------------
-  signal a_idx  : natural range 0 to 2 ** G_ADDR_WIDTH - 1;
-  signal b_idx  : natural range 0 to 2 ** G_ADDR_WIDTH - 1;
-  signal a_pipe : slv_arr_t(0 to G_RD_LATENCY - 1)(DATA_WIDTH - 1 downto 0);
-  signal b_pipe : slv_arr_t(0 to G_RD_LATENCY - 1)(DATA_WIDTH - 1 downto 0);
-  signal ram    : slv_arr_t(0 to 2 ** G_ADDR_WIDTH - 1)(DATA_WIDTH - 1 downto 0) := G_RAM_INIT;
+  signal a_idx  : natural range 0 to 2 ** AW - 1;
+  signal b_idx  : natural range 0 to 2 ** AW - 1;
+  signal a_pipe : slv_arr_t(0 to G_RD_LATENCY - 1)(DW - 1 downto 0);
+  signal b_pipe : slv_arr_t(0 to G_RD_LATENCY - 1)(DW - 1 downto 0);
+  signal ram    : slv_arr_t(0 to 2 ** AW - 1)(DW - 1 downto 0) := G_RAM_INIT;
 
   -- ---------------------------------------------------------------------------
   attribute ram_style : string;
@@ -85,8 +87,8 @@ architecture rtl of ram is
 
 begin
 
-  a_idx  <= to_integer(unsigned(a_addr));
-  b_idx  <= to_integer(unsigned(b_addr));
+  a_idx <= to_integer(unsigned(a_addr));
+  b_idx <= to_integer(unsigned(b_addr));
 
   -- ---------------------------------------------------------------------------
   -- Notice that this process is sensitive to both clocks. Somewhat non-standard
@@ -101,12 +103,11 @@ begin
 
         for i in 0 to G_BYTES_PER_ROW - 1 loop
           if a_wen(i) then
-            ram(a_idx)(i * G_BYTE_WIDTH + G_BYTE_WIDTH - 1 downto i * G_BYTE_WIDTH) <=
-              a_wdat(i * G_BYTE_WIDTH + G_BYTE_WIDTH - 1 downto i * G_BYTE_WIDTH);
+            ram(a_idx)(i * BW + BW - 1 downto i * BW) <= a_wdat(i * BW + BW - 1 downto i * BW);
           end if;
         end loop;
 
-        a_pipe(0) <= ram(a_idx);
+        a_pipe(0)                     <= ram(a_idx);
         a_pipe(1 to G_RD_LATENCY - 1) <= a_pipe(0 to G_RD_LATENCY - 2);
 
       end if;
@@ -119,12 +120,11 @@ begin
 
         for i in 0 to G_BYTES_PER_ROW - 1 loop
           if b_wen(i) then
-            ram(b_idx)(i * G_BYTE_WIDTH + G_BYTE_WIDTH - 1 downto i * G_BYTE_WIDTH) <=
-              b_wdat(i * G_BYTE_WIDTH + G_BYTE_WIDTH - 1 downto i * G_BYTE_WIDTH);
+            ram(b_idx)(i * BW + BW - 1 downto i * BW) <= b_wdat(i * BW + BW - 1 downto i * BW);
           end if;
         end loop;
 
-        b_pipe(0) <= ram(b_idx);
+        b_pipe(0)                     <= ram(b_idx);
         b_pipe(1 to G_RD_LATENCY - 1) <= b_pipe(0 to G_RD_LATENCY - 2);
 
       end if;
