@@ -15,24 +15,35 @@ package util_pkg is
 
   -- ---------------------------------------------------------------------------
   -- AXI Lite
-  constant AXIL_DATA_WIDTH : integer                      := 32;
-  constant AXIL_ADDR_WIDTH : integer                      := 32;
-  constant AXI_RSP_OKAY    : std_logic_vector(1 downto 0) := b"00";
-  constant AXI_RSP_EXOKAY  : std_logic_vector(1 downto 0) := b"01";
-  constant AXI_RSP_SLVERR  : std_logic_vector(1 downto 0) := b"10";
-  constant AXI_RSP_DECERR  : std_logic_vector(1 downto 0) := b"11";
+  constant AXIL_DATA_WIDTH : integer := 32;
+  constant AXIL_ADDR_WIDTH : integer := 32;
+
+  subtype axil_data_range is natural range AXIL_DATA_WIDTH - 1 downto 0;
+
+  subtype axil_addr_range is natural range AXIL_ADDR_WIDTH - 1 downto 0;
+
+  subtype axil_strb_range is natural range AXIL_DATA_WIDTH / 8 - 1 downto 0;
+
+  subtype axil_prot_range is natural range 2 downto 0;
+
+  subtype axil_resp_range is natural range 1 downto 0;
+
+  constant AXI_RSP_OKAY   : std_logic_vector(AXIL_RESP_RANGE) := b"00";
+  constant AXI_RSP_EXOKAY : std_logic_vector(AXIL_RESP_RANGE) := b"01";
+  constant AXI_RSP_SLVERR : std_logic_vector(AXIL_RESP_RANGE) := b"10";
+  constant AXI_RSP_DECERR : std_logic_vector(AXIL_RESP_RANGE) := b"11";
 
   type axil_req_t is record
     awvalid : std_logic;
-    awprot  : std_logic_vector(2 downto 0);
-    awaddr  : std_logic_vector(AXIL_ADDR_WIDTH - 1 downto 0);
+    awprot  : std_logic_vector(AXIL_PROT_RANGE);
+    awaddr  : std_logic_vector(AXIL_ADDR_RANGE);
     wvalid  : std_logic;
-    wdata   : std_logic_vector(AXIL_DATA_WIDTH - 1 downto 0);
-    wstrb   : std_logic_vector(AXIL_DATA_WIDTH / 8 - 1 downto 0);
+    wdata   : std_logic_vector(AXIL_DATA_RANGE);
+    wstrb   : std_logic_vector(AXIL_STRB_RANGE);
     bready  : std_logic;
     arvalid : std_logic;
-    arprot  : std_logic_vector(2 downto 0);
-    araddr  : std_logic_vector(AXIL_ADDR_WIDTH - 1 downto 0);
+    arprot  : std_logic_vector(AXIL_PROT_RANGE);
+    araddr  : std_logic_vector(AXIL_ADDR_RANGE);
     rready  : std_logic;
   end record;
 
@@ -40,11 +51,11 @@ package util_pkg is
     awready : std_logic;
     wready  : std_logic;
     bvalid  : std_logic;
-    bresp   : std_logic_vector( 1 downto 0);
+    bresp   : std_logic_vector(AXIL_RESP_RANGE);
     arready : std_logic;
     rvalid  : std_logic;
-    rdata   : std_logic_vector(AXIL_DATA_WIDTH - 1 downto 0);
-    rresp   : std_logic_vector( 1 downto 0);
+    rdata   : std_logic_vector(AXIL_DATA_RANGE);
+    rresp   : std_logic_vector(AXIL_RESP_RANGE);
   end record;
 
   type axil_req_arr_t is array (natural range <>) of axil_req_t;
@@ -53,21 +64,19 @@ package util_pkg is
 
   -- ---------------------------------------------------------------------------
   -- Wishbone (Non-pipelined)
-  constant WB_DATA_WIDTH : integer := 32;
-  constant WB_ADDR_WIDTH : integer := 32;
 
   type wb_req_t is record
     stb  : std_logic;
     wen  : std_logic;
-    addr : std_logic_vector(WB_ADDR_WIDTH - 1 downto 0);
-    wdat : std_logic_vector(WB_DATA_WIDTH - 1 downto 0);
-    wsel : std_logic_vector(WB_DATA_WIDTH / 8 - 1 downto 0);
+    addr : std_logic_vector(AXIL_ADDR_RANGE);
+    wdat : std_logic_vector(AXIL_DATA_RANGE);
+    wsel : std_logic_vector(AXIL_STRB_RANGE);
   end record;
 
   type wb_rsp_t is record
     ack  : std_logic;
     err  : std_logic;
-    rdat : std_logic_vector(WB_DATA_WIDTH - 1 downto 0);
+    rdat : std_logic_vector(AXIL_DATA_RANGE);
   end record;
 
   type wb_req_arr_t is array (natural range <>) of wb_req_t;
@@ -80,14 +89,14 @@ package util_pkg is
     psel    : std_logic;
     penable : std_logic;
     pwrite  : std_logic;
-    pprot   : std_logic_vector( 2 downto 0);
-    paddr   : std_logic_vector(31 downto 0);
-    pwdata  : std_logic_vector(31 downto 0);
-    pstrb   : std_logic_vector( 3 downto 0);
+    pprot   : std_logic_vector(AXIL_PROT_RANGE);
+    paddr   : std_logic_vector(AXIL_ADDR_RANGE);
+    pwdata  : std_logic_vector(AXIL_DATA_RANGE);
+    pstrb   : std_logic_vector(AXIL_STRB_RANGE);
   end record;
 
   type apb_rsp_t is record
-    prdata  : std_logic_vector(31 downto 0);
+    prdata  : std_logic_vector(AXIL_DATA_RANGE);
     pready  : std_logic;
     pslverr : std_logic;
   end record;
@@ -109,15 +118,15 @@ package util_pkg is
   -- external pipelining and interconnect logic.
   type reg_req_t is record
     ren   : std_logic;
-    raddr : std_logic_vector(31 downto 0);
+    raddr : std_logic_vector(AXIL_ADDR_RANGE);
     wen   : std_logic;
-    waddr : std_logic_vector(31 downto 0);
-    wstrb : std_logic_vector( 3 downto 0);
-    wdata : std_logic_vector(31 downto 0);
+    waddr : std_logic_vector(AXIL_ADDR_RANGE);
+    wstrb : std_logic_vector(AXIL_STRB_RANGE);
+    wdata : std_logic_vector(AXIL_DATA_RANGE);
   end record;
 
   type reg_rsp_t is record
-    rdata : std_logic_vector(31 downto 0);
+    rdata : std_logic_vector(AXIL_DATA_RANGE);
     rerr  : std_logic;
     werr  : std_logic;
   end record;
@@ -132,10 +141,10 @@ package util_pkg is
 
   type bus_xact_t is record
     cmd   : bus_cmd_t;
-    wstrb : std_logic_vector( 3 downto 0);
-    addr  : std_logic_vector(31 downto 0);
-    data  : std_logic_vector(31 downto 0);
-    mask  : std_logic_vector(31 downto 0);
+    wstrb : std_logic_vector(AXIL_STRB_RANGE);
+    addr  : std_logic_vector(AXIL_ADDR_RANGE);
+    data  : std_logic_vector(AXIL_DATA_RANGE);
+    mask  : std_logic_vector(AXIL_DATA_RANGE);
   end record;
 
   type bus_xact_arr_t is array (natural range <>) of bus_xact_t;
@@ -149,6 +158,8 @@ package util_pkg is
   type int_arr_t is array (natural range <>) of integer;
 
   type bool_arr_t is array (natural range <>) of boolean;
+
+  type string_arr_t is array (natural range <>) of string;
 
   -- ---------------------------------------------------------------------------
   -- Functions

@@ -32,8 +32,9 @@ entity stdver_axil is
     G_GIT_DIRTY   : boolean                       := true
   );
   port (
-    clk        : in    std_logic;
-    srst       : in    std_logic;
+    clk  : in    std_logic;
+    srst : in    std_logic;
+    --
     s_axil_req : in    axil_req_t;
     s_axil_rsp : out   axil_rsp_t
   );
@@ -41,6 +42,7 @@ end entity;
 
 architecture rtl of stdver_axil is
 
+  -- ---------------------------------------------------------------------------
   signal axi_lite_m2s : axi_lite_m2s_t;
   signal axi_lite_s2m : axi_lite_s2m_t;
   signal i            : stdver_regs_up_t         := stdver_regs_up_init;
