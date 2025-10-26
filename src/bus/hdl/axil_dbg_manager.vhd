@@ -1,13 +1,53 @@
 --##############################################################################
---# File : axil_master.vhd
+--# File : axil_dbg_manager.vhd
 --# Auth : David Gussler
 --# Lang : VHDL '08
 --# ============================================================================
---! This is a generic axi-lite master state machine
---! that runs a hard-coded sequence of read and write transactions after reset.
---! Intended to configure an FPGA at startup / reset without the need for
---! software init scripts or a soft-processor. This can also be used to run a
---! BIST at startup by checking register values to ensure they match expected.
+--! AXI Lite debug bus manager. This is a state machine with a user-friendly
+--! ASCII character based interface on one end and an AXI Lite manager interface
+--! on the other end. This module is primarily intended to be connected to a
+--! UART to enable a straightforward terminal-based register access interface,
+--! but since this uses a set of generic axi streams,
+--! any other stream-based interface could be used to manage the bus.
+--! For example, a UDP-based ethernet interface would be a faster alternative
+--! to UART.
+--!
+--! The simple user protocol supports two commands: read and write.
+--!
+--! | Command | Command Format      | Success Resp | Fail Resp |
+--! |---------|---------------------|--------------|-----------|
+--! | Write   | w aaaaaaaa dddddddd | +            | ! or ?    |
+--! | Read    | r aaaaaaaa          | dddddddd     | ! or ?    |
+--!
+--! The protocol was designed to work equally well with an interactive terminal
+--! or a scripted software parser. An interactive terminal could be used
+--! for short-term experiments and edits, while a software parser could be used
+--! to programmatically interface with the device, for example, as a layer
+--! between the hardware and a GUI.
+--!
+--! * 'w' or 'W' is a write command.
+--! * 'r' or 'R' is a read command.
+--! * 'aaaaaaaa' is a 32-bit hex formatted address. It can be anywhere
+--!    from 1 to 8 characters.
+--! * 'dddddddd' is a 32-bit hex formatted data value. It can be anywhere
+--!    from 1 to 8 characters.
+--! * '+' is a write success response, returned by the FPGA.
+--! * '!' is a bus error response, returned by the FPGA.
+--! * '?' is a unknown command or badly formatted command response, returned
+--!    by the FPGA.
+--! * '<LF>' is a line feed character
+--!   (the enter key). This marks the end of every command or response (not
+--!   shown in the command table).
+--! * Some terminal emulators use <CR><LF> for enter (carriage return followed
+--!   by line feed). This protocol is only sensitive to <LF>. <CR> will be
+--!   ignored.
+--! * Only supports 32-bit aligned access.
+--! * Backspaces are supported.
+--! * Protocol is case insensitive.
+--! * Leading zeros are optional in addresses and data.
+--! * Only hex format is supported for address and data.
+--! * No leading `0x` for the address and data.
+--! * Extraneous spaces are trimmed.
 --##############################################################################
 
 library ieee;
@@ -15,38 +55,29 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.util_pkg.all;
 
-library ieee;
-use ieee.std_logic_1164.all;
-
-entity axil_master is
-  generic (
-    G_RESET_DELAY_CLKS : positive := 10;
-    G_XACTIONS         : bus_xact_arr_t
-  );
+entity axil_dbg_manager is
   port (
-    --! System
+    -- System
     clk  : in    std_logic;
     srst : in    std_logic;
-    --! AXI Lite interface
+
+    -- Command
+    s_cmd_valid : in    std_logic;
+    s_cmd_ready : out   std_logic;
+    s_cmd_data  : in    std_logic_vector(7 downto 0);
+
+    -- Response
+    m_rsp_valid : out   std_logic;
+    m_rsp_ready : in    std_logic;
+    m_rsp_data  : out   std_logic_vector(7 downto 0);
+
+    -- AXI Lite manager
     m_axil_req : out   axil_req_t;
-    m_axil_rsp : in    axil_rsp_t;
-    --
-    --! Valid data qualifier for the remaining m_sts_* signals
-    m_sts_valid : out   std_logic;
-    --! Indicates that the transaction had a bus error
-    m_sts_bus_err : out   std_logic;
-    --! Indicates that the transaction's read data did not match the expected data
-    m_sts_chk_err : out   std_logic;
-    --! Read data for the transaction (if it was a read)
-    m_sts_chk_rdata : out   std_logic_vector(31 downto 0);
-    --! Transaction index. Starts at 0 and counts up
-    m_sts_xact_idx : out   unsigned(15 downto 0)
+    m_axil_rsp : in    axil_rsp_t
   );
 end entity;
 
-architecture rtl of axil_master is
-
-  constant NUM_XACTIONS : integer := G_XACTIONS'length;
+architecture rtl of axil_dbg_manager is
 
   type state_t is (
     ST_RESET, ST_START, ST_DONE, ST_WRITE_WAIT, ST_WRITE_RSP_WAIT,
@@ -65,7 +96,7 @@ begin
   m_axil_req.arprot <= b"000";
 
   -- ---------------------------------------------------------------------------
-  prc_axil_master : process (clk) is begin
+  prc_fsm : process (clk) is begin
     if rising_edge(clk) then
       -- Pulse
       m_sts_valid <= '0';
