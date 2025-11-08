@@ -18,7 +18,7 @@ entity cdc_bit is
   generic (
     --! True: Register the input; False: Don't register the input; If set to
     --! false then src_clk is unused
-    G_USE_SRC_CLK : boolean := false;
+    G_USE_SRC_REG : boolean := false;
     --! Number of synchronizer flip-flops
     G_SYNC_LEN : positive := 2;
     --! Number of unrelated bits to synchronize; Ie: the length of 'src_bits'
@@ -58,7 +58,7 @@ architecture rtl of cdc_bit is
 begin
 
   -- ---------------------------------------------------------------------------
-  gen_src_clk : if G_USE_SRC_CLK generate
+  gen_src_clk : if G_USE_SRC_REG generate
 
     prc_src_clk : process (src_clk) is begin
       if rising_edge(src_clk) then
@@ -77,8 +77,8 @@ begin
     if rising_edge(dst_clk) then
       cdc_regs(0) <= src_reg;
 
-      for i0 in 1 to cdc_regs'high loop
-        cdc_regs(i0) <= cdc_regs(i0 - 1);
+      for i in 1 to cdc_regs'high loop
+        cdc_regs(i) <= cdc_regs(i - 1);
       end loop;
 
     end if;

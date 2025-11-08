@@ -57,7 +57,7 @@ begin
 
     u_cdc_bit : entity work.cdc_bit
     generic map (
-      G_USE_SRC_CLK => FALSE,
+      G_USE_SRC_REG => FALSE,
       G_SYNC_LEN    => 2,
       G_WIDTH       => G_CH_WIDTH
     )
