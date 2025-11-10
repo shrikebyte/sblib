@@ -15,7 +15,6 @@ library vunit_lib;
   context vunit_lib.vunit_context;
   context vunit_lib.vc_context;
 use vunit_lib.axi_lite_master_pkg.all;
-use vunit_lib.wishbone_pkg.all;
 
 entity axil_xbar_tb is
   generic (
@@ -28,14 +27,14 @@ architecture tb of axil_xbar_tb is
   -- Testbench constants
   constant CLK_PERIOD  : time     := 10 ns;
   constant CLK_TO_Q    : time     := 1 ns;
-  constant NUM_MASTERS : positive := 1;
+  constant NUM_MASTERS : positive := 4;
   constant NUM_SLAVES  : positive := 4;
 
   constant BASEADDRS : slv_arr_t(0 to NUM_SLAVES - 1)(AXIL_ADDR_WIDTH - 1 downto 0) := (
     0 => x"0000_0000",
     1 => x"0001_0000",
-    2 => x"0002_0000",
-    3 => x"0003_0000"
+    2 => x"000F_0000",
+    3 => x"0110_0000"
   );
 
   -- DUT ports
@@ -50,10 +49,10 @@ architecture tb of axil_xbar_tb is
 
   -- Testbench BFMs
   constant AXIM : bus_master_arr_t(0 to NUM_MASTERS - 1) := (
-    0 => new_bus(AXIL_DATA_WIDTH, AXIL_ADDR_WIDTH) -- ,
-    -- 1 => new_bus(AXIL_DATA_WIDTH, AXIL_ADDR_WIDTH),
-    -- 2 => new_bus(AXIL_DATA_WIDTH, AXIL_ADDR_WIDTH),
-    -- 3 => new_bus(AXIL_DATA_WIDTH, AXIL_ADDR_WIDTH)
+    0 => new_bus(AXIL_DATA_WIDTH, AXIL_ADDR_WIDTH),
+    1 => new_bus(AXIL_DATA_WIDTH, AXIL_ADDR_WIDTH),
+    2 => new_bus(AXIL_DATA_WIDTH, AXIL_ADDR_WIDTH),
+    3 => new_bus(AXIL_DATA_WIDTH, AXIL_ADDR_WIDTH)
   );
 
 begin
@@ -98,10 +97,11 @@ begin
 
         prd_wait_clk;
 
+        -- Generate transactions
         for master in 0 to NUM_MASTERS - 1 loop
           for slave in 0 to NUM_SLAVES - 1 loop
             for transaction in 1 to 10 loop
-              addr  := BASEADDRS(slave) or (std_logic_vector(to_unsigned(transaction, AXIL_ADDR_WIDTH - 2)) & b"00");
+              addr  := BASEADDRS(slave) or (std_logic_vector(to_unsigned(transaction + (master * 16), AXIL_ADDR_WIDTH - 2)) & b"00");
               data  := addr;
               wstrb := x"F";
               write_axi_lite(net, AXIM(master), addr, data, AXI_RSP_OKAY, wstrb);
@@ -109,10 +109,11 @@ begin
           end loop;
         end loop;
 
+        -- Check transactions
         for master in 0 to NUM_MASTERS - 1 loop
           for slave in 0 to NUM_SLAVES - 1 loop
             for transaction in 1 to 10 loop
-              addr := BASEADDRS(slave) or (std_logic_vector(to_unsigned(transaction, AXIL_ADDR_WIDTH - 2)) & b"00");
+              addr := BASEADDRS(slave) or (std_logic_vector(to_unsigned(transaction + (master * 16), AXIL_ADDR_WIDTH - 2)) & b"00");
               data := addr;
               check_axi_lite(net, AXIM(master), addr, AXI_RSP_OKAY, data, "Check during read loop failed.");
             end loop;
@@ -140,16 +141,17 @@ begin
   clk <= not clk after CLK_PERIOD / 2;
 
   -- ---------------------------------------------------------------------------
-  u_axil_decoder : entity work.axil_decoder
+  u_axil_xbar : entity work.axil_xbar
   generic map (
-    G_NUM_SLAVES => NUM_SLAVES,
-    G_BASEADDRS  => BASEADDRS
+    G_NUM_MASTERS => NUM_MASTERS,
+    G_NUM_SLAVES  => NUM_SLAVES,
+    G_BASEADDRS   => BASEADDRS
   )
   port map (
     clk        => clk,
     srst       => srst,
-    s_axil_req => axil_req_cpu(0),
-    s_axil_rsp => axil_rsp_cpu(0),
+    s_axil_req => axil_req_cpu,
+    s_axil_rsp => axil_rsp_cpu,
     m_axil_req => axil_req_ram,
     m_axil_rsp => axil_rsp_ram
   );
