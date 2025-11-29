@@ -215,6 +215,22 @@ package util_pkg is
     arr : int_arr_t
   ) return integer;
 
+  function find_max (
+    arr : nat_arr_t
+  ) return integer;
+
+  function find_min (
+    arr : nat_arr_t
+  ) return integer;
+
+  function find_max (
+    arr : pos_arr_t
+  ) return integer;
+
+  function find_min (
+    arr : pos_arr_t
+  ) return integer;
+
 end package;
 
 package body util_pkg is
@@ -377,6 +393,58 @@ package body util_pkg is
   -- Find the min value of an integer array
   function find_min (
     arr : int_arr_t
+  ) return integer is
+    variable rtn : integer := arr(arr'low);
+  begin
+    for i in arr'range loop
+      if arr(i) < rtn then
+        rtn := arr(i);
+      end if;
+    end loop;
+    return rtn;
+  end function;
+
+  function find_max (
+    arr : nat_arr_t
+  ) return integer is
+    variable rtn : integer := arr(arr'low);
+  begin
+    for i in arr'range loop
+      if arr(i) > rtn then
+        rtn := arr(i);
+      end if;
+    end loop;
+    return rtn;
+  end function;
+
+  function find_min (
+    arr : nat_arr_t
+  ) return integer is
+    variable rtn : integer := arr(arr'low);
+  begin
+    for i in arr'range loop
+      if arr(i) < rtn then
+        rtn := arr(i);
+      end if;
+    end loop;
+    return rtn;
+  end function;
+
+  function find_max (
+    arr : pos_arr_t
+  ) return integer is
+    variable rtn : integer := arr(arr'low);
+  begin
+    for i in arr'range loop
+      if arr(i) > rtn then
+        rtn := arr(i);
+      end if;
+    end loop;
+    return rtn;
+  end function;
+
+  function find_min (
+    arr : pos_arr_t
   ) return integer is
     variable rtn : integer := arr(arr'low);
   begin
