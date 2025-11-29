@@ -152,11 +152,17 @@ package util_pkg is
   -- ---------------------------------------------------------------------------
   -- Array types
   type sl_arr_t is array (natural range <>) of std_logic;
+
   type slv_arr_t is array (natural range <>) of std_logic_vector;
+
   type int_arr_t is array (natural range <>) of integer;
+
   type pos_arr_t is array (natural range <>) of positive;
+
   type nat_arr_t is array (natural range <>) of natural;
+
   type bool_arr_t is array (natural range <>) of boolean;
+
   type string_arr_t is array (natural range <>) of string;
 
   -- ---------------------------------------------------------------------------
@@ -201,9 +207,13 @@ package util_pkg is
     val : boolean
   ) return std_logic;
 
-  function find_max (arr : int_arr_t) return integer;
+  function find_max (
+    arr : int_arr_t
+  ) return integer;
 
-  function find_min (arr : int_arr_t) return integer;
+  function find_min (
+    arr : int_arr_t
+  ) return integer;
 
 end package;
 
@@ -350,7 +360,9 @@ package body util_pkg is
 
   -- ---------------------------------------------------------------------------
   -- Find the max value of an integer array
-  function find_max (arr : int_arr_t) return integer is
+  function find_max (
+    arr : int_arr_t
+  ) return integer is
     variable rtn : integer := arr(arr'low);
   begin
     for i in arr'range loop
@@ -363,7 +375,9 @@ package body util_pkg is
 
   -- ---------------------------------------------------------------------------
   -- Find the min value of an integer array
-  function find_min (arr : int_arr_t) return integer is
+  function find_min (
+    arr : int_arr_t
+  ) return integer is
     variable rtn : integer := arr(arr'low);
   begin
     for i in arr'range loop
