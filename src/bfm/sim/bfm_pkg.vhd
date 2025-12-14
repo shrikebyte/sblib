@@ -59,6 +59,8 @@ package bfm_pkg is
 
   function is_01(value : std_ulogic_vector) return boolean;
 
+  function to_real(b : boolean) return real;
+
 end package;
 
 package body bfm_pkg is
@@ -149,6 +151,15 @@ package body bfm_pkg is
     end loop;
 
     return true;
+  end function;
+
+  function to_real(b : boolean) return real is
+  begin
+    if b then
+      return 1.0;
+    else
+      return 0.0;
+    end if;
   end function;
 
 end package body;

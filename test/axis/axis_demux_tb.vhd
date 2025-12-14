@@ -11,16 +11,16 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library vunit_lib;
-  context vunit_lib.vunit_context;
-  context vunit_lib.vc_context;
+context vunit_lib.vunit_context;
+context vunit_lib.vc_context;
 use vunit_lib.random_pkg.all;
 
 library osvvm;
 use osvvm.randompkg.all;
-use work.stall_bfm_pkg.stall_configuration_t;
-use work.queue_bfm_pkg.get_new_queues;
+
 use work.util_pkg.all;
 use work.axis_pkg.all;
+use work.bfm_pkg.all;
 
 entity axis_demux_tb is
   generic (
@@ -33,14 +33,14 @@ end entity;
 architecture tb of axis_demux_tb is
 
   -- TB Constants
-  constant RESET_TIME : time := 50 ns;
-  constant CLK_PERIOD : time := 5 ns;
-
-  constant AXIS_DATA_WIDTH : integer := 16;
-  constant AXIS_BYTE_WIDTH : integer := 8;
-  constant AXIS_KEEP_WIDTH : integer := AXIS_DATA_WIDTH / AXIS_BYTE_WIDTH;
-  constant AXIS_USER_WIDTH : integer := 8;
-  constant NUM_CH          : integer := 4;
+  constant RESET_TIME  : time := 50 ns;
+  constant CLK_PERIOD  : time := 5 ns;
+  constant NUM_OUTPUTS : integer := 4;
+  constant KW         : integer := 2;
+  constant DW         : integer := 16;
+  constant UW         : integer := 8;
+  constant DBW        : integer := DW / KW;
+  constant UBW        : integer := UW / KW;
 
   -- TB Signals
   signal clk   : std_ulogic := '1';
@@ -50,31 +50,19 @@ architecture tb of axis_demux_tb is
 
   -- DUT Signals
   signal s_axis : axis_t (
-    tdata(AXIS_DATA_WIDTH - 1 downto 0),
-    tkeep(AXIS_KEEP_WIDTH - 1 downto 0),
-    tuser(AXIS_USER_WIDTH - 1 downto 0)
+    tdata(DW-1 downto 0),
+    tkeep(KW-1 downto 0),
+    tuser(UW-1 downto 0)
   );
 
-  signal m_axis : axis_arr_t (0 to NUM_CH-1)(
-    tdata(AXIS_DATA_WIDTH - 1 downto 0),
-    tkeep(AXIS_KEEP_WIDTH - 1 downto 0),
-    tuser(AXIS_USER_WIDTH - 1 downto 0)
+  signal m_axis :  axis_arr_t(0 to NUM_OUTPUTS - 1)(
+    tdata(DW-1 downto 0),
+    tkeep(KW-1 downto 0),
+    tuser(UW-1 downto 0)
   );
 
   signal sel : integer range m_axis'range := m_axis'low;
 
-  function to_real (
-    b : boolean
-  ) return real is
-  begin
-    if b then
-      return 1.0;
-    else
-      return 0.0;
-    end if;
-  end function;
-
-  -- ---------------------------------------------------------------------------
   -- Testbench BFMs
   constant STALL_CFG : stall_configuration_t := (
     stall_probability => 0.2 * to_real(G_ENABLE_JITTER),
@@ -83,12 +71,15 @@ architecture tb of axis_demux_tb is
   );
 
   signal bfm_axis : axis_t (
-    tdata(AXIS_DATA_WIDTH - 1 downto 0),
-    tkeep(AXIS_DATA_WIDTH / 8 - 1 downto 0),
-    tuser(AXIS_USER_WIDTH - 1 downto 0)
+    tdata(DW-1 downto 0),
+    tkeep(KW-1 downto 0),
+    tuser(UW-1 downto 0)
   );
 
-  constant INPUT_DATA_QUEUE, REF_DATA_QUEUE, INPUT_USER_QUEUE, REF_USER_QUEUE : queue_t := new_queue;
+  constant DATA_QUEUE : queue_t := new_queue;
+  constant USER_QUEUE : queue_t := new_queue;
+  constant REF_DATA_QUEUE : queue_t := new_queue;
+  constant REF_USER_QUEUE : queue_t := new_queue;
 
   signal num_packets_checked : natural := 0;
 
@@ -98,52 +89,44 @@ begin
 
   -- ---------------------------------------------------------------------------
   test_runner_watchdog(runner, 100 us);
-
   prc_main : process is
+    
     variable rnd : randomptype;
-
     variable num_tests : natural := 0;
 
     procedure send_random is
 
-      constant PACKET_LENGTH_BYTES : natural := rnd.Uniform(1, 5 * AXIS_KEEP_WIDTH);
+      constant PACKET_LENGTH_BYTES : natural := rnd.Uniform(1, 5 * KW);
 
-      -- Calculate the integer ceiling division of
-      -- PACKET_LENGTH_BYTES / AXIS_KEEP_WIDTH to determine the number of beats
-      -- in a packet.
-      constant PACKET_LENGTH_BEATS : natural := (PACKET_LENGTH_BYTES + AXIS_KEEP_WIDTH - 1) / AXIS_KEEP_WIDTH;
-
-      variable data, data_copy : integer_array_t := null_integer_array;
-      variable user, user_copy : integer_array_t := new_1d (
-                                                             length => PACKET_LENGTH_BEATS,
-                                                             bit_width => AXIS_BYTE_WIDTH,
-                                                             is_signed => false
-                                                           );
+      variable data      : integer_array_t := null_integer_array;
+      variable data_copy : integer_array_t := null_integer_array;
+      variable user      : integer_array_t := null_integer_array;
+      variable user_copy : integer_array_t := null_integer_array;
 
     begin
 
       -- Random test data packet
       random_integer_array (
-                            rnd           => rnd,
-                            integer_array => data,
-                            width         => PACKET_LENGTH_BYTES,
-                            bits_per_word => AXIS_BYTE_WIDTH,
-                            is_signed     => false
-                          );
+        rnd           => rnd,
+        integer_array => data,
+        width         => PACKET_LENGTH_BYTES,
+        bits_per_word => DBW,
+        is_signed     => false
+      );
       data_copy := copy(data);
-      push_ref(INPUT_DATA_QUEUE, data);
+      push_ref(DATA_QUEUE, data);
       push_ref(REF_DATA_QUEUE, data_copy);
 
       -- Random user data packet
       random_integer_array (
-                            rnd           => rnd,
-                            integer_array => user,
-                            width         => PACKET_LENGTH_BEATS,
-                            bits_per_word => AXIS_BYTE_WIDTH,
-                            is_signed     => false
-                          );
+        rnd           => rnd,
+        integer_array => user,
+        width         => PACKET_LENGTH_BYTES,
+        bits_per_word => UBW,
+        is_signed     => false
+      );
       user_copy := copy(user);
-      push_ref(INPUT_USER_QUEUE, user);
+      push_ref(USER_QUEUE, user);
       push_ref(REF_USER_QUEUE, user_copy);
 
       num_tests := num_tests + 1;
@@ -172,9 +155,6 @@ begin
   end process;
 
   -- ---------------------------------------------------------------------------
-  -- Clocks & Resets
-  clk <= not clk after CLK_PERIOD / 2;
-
   prc_srst : process (clk) is begin
     if rising_edge(clk) then
       srst  <= arst;
@@ -182,8 +162,9 @@ begin
     end if;
   end process;
 
+  clk <= not clk after CLK_PERIOD / 2;
+
   -- ---------------------------------------------------------------------------
-  -- DUT
   u_axis_demux : entity work.axis_demux
   generic map (
     G_LOW_AREA => G_LOW_AREA
@@ -196,59 +177,40 @@ begin
     sel    => sel
   );
 
-  axi_stream_master_inst : entity work.axi_stream_master
-  generic map (
-    DATA_WIDTH         => s_axis.tdata'length,
-    DATA_QUEUE         => INPUT_DATA_QUEUE,
-    USER_WIDTH         => s_axis.tuser'length,
-    USER_QUEUE         => INPUT_USER_QUEUE,
-    STALL_CONFIG       => STALL_CFG,
-    LOGGER_NAME_SUFFIX => " - input"
+  u_bfm_axis_man : entity work.bfm_axis_man
+  generic map(
+    G_DATA_QUEUE   => DATA_QUEUE,
+    G_USER_QUEUE   => USER_QUEUE,
+    G_STALL_CONFIG => STALL_CFG
   )
-  port map (
-    clk => clk,
-    --
-    ready  => s_axis.tready,
-    valid  => s_axis.tvalid,
-    last   => s_axis.tlast,
-    data   => s_axis.tdata,
-    strobe => s_axis.tkeep,
-    user   => s_axis.tuser
+  port map(
+    clk    => clk,
+    m_axis => s_axis
   );
 
-  axi_stream_slave_inst : entity work.axi_stream_slave
-  generic map (
-    DATA_WIDTH           => bfm_axis.tdata'length,
-    REFERENCE_DATA_QUEUE => REF_DATA_QUEUE,
-    USER_WIDTH           => bfm_axis.tuser'length,
-    REFERENCE_USER_QUEUE => REF_USER_QUEUE,
-    STALL_CONFIG         => STALL_CFG,
-    LOGGER_NAME_SUFFIX   => " - result"
+  u_bfm_axis_sub : entity work.bfm_axis_sub
+  generic map(
+    G_REF_DATA_QUEUE => REF_DATA_QUEUE,
+    G_REF_USER_QUEUE => REF_USER_QUEUE,
+    G_STALL_CONFIG   => STALL_CFG
   )
-  port map (
-    clk => clk,
-    --
-    ready  => bfm_axis.tready,
-    valid  => bfm_axis.tvalid,
-    last   => bfm_axis.tlast,
-    data   => bfm_axis.tdata,
-    strobe => bfm_axis.tkeep,
-    user   => bfm_axis.tuser,
-    --
+  port map(
+    clk    => clk,
+    s_axis => bfm_axis,
     num_packets_checked => num_packets_checked
   );
 
+  -- ---------------------------------------------------------------------------
   -- Squish the output streams into one input stream for the checker.
   -- We know that that module will only assert one of the valid channels at a
   -- time, so this will work.
   prc_assign_handshake : process(all) begin
 
     bfm_axis.tvalid <= or m_axis_tvalid;
-
-    bfm_axis.tlast <= 'X';
-    bfm_axis.tdata <= (others => 'X');
-    bfm_axis.tkeep <=  (others => 'X');
-    bfm_axis.tuser <=  (others => 'X');
+    bfm_axis.tlast  <= 'X';
+    bfm_axis.tdata  <= (others => 'X');
+    bfm_axis.tkeep  <= (others => 'X');
+    bfm_axis.tuser  <= (others => 'X');
 
     for i in m_axis'range loop
       if m_axis(i).tvalid then
@@ -265,8 +227,8 @@ begin
     m_axis(i).tready <= bfm_axis.tready;
   end generate;
 
-  -- Use randomly changing values for sel
-  prc_sel : process
+  -- Use randomly changing values for select
+  prc_sel_tb : process
     variable rnd : RandomPType;
   begin
     rnd.InitSeed(get_string_seed(runner_cfg));

@@ -11,23 +11,24 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library vunit_lib;
-  context vunit_lib.vunit_context;
-  context vunit_lib.vc_context;
+context vunit_lib.vunit_context;
+context vunit_lib.vc_context;
 use vunit_lib.random_pkg.all;
 
 library osvvm;
 use osvvm.randompkg.all;
-use work.stall_bfm_pkg.stall_configuration_t;
-use work.queue_bfm_pkg.get_new_queues;
+
 use work.util_pkg.all;
 use work.axis_pkg.all;
+use work.bfm_pkg.all;
 
 entity axis_merge_tb is
   generic (
     RUNNER_CFG      : string;
     G_ENABLE_JITTER : boolean := true;
+    G_KW            : integer := 2;
     G_DW            : integer := 16;
-    G_KW            : integer := 2
+    G_UW            : integer := 8
   );
 end entity;
 
@@ -36,9 +37,11 @@ architecture tb of axis_merge_tb is
   -- TB Constants
   constant RESET_TIME : time := 50 ns;
   constant CLK_PERIOD : time := 5 ns;
-
-  constant BW : integer := G_DW / G_KW;
-  constant UW : integer := 8;
+  constant KW          : integer  := G_KW;
+  constant DW          : integer  := G_DW;
+  constant UW          : integer  := G_UW;
+  constant DBW         : integer  := DW / KW;
+  constant UBW         : integer  := UW / KW;
 
   -- TB Signals
   signal clk   : std_ulogic := '1';
@@ -50,35 +53,23 @@ architecture tb of axis_merge_tb is
   signal merge_enable : std_ulogic := '0';
 
   signal s0_axis : axis_t (
-                           tdata(G_DW - 1 downto 0),
-                           tkeep(G_KW - 1 downto 0),
-                           tuser(UW - 1 downto 0)
-                         );
+    tdata(DW - 1 downto 0),
+    tkeep(KW - 1 downto 0),
+    tuser(UW - 1 downto 0)
+  );
 
   signal s1_axis : axis_t (
-                           tdata(G_DW - 1 downto 0),
-                           tkeep(G_KW - 1 downto 0),
-                           tuser(UW - 1 downto 0)
-                         );
+    tdata(DW - 1 downto 0),
+    tkeep(KW - 1 downto 0),
+    tuser(UW - 1 downto 0)
+  );
 
   signal m_axis : axis_t (
-                           tdata(G_DW - 1 downto 0),
-                           tkeep(G_KW - 1 downto 0),
-                           tuser(UW - 1 downto 0)
-                         );
+    tdata(DW - 1 downto 0),
+    tkeep(KW - 1 downto 0),
+    tuser(UW - 1 downto 0)
+  );
 
-  function to_real (
-    b : boolean
-  ) return real is
-  begin
-    if b then
-      return 1.0;
-    else
-      return 0.0;
-    end if;
-  end function;
-
-  -- ---------------------------------------------------------------------------
   -- Testbench BFMs
   constant STALL_CFG : stall_configuration_t := (
     stall_probability => 0.2 * to_real(G_ENABLE_JITTER),
@@ -86,9 +77,12 @@ architecture tb of axis_merge_tb is
     max_stall_cycles  => 3
   );
 
-  constant S0_INPUT_DATA_QUEUE  : queue_t := new_queue;
-  constant S1_INPUT_DATA_QUEUE  : queue_t := new_queue;
+  constant S0_DATA_QUEUE  : queue_t := new_queue;
+  constant S1_DATA_QUEUE  : queue_t := new_queue;
   constant REF_DATA_QUEUE : queue_t := new_queue;
+  constant S0_USER_QUEUE  : queue_t := new_queue;
+  constant S1_USER_QUEUE  : queue_t := new_queue;
+  constant REF_USER_QUEUE : queue_t := new_queue;
 
   signal num_packets_checked : natural := 0;
 
@@ -96,10 +90,9 @@ begin
 
   -- ---------------------------------------------------------------------------
   test_runner_watchdog(runner, 100 us);
-
   prc_main : process is
+    
     variable rnd : randomptype;
-
     variable num_tests : natural := 0;
 
     procedure send_random(constant merge_enable : boolean) is
@@ -109,10 +102,18 @@ begin
 
       variable s0_data : integer_array_t := null_integer_array;
       variable s1_data : integer_array_t := null_integer_array;
+      variable s0_user : integer_array_t := null_integer_array;
+      variable s1_user : integer_array_t := null_integer_array;
 
       variable m_data : integer_array_t := new_1d (
         length => 0,
-        bit_width => BW,
+        bit_width => DBW,
+        is_signed => false
+      );
+
+      variable m_user : integer_array_t := new_1d (
+        length => 0,
+        bit_width => UBW,
         is_signed => false
       );
 
@@ -120,28 +121,27 @@ begin
 
       -- Random s0 data packet
       random_integer_array (
-                            rnd           => rnd,
-                            integer_array => s0_data,
-                            width         => S0_PACKET_LENGTH_BYTES,
-                            bits_per_word => BW,
-                            is_signed     => false
-                          );
+        rnd           => rnd,
+        integer_array => s0_data,
+        width         => S0_PACKET_LENGTH_BYTES,
+        bits_per_word => DBW,
+        is_signed     => false
+      );
       
-
       -- Random s1 data packet
       random_integer_array (
-                            rnd           => rnd,
-                            integer_array => s1_data,
-                            width         => S1_PACKET_LENGTH_BYTES,
-                            bits_per_word => BW,
-                            is_signed     => false
-                          );
+        rnd           => rnd,
+        integer_array => s1_data,
+        width         => S1_PACKET_LENGTH_BYTES,
+        bits_per_word => DBW,
+        is_signed     => false
+      );
 
       -- Reference data packet
       for i in 0 to S0_PACKET_LENGTH_BYTES - 1 loop
         append(m_data, get(s0_data, i));
       end loop;
-      
+
       if merge_enable then
         for i in 0 to S1_PACKET_LENGTH_BYTES - 1 loop
           append(m_data, get(s1_data, i));
@@ -149,9 +149,44 @@ begin
       end if;
 
       -- Push data to queues
-      push_ref(S1_INPUT_DATA_QUEUE, s1_data);
-      push_ref(S0_INPUT_DATA_QUEUE, s0_data);
+      push_ref(S0_DATA_QUEUE, s0_data);
+      push_ref(S1_DATA_QUEUE, s1_data);
       push_ref(REF_DATA_QUEUE, m_data);
+
+
+      -- Random s0 user packet
+      random_integer_array (
+        rnd           => rnd,
+        integer_array => s0_user,
+        width         => S0_PACKET_LENGTH_BYTES,
+        bits_per_word => UBW,
+        is_signed     => false
+      );
+
+      -- Random s1 user packet
+      random_integer_array (
+        rnd           => rnd,
+        integer_array => s1_data,
+        width         => S1_PACKET_LENGTH_BYTES,
+        bits_per_word => UBW,
+        is_signed     => false
+      );
+
+      -- Reference user packet
+      for i in 0 to S0_PACKET_LENGTH_BYTES - 1 loop
+        append(m_data, get(s0_user, i));
+      end loop;
+
+      if merge_enable then
+        for i in 0 to S1_PACKET_LENGTH_BYTES - 1 loop
+          append(m_data, get(s1_user, i));
+        end loop;
+      end if;
+
+      -- Push user to queues
+      push_ref(S0_USER_QUEUE, s0_user);
+      push_ref(S1_USER_QUEUE, s1_user);
+      push_ref(REF_USER_QUEUE, m_user);
 
       num_tests := num_tests + 1;
 
@@ -188,9 +223,6 @@ begin
   end process;
 
   -- ---------------------------------------------------------------------------
-  -- Clocks & Resets
-  clk <= not clk after CLK_PERIOD / 2;
-
   prc_srst : process (clk) is begin
     if rising_edge(clk) then
       srst  <= arst;
@@ -198,8 +230,9 @@ begin
     end if;
   end process;
 
+  clk <= not clk after CLK_PERIOD / 2;
+
   -- ---------------------------------------------------------------------------
-  -- DUT
   u_axis_merge : entity work.axis_merge
   port map (
     clk     => clk,
@@ -210,59 +243,37 @@ begin
     m_axis  => m_axis
   );
 
-  u_axi_stream_master_0 : entity work.axi_stream_master
-  generic map (
-    DATA_WIDTH         => s0_axis.tdata'length,
-    DATA_QUEUE         => S0_INPUT_DATA_QUEUE,
-    STALL_CONFIG       => STALL_CFG,
-    LOGGER_NAME_SUFFIX => " - input 0"
+  u_bfm_axis_man_0 : entity work.bfm_axis_man
+  generic map(
+    G_DATA_QUEUE   => S0_DATA_QUEUE,
+    G_USER_QUEUE   => S0_USER_QUEUE,
+    G_STALL_CONFIG => STALL_CFG
   )
-  port map (
-    clk => clk,
-    --
-    ready  => s0_axis.tready,
-    valid  => s0_axis.tvalid,
-    last   => s0_axis.tlast,
-    data   => s0_axis.tdata,
-    strobe => s0_axis.tkeep
-    --user   => s0_axis.tuser
+  port map(
+    clk    => clk,
+    m_axis => s0_axis
   );
 
-  u_axi_stream_master_1 : entity work.axi_stream_master
-  generic map (
-    DATA_WIDTH         => s1_axis.tdata'length,
-    DATA_QUEUE         => S1_INPUT_DATA_QUEUE,
-    STALL_CONFIG       => STALL_CFG,
-    LOGGER_NAME_SUFFIX => " - input 1"
+  u_bfm_axis_man_1 : entity work.bfm_axis_man
+  generic map(
+    G_DATA_QUEUE   => S1_DATA_QUEUE,
+    G_USER_QUEUE   => S1_USER_QUEUE,
+    G_STALL_CONFIG => STALL_CFG
   )
-  port map (
-    clk => clk,
-    --
-    ready  => s1_axis.tready,
-    valid  => s1_axis.tvalid,
-    last   => s1_axis.tlast,
-    data   => s1_axis.tdata,
-    strobe => s1_axis.tkeep
-    --user   => s1_axis.tuser
+  port map(
+    clk    => clk,
+    m_axis => s1_axis
   );
 
-  axi_stream_slave : entity work.axi_stream_slave
-  generic map (
-    DATA_WIDTH           => m_axis.tdata'length,
-    REFERENCE_DATA_QUEUE => REF_DATA_QUEUE,
-    STALL_CONFIG         => STALL_CFG,
-    LOGGER_NAME_SUFFIX   => " - result"
+  u_bfm_axis_sub : entity work.bfm_axis_sub
+  generic map(
+    G_REF_DATA_QUEUE => REF_DATA_QUEUE,
+    G_REF_USER_QUEUE => REF_USER_QUEUE,
+    G_STALL_CONFIG   => STALL_CFG
   )
-  port map (
-    clk => clk,
-    --
-    ready  => m_axis.tready,
-    valid  => m_axis.tvalid,
-    last   => m_axis.tlast,
-    data   => m_axis.tdata,
-    strobe => m_axis.tkeep,
-    --user   => m_axis.tuser,
-    --
+  port map(
+    clk    => clk,
+    s_axis => m_axis,
     num_packets_checked => num_packets_checked
   );
 
