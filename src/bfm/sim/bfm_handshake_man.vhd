@@ -10,7 +10,7 @@
 -- This realizes a handshake master with jitter that is compliant with the AXI-Stream standard.
 -- According to the standard, ``valid`` may be lowered only after a transaction.
 --
--- This BFM can be more convenient to use than the :ref:`bfm.axi_stream_master` BFM in
+-- This BFM can be more convenient to use than the :ref:`bfm.axis_mgr` BFM in
 -- some cases.
 -- Specifically when the data is not an SLV, but instead a record.
 -- When using AXI-Stream BFMs we would need to have conversion functions to and from SLV.
@@ -40,12 +40,12 @@ use vunit_lib.run_types_pkg.all;
 library osvvm;
 use osvvm.RandomPkg.RandomPType;
 
-use work.stall_bfm_pkg.all;
+use work.bfm_pkg.all;
 
 
-entity handshake_master is
+entity bfm_handshake_man is
   generic (
-    stall_config : stall_configuration_t
+    G_STALL_CONFIG : stall_configuration_t
   );
   port (
     clk : in std_ulogic;
@@ -58,7 +58,7 @@ entity handshake_master is
   );
 end entity;
 
-architecture a of handshake_master is
+architecture sim of bfm_handshake_man is
 
   signal let_data_through : std_ulogic := '1';
 
@@ -68,7 +68,7 @@ begin
 
 
   ------------------------------------------------------------------------------
-  toggle_stall_gen : if stall_config.stall_probability > 0.0 generate
+  toggle_stall_gen : if G_STALL_CONFIG.stall_probability > 0.0 generate
 
     ------------------------------------------------------------------------------
     toggle_stall : process
@@ -76,12 +76,12 @@ begin
       variable rnd : RandomPType;
     begin
       -- Use salt so that parallel instances of this entity get unique random sequences.
-      get_seed(seed, salt=>handshake_master'path_name);
+      get_seed(seed, salt=>bfm_handshake_man'path_name);
       rnd.InitSeed(seed);
 
       loop
         let_data_through <= '0';
-        random_stall(stall_config=>stall_config, rnd=>rnd, clk=>clk);
+        random_stall(stall_config=>G_STALL_CONFIG, rnd=>rnd, clk=>clk);
         let_data_through <= '1';
 
         wait until (ready and valid) = '1' and rising_edge(clk);

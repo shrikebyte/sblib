@@ -40,17 +40,17 @@ library vunit_lib;
 use vunit_lib.run_pkg.all;
 use vunit_lib.run_types_pkg.all;
 
-use work.stall_bfm_pkg.all;
+use work.bfm_pkg.all;
 
 
-entity handshake_slave is
+entity bfm_handshake_sub is
   generic (
-    stall_config : stall_configuration_t;
+    G_STALL_CONFIG : stall_configuration_t;
     -- If true: Once asserted, 'ready' will not fall until valid has been asserted (i.e. a
     -- handshake has happened). Note that according to the AXI-Stream standard 'ready' may fall
     -- at any time (regardless of 'valid'). However, many modules are developed with this
     -- well-behavedness as a way of saving resources.
-    well_behaved_stall : boolean := false
+    G_WELL_BEHAVED_STALL : boolean := false
   );
   port (
     clk : in std_ulogic;
@@ -59,12 +59,12 @@ entity handshake_slave is
     data_is_ready : in std_ulogic := '1';
     --# {{}}
     ready : out std_ulogic := '0';
-    -- Must be connected if 'well_behaved_stall' is true. Otherwise it has no effect.
+    -- Must be connected if 'G_WELL_BEHAVED_STALL' is true. Otherwise it has no effect.
     valid : in std_ulogic := '0'
   );
 end entity;
 
-architecture a of handshake_slave is
+architecture sim of bfm_handshake_sub is
 
   signal let_data_through : std_ulogic := '1';
 
@@ -74,7 +74,7 @@ begin
 
 
   ------------------------------------------------------------------------------
-  toggle_stall_gen : if stall_config.stall_probability > 0.0 generate
+  toggle_stall_gen : if G_STALL_CONFIG.stall_probability > 0.0 generate
 
     ------------------------------------------------------------------------------
     toggle_stall : process
@@ -82,15 +82,15 @@ begin
       variable rnd : RandomPType;
     begin
       -- Use salt so that parallel instances of this entity get unique random sequences.
-      get_seed(seed, salt=>handshake_slave'path_name);
+      get_seed(seed, salt=>bfm_handshake_sub'path_name);
       rnd.InitSeed(seed);
 
       loop
         let_data_through <= '0';
-        random_stall(stall_config=>stall_config, rnd=>rnd, clk=>clk);
+        random_stall(stall_config=>G_STALL_CONFIG, rnd=>rnd, clk=>clk);
         let_data_through <= '1';
 
-        wait until (valid = '1' or not well_behaved_stall) and rising_edge(clk);
+        wait until (valid = '1' or not G_WELL_BEHAVED_STALL) and rising_edge(clk);
       end loop;
     end process;
 

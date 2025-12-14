@@ -1,5 +1,5 @@
 --##############################################################################
---# File : iserdes_4x_model.vhd
+--# File : bfm_iserdes_4x.vhd
 --# Auth : David Gussler
 --# Lang : VHDL '08
 --# ============================================================================
@@ -9,7 +9,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-entity iserdes_4x_model is
+entity bfm_iserdes_4x is
   port (
     clk_2x : in    std_logic;
     clk_1x : in    std_logic;
@@ -18,7 +18,7 @@ entity iserdes_4x_model is
   );
 end entity;
 
-architecture rtl of iserdes_4x_model is
+architecture sim of bfm_iserdes_4x is
 
   signal dp   : std_logic;
   signal dn   : std_logic;

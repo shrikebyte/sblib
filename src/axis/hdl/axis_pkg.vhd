@@ -38,8 +38,8 @@ package axis_pkg is
   -- Subordinate view
   alias s_axis_v is m_axis_v'converse;
 
-  -- Debug view
-  view d_axis_v of axis_t is
+  -- Monitor view
+  view monitor_axis_v of axis_t is
     tready : in;
     tvalid : in;
     tlast  : in;

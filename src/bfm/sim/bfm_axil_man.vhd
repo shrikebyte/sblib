@@ -1,9 +1,9 @@
 --##############################################################################
---# File : axil_bfm.vhd
+--# File : bfm_axil_man.vhd
 --# Auth : David Gussler
 --# Lang : VHDL '08
 --# ============================================================================
---! AXI lite master BFM. This is just an axil record wrapper around the vunit
+--! AXI lite manager BFM. This is just an axil record wrapper around the vunit
 --! bfm
 --# ============================================================================
 --# Copyright (c) 2024, David Gussler. All rights reserved.
@@ -20,7 +20,7 @@ library vunit_lib;
   context vunit_lib.vunit_context;
   context vunit_lib.vc_context;
 
-entity axil_bfm is
+entity bfm_axil_man is
   generic (
     G_BUS_HANDLE : bus_master_t
   );
@@ -31,7 +31,7 @@ entity axil_bfm is
   );
 end entity;
 
-architecture rtl of axil_bfm is
+architecture sim of bfm_axil_man is
 
 begin
 
