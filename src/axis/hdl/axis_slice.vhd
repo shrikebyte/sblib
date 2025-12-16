@@ -250,24 +250,52 @@ begin
     end if;
   end process;
 
-
   -- ---------------------------------------------------------------------------
   gen_packer : if G_PACK_OUTPUT generate
 
+    signal int0_tuser_tid : std_ulogic_vector(UW + (int0_sel'length * KW) - 1 downto 0);
+    signal int1_tuser_tid : std_ulogic_vector(UW + (int0_sel'length * KW) - 1 downto 0);
+    constant ID_UBW : natural := UBW + int0_sel'length;
+  
+  begin
+
+    -- Hijack the upper bits of tuser to pass along the tid information through
+    -- the packer stage. The packer can have variable latency, so the stream ID
+    -- has to be transported with the stream.
+    gen_tuser_sel : for i in 0 to KW - 1 generate begin
+
+      int0_tuser_tid((i * ID_UBW) + ID_UBW - 1 downto (i * ID_UBW)) <= 
+        std_ulogic_vector(int0_sel) & 
+        int0_axis.tuser((i * UBW) + UBW - 1 downto (i * UBW));
+    
+      int1_axis.tuser((i * UBW) + UBW - 1 downto (i * UBW)) <=
+        int1_tuser_tid((i * ID_UBW) + UBW - 1 downto (i * ID_UBW));
+
+    end generate;
+
+    int1_sel <= u_unsigned(int1_tuser_tid(ID_UBW - 1 downto ID_UBW - UBW));
+
     u_axis_pack : entity work.axis_pack
     generic map(
-      G_SUPPORT_NULL_TLAST => false,
-      G_TID_WIDTH => 1
+      G_SUPPORT_NULL_TLAST => false
     )
     port map(
       clk    => clk,
       srst   => srst,
       --
-      s_axis => int0_axis,
-      s_axis_tid => int0_sel,
+      s_axis.tready => int0_axis.tready,
+      s_axis.tvalid => int0_axis.tvalid,
+      s_axis.tlast  => int0_axis.tlast,
+      s_axis.tkeep  => int0_axis.tkeep,
+      s_axis.tdata  => int0_axis.tdata,
+      s_axis.tuser  => int0_tuser_tid,
       --
-      m_axis => int1_axis,
-      m_axis_tid => int1_sel
+      m_axis.tready => int1_axis.tready,
+      m_axis.tvalid => int1_axis.tvalid,
+      m_axis.tlast  => int1_axis.tlast,
+      m_axis.tkeep  => int1_axis.tkeep,
+      m_axis.tdata  => int1_axis.tdata,
+      m_axis.tuser  => int1_tuser_tid
     );
 
   else generate
@@ -283,6 +311,7 @@ begin
       s_axis => int0_axis,
       m_axis => int1_axis
     );
+    
     int1_sel <= int0_sel;
 
   end generate;

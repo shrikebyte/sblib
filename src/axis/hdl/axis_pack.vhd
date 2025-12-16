@@ -23,18 +23,15 @@ entity axis_pack is
     --! area footprint. If the user can guarantee that tlast transfers will
     --! always contain at least one valid byte, then set this to false to
     --! save area and latency.
-    G_SUPPORT_NULL_TLAST : boolean := false;
-    G_TID_WIDTH : natural := 1;
+    G_SUPPORT_NULL_TLAST : boolean := false
   );
   port (
     clk    : in    std_ulogic;
     srst   : in    std_ulogic;
     --
     s_axis : view s_axis_v;
-    s_axis_tid : in u_unsigned(G_TID_WIDTH-1 downto 0) := (others => '0');
     --
-    m_axis : view m_axis_v;
-    m_axis_tid : out u_unsigned(G_TID_WIDTH-1 downto 0);
+    m_axis : view m_axis_v
   );
 end entity;
 
@@ -63,7 +60,6 @@ architecture rtl of axis_pack is
     tkeep(m_axis.tkeep'range),
     tuser(m_axis.tuser'range)
   );
-  signal int_axis_tid : u_unsigned(m_axis_tid'range);
 
   -- Represents packed data type, comprising of 2 back-to-back beats with
   -- some tkeep bits unset in one or both beats.
@@ -182,7 +178,6 @@ begin
             int_axis.tkeep <= pack.packed_tkeep;
             int_axis.tdata <= pack.packed_tdata;
             int_axis.tuser <= pack.packed_tuser;
-            int_axis_tid   <= s_axis_tid;
 
             if packed_all_are_valid then
               -- If a new packed beat is ready, then shift out the packed data
@@ -243,7 +238,6 @@ begin
             int_axis.tuser  <= resid_tuser;
             int_axis.tkeep  <= resid_tkeep;
             int_axis.tlast  <= '1';
-            int_axis_tid    <= int_axis_tid;
             resid_tkeep     <= (others => '0');
             state           <= ST_PACK;
           end if;
@@ -273,7 +267,6 @@ begin
           m_axis.tdata    <= int_axis.tdata; 
           m_axis.tkeep    <= int_axis.tkeep; 
           m_axis.tuser    <= int_axis.tuser;
-          m_axis_tid      <= int_axis_tid;
 
           -- If next output beat is packed / valid but current input beat is
           -- a null tlast beat, then the FSM will invalidate the null
@@ -309,7 +302,6 @@ begin
     m_axis.tkeep    <= int_axis.tkeep; 
     m_axis.tuser    <= int_axis.tuser;
     m_axis.tlast    <= int_axis.tlast;
-    m_axis_tid      <= int_axis_tid;
 
   end generate;
 

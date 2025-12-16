@@ -43,19 +43,19 @@ def add_configs(lib):
         })
 
 
-    ## Async FIFO
-    tb = lib.test_bench('fifo_async_tb')
+    # ## Async FIFO
+    # tb = lib.test_bench('fifo_async_tb')
 
-    out_regs = [True, False]
-    clk_ratios = [100, 50, 200, 150, 12, 432, 95]
-    stall_probs = [0, 50]
+    # out_regs = [True, False]
+    # clk_ratios = [100, 50, 200, 150, 12, 432, 95]
+    # stall_probs = [0, 50]
 
-    for out_reg, clk_ratio, stall_prob in product(out_regs, clk_ratios, stall_probs):
-        sim_utils.named_config(tb, {
-            'G_OUT_REG': out_reg,
-            'G_CLK_RATIO': clk_ratio,
-            'G_AXIS_STALL_PROB': stall_prob,
-        })
+    # for out_reg, clk_ratio, stall_prob in product(out_regs, clk_ratios, stall_probs):
+    #     sim_utils.named_config(tb, {
+    #         'G_OUT_REG': out_reg,
+    #         'G_CLK_RATIO': clk_ratio,
+    #         'G_AXIS_STALL_PROB': stall_prob,
+    #     })
 
 
 

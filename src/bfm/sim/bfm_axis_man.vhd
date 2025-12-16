@@ -107,12 +107,12 @@ architecture sim of bfm_axis_man is
   constant DBW : integer := DW / KW;
   constant UBW : integer := UW / KW;
 
-  signal int_axis_tdata : std_ulogic_vector(m_axis.tdata'range) := 
+  signal int_axis_tdata : std_ulogic_vector(DW-1 downto 0) := 
     (others => DRIVE_INVALID_VALUE);
-  signal int_axis_tkeep : std_ulogic_vector(m_axis.tkeep'range) := 
-    (others => DRIVE_INVALID_VALUE);
+  signal int_axis_tkeep : std_ulogic_vector(KW-1 downto 0) := 
+    (others => '0');
   signal int_axis_tlast : std_ulogic := DRIVE_INVALID_VALUE;
-  signal int_axis_tuser : std_ulogic_vector(m_axis.tuser'range) := 
+  signal int_axis_tuser : std_ulogic_vector(UW-1 downto 0) := 
         (others => DRIVE_INVALID_VALUE);
   signal data_is_valid : std_ulogic := '0';
 
@@ -139,7 +139,7 @@ begin
     variable i : natural := 0;
     variable k : natural range 0 to KW - 1 := 0;
     variable is_last_byte : boolean := false;
-    variable byte_is_valid : std_ulogic;
+    variable byte_is_valid : boolean;
     variable seed : string_seed_t;
     variable rnd : RandomPType;
   begin
@@ -151,13 +151,12 @@ begin
 
     loop
 
-      i := 0;
-      k := 0;
-
       while is_empty(G_DATA_QUEUE) loop
         wait until rising_edge(clk);
       end loop;
 
+      i := 0;
+      k := 0;
       data_packet := pop_ref(G_DATA_QUEUE);
       user_packet := pop_ref(G_USER_QUEUE);
       packet_length_bytes := length(data_packet);
@@ -172,13 +171,14 @@ begin
       while i < packet_length_bytes loop
 
         if G_SPARSE_STREAM then
-          byte_is_valid := '1' when rnd.RandInt(0, 1) = 1 else '0';
+          byte_is_valid := true when rnd.RandInt(0, 1) = 1 else false;
         else
-          byte_is_valid := '1';
+          byte_is_valid := true;
         end if;
-        int_axis_tkeep(k) <= byte_is_valid;
 
         if byte_is_valid then
+          int_axis_tkeep(k) <= '1';
+
           data_value := get(data_packet, i);
           int_axis_tdata((k + 1) * DBW - 1 downto k * DBW) <=
             std_ulogic_vector(to_unsigned(data_value, DBW));
@@ -186,6 +186,9 @@ begin
           user_value := get(user_packet, i);
           int_axis_tuser((k + 1) * UBW - 1 downto k * UBW) <=
             std_ulogic_vector(to_unsigned(user_value, UBW));
+        
+        else 
+          int_axis_tkeep(k) <= '0';
         end if;
 
         is_last_byte := (i = (packet_length_bytes - 1)) and byte_is_valid;
@@ -232,7 +235,6 @@ begin
     ready => m_axis.tready,
     valid => m_axis.tvalid
   );
-
 
   -- ---------------------------------------------------------------------------
   prc_assign_tdata_invalid : process(all) begin

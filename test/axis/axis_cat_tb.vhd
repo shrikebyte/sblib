@@ -49,13 +49,7 @@ architecture tb of axis_cat_tb is
   -- DUT Signals
   signal enable : std_ulogic := '1';
 
-  signal s0_axis : axis_t (
-    tdata(DW - 1 downto 0),
-    tkeep(KW - 1 downto 0),
-    tuser(UW - 1 downto 0)
-  );
-
-  signal s1_axis : axis_t (
+  signal s_axis : axis_arr_t(0 to 1) (
     tdata(DW - 1 downto 0),
     tkeep(KW - 1 downto 0),
     tuser(UW - 1 downto 0)
@@ -239,8 +233,7 @@ begin
     clk       => clk,
     srst      => srst,
     --enable    => enable,
-    s_axis(0) => s0_axis,
-    s_axis(1) => s1_axis,
+    s_axis    => s_axis,
     m_axis    => m_axis
   );
 
@@ -252,7 +245,7 @@ begin
   )
   port map(
     clk    => clk,
-    m_axis => s0_axis
+    m_axis => s_axis(0)
   );
 
   u_bfm_axis_man_1 : entity work.bfm_axis_man
@@ -263,7 +256,7 @@ begin
   )
   port map(
     clk    => clk,
-    m_axis => s1_axis
+    m_axis => s_axis(1)
   );
 
   u_bfm_axis_sub : entity work.bfm_axis_sub
