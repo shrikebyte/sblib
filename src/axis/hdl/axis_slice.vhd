@@ -24,11 +24,9 @@ entity axis_slice is
     --
     m0_axis : view m_axis_v;
     m1_axis : view m_axis_v;
-    --! Enable split operation. Otherwise, this module is just a passthru.
-    enable : in std_ulogic;
     --! Number of bytes from the start of the input to send to the first output
-    --! packet. The remaining input bytes, until tlast, will be sent to the
-    --! second output packet. Note that this does not necessarily have to be
+    --! port. The remaining input bytes, until tlast, will be sent to the
+    --! seconhd output port. Note tat this does not necessarily have to be
     --! 8-bit bytes. For example, if data width is 32 and keep width is 2, then
     --! byte width would be 16.
     num_bytes  : in u_unsigned;
@@ -63,7 +61,7 @@ architecture rtl of axis_slice is
   is
     variable result : sliced_tkeep_t;
     variable mask : std_ulogic_vector(KW-1 downto 0);
-    variable num_bytes_remain : natural range 0 to s_axis.tkeep'length := to_integer(num_bytes_in_current);
+    variable num_bytes_remain : u_unsigned(num_bytes'range) := num_bytes_in_current;
   begin
     for i in 0 to KW-1 loop
       if num_bytes_remain /= 0 then
@@ -128,12 +126,13 @@ begin
         -- ---------------------------------------------------------------------
         when ST_IDLE =>
           if s_axis.tvalid then
-            int0_sel <= "0";
-            if enable then
+            if num_bytes /= 0 then
               num_bytes_remaining_in_pkt0 <= num_bytes;
-              state           <= ST_TX0;
-            else
-              state <= ST_PASSTHRU;
+              int0_sel <= "0";
+              state    <= ST_TX0;
+            else 
+              int0_sel <= "1";
+              state    <= ST_TX1;
             end if;
           end if;
 
@@ -222,21 +221,6 @@ begin
             end if;
           end if;
 
-        -- ---------------------------------------------------------------------
-        when ST_PASSTHRU =>
-          if s_axis_xact then
-            int0_axis.tvalid <= '1';
-            int0_axis.tdata  <= s_axis.tdata;
-            int0_axis.tkeep  <= s_axis.tkeep;
-            --
-            if s_axis.tlast then
-              int0_axis.tlast  <= '1';
-              state            <= ST_IDLE;
-            else 
-              int0_axis.tlast  <= '0';
-            end if;
-          end if;
-
         when others =>
           null;
       end case;
@@ -273,7 +257,7 @@ begin
 
     end generate;
 
-    int1_sel <= u_unsigned(int1_tuser_tid(ID_UBW - 1 downto ID_UBW - UBW));
+    int1_sel <= u_unsigned(int1_tuser_tid(ID_UBW - 1 downto UBW));
 
     u_axis_pack : entity work.axis_pack
     generic map(
@@ -311,7 +295,7 @@ begin
       s_axis => int0_axis,
       m_axis => int1_axis
     );
-    
+
     int1_sel <= int0_sel;
 
   end generate;
