@@ -46,26 +46,9 @@ architecture rtl of axis_slice is
   constant UBW : integer := UW / KW;
 
   type state_t is (ST_IDLE, ST_TX0, ST_PARTIAL, ST_TX1, ST_PASSTHRU);
-       
   signal state : state_t;
 
-  signal m0_oe : std_ulogic;
-  signal m1_oe : std_ulogic;
-
   signal num_bytes_remaining_in_pkt0 : u_unsigned(num_bytes'range);
-
-  signal int0_axis : axis_t (
-    tdata(s_axis.tdata'range),
-    tkeep(s_axis.tkeep'range),
-    tuser(s_axis.tuser'range)
-  );
-
-  signal int1_axis : axis_t (
-    tdata(s_axis.tdata'range),
-    tkeep(s_axis.tkeep'range),
-    tuser(s_axis.tuser'range)
-  );
-
   signal num_bytes_in_this_beat : natural range 0 to s_axis.tkeep'length;
 
   type sliced_tkeep_t is record
@@ -79,7 +62,7 @@ architecture rtl of axis_slice is
   ) return sliced_tkeep_t
   is
     variable result : sliced_tkeep_t;
-    variable mask : std_ulogic_vector(KW-1 downto 0) := (others => '0');
+    variable mask : std_ulogic_vector(KW-1 downto 0);
     variable num_bytes_remain : natural range 0 to s_axis.tkeep'length := to_integer(num_bytes_in_current);
   begin
     for i in 0 to KW-1 loop
@@ -102,15 +85,30 @@ architecture rtl of axis_slice is
   signal sliced_tkeep : sliced_tkeep_t;
   signal pkt1_tkeep : std_ulogic_vector(s_axis.tkeep'range);
   signal pkt1_tlast : std_ulogic;
+  signal int0_axis_oe : std_ulogic;
+  signal s_axis_xact : std_ulogic;
+  signal int0_sel : u_unsigned(0 downto 0);
+  signal int1_sel : u_unsigned(0 downto 0);
 
-  signal int0_oe : std_ulogic;
+  signal int0_axis : axis_t (
+    tdata(s_axis.tdata'range),
+    tkeep(s_axis.tkeep'range),
+    tuser(s_axis.tuser'range)
+  );
+
+  signal int1_axis : axis_t (
+    tdata(s_axis.tdata'range),
+    tkeep(s_axis.tkeep'range),
+    tuser(s_axis.tuser'range)
+  );
 
 begin
 
   -- ---------------------------------------------------------------------------
   num_bytes_in_this_beat <= cnt_ones(s_axis.tkeep);
-  int0_oe <= int0_axis.tready or not int0_axis.tvalid;
-  s_axis.tready <= int0_oe and ((state = ST_TX0) or (state = ST_TX1) or (state = ST_PASSTHRU));
+  int0_axis_oe <= int0_axis.tready or not int0_axis.tvalid;
+  s_axis.tready <= int0_axis_oe and ((state = ST_TX0) or (state = ST_TX1) or (state = ST_PASSTHRU));
+  s_axis_xact <= s_axis.tvalid and s_axis.tready;
   sliced_tkeep <= calc_sliced_tkeep(
     s_axis.tkeep, 
     num_bytes_remaining_in_pkt0
@@ -130,10 +128,10 @@ begin
         -- ---------------------------------------------------------------------
         when ST_IDLE =>
           if s_axis.tvalid then
+            int0_sel <= "0";
             if enable then
               num_bytes_remaining_in_pkt0 <= num_bytes;
               state           <= ST_TX0;
-              --sel
             else
               state <= ST_PASSTHRU;
             end if;
@@ -141,7 +139,7 @@ begin
 
         -- ---------------------------------------------------------------------
         when ST_TX0 =>
-          if s_axis.tvalid and s_axis.tready then
+          if s_axis_xact then
 
             int0_axis.tvalid  <= '1';
             int0_axis.tdata   <= s_axis.tdata;
@@ -171,6 +169,7 @@ begin
                 sts_err_runt <= '1';
                 state <= ST_IDLE;
               else
+                int0_sel <= "1";
                 state <= ST_TX1;
               end if;
               --
@@ -186,58 +185,53 @@ begin
               end if;
               num_bytes_remaining_in_pkt0 <= (others => '0');
               pkt1_tkeep <= sliced_tkeep.pkt1_tkeep;
+              int0_sel <= "1";
               state <= ST_PARTIAL;
-              
             end if;
           end if;
 
         -- ---------------------------------------------------------------------
         when ST_PARTIAL =>
-          if int0_oe then
+          if int0_axis_oe then
             int0_axis.tvalid  <= '1';
             int0_axis.tkeep   <= pkt1_tkeep;
             int0_axis.tdata   <= int0_axis.tdata;
             int0_axis.tuser   <= int0_axis.tuser;
-
-            pkt1_tlast <= '0';
-
+            --
             if pkt1_tlast then
               int0_axis.tlast <= '1';
               state <= ST_IDLE;
             else 
               state <= ST_TX1;
             end if;
+            pkt1_tlast <= '0';
           end if;
 
         when ST_TX1 =>
-          if s_axis.tvalid and s_axis.tready then
+          if s_axis_xact then
             int0_axis.tvalid  <= '1';
             int0_axis.tkeep   <= s_axis.tkeep;
             int0_axis.tdata   <= s_axis.tdata;
             int0_axis.tuser   <= s_axis.tuser;
-
+            --
             if s_axis.tlast then
               int0_axis.tlast  <= '1';
               state            <= ST_IDLE;
             else 
               int0_axis.tlast  <= '0';
             end if;
-
-            --
-            state <= ST_IDLE;
           end if;
 
         -- ---------------------------------------------------------------------
         when ST_PASSTHRU =>
-          if s_axis.tvalid and s_axis.tready then
-
+          if s_axis_xact then
             int0_axis.tvalid <= '1';
             int0_axis.tdata  <= s_axis.tdata;
             int0_axis.tkeep  <= s_axis.tkeep;
-
+            --
             if s_axis.tlast then
               int0_axis.tlast  <= '1';
-              state          <= ST_IDLE;
+              state            <= ST_IDLE;
             else 
               int0_axis.tlast  <= '0';
             end if;
@@ -248,12 +242,77 @@ begin
       end case;
 
       if srst then
-        int0_axis.tvalid  <= '0';
-        sts_err_runt    <= '0';
-        state           <= ST_IDLE;
+        int0_axis.tvalid <= '0';
+        sts_err_runt     <= '0';
+        int0_sel <= "0";
+        state            <= ST_IDLE;
       end if;
     end if;
   end process;
 
+
+  -- ---------------------------------------------------------------------------
+  gen_packer : if G_PACK_OUTPUT generate
+
+    u_axis_pack : entity work.axis_pack
+    generic map(
+      G_SUPPORT_NULL_TLAST => false,
+      G_TID_WIDTH => 1
+    )
+    port map(
+      clk    => clk,
+      srst   => srst,
+      --
+      s_axis => int0_axis,
+      s_axis_tid => int0_sel,
+      --
+      m_axis => int1_axis,
+      m_axis_tid => int1_sel
+    );
+
+  else generate
+
+    u_axis_pipe : entity work.axis_pipe
+    generic map(
+      G_READY_PIPE => false,
+      G_DATA_PIPE  => false
+    )
+    port map(
+      clk => clk,
+      srst => srst,
+      s_axis => int0_axis,
+      m_axis => int1_axis
+    );
+    int1_sel <= int0_sel;
+
+  end generate;
+
+  -- ---------------------------------------------------------------------------
+  prc_out_sel : process (all) begin
+
+    m0_axis.tvalid <= '0';
+    m1_axis.tvalid <= '0';
+    int1_axis.tready <= '0';
+
+    if int1_sel = "0" then
+      m0_axis.tvalid <= int1_axis.tvalid and int1_axis.tready;
+      int1_axis.tready <= m0_axis.tready;
+    
+    elsif int1_sel = "1" then
+      m1_axis.tvalid <= int1_axis.tvalid and int1_axis.tready;
+      int1_axis.tready <= m1_axis.tready;
+    end if;
+
+  end process;
+
+  m0_axis.tlast  <= int1_axis.tlast;
+  m0_axis.tdata  <= int1_axis.tdata;
+  m0_axis.tkeep  <= int1_axis.tkeep;
+  m0_axis.tuser  <= int1_axis.tuser;
+
+  m1_axis.tlast  <= int1_axis.tlast;
+  m1_axis.tdata  <= int1_axis.tdata;
+  m1_axis.tkeep  <= int1_axis.tkeep;
+  m1_axis.tuser  <= int1_axis.tuser;
 
 end architecture;
