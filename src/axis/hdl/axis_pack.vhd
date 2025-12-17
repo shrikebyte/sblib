@@ -277,7 +277,7 @@ begin
           -- because we need to be able to look ahead in time by one
           -- transaction.
           if s_axis.tvalid and s_axis.tready and s_axis.tlast and 
-             (nor s_axis.tkeep)
+             (nor pack.packed_tkeep)
           then
             m_axis.tlast <= '1';
           else 
