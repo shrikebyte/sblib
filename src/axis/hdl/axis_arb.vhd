@@ -4,7 +4,7 @@
 --# Lang : VHDL'19
 --# ============================================================================
 --! AXI-Stream arbiter.
---! Simple, fixed priority, packet arbiter. Higher subordinate channel numbers
+--! Simple, fixed-priority, packet arbiter. Higher subordinate channel numbers
 --! have higher priority.
 --! NOTICE: Since this is fixed-priority, if a higher channel is sending data
 --! every clock cycle, it is possible for it to hog all of the bandwidth,

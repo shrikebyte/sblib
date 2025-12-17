@@ -20,11 +20,18 @@ entity axis_cat is
     --! packets. It does not shift partial beats.
     --! If true - this module shifts partial beats to generate fully-packed
     --! output packets.
-    --! If the user can guarantee that input tkeep is always all ones, then
+    --! If the user can guarantee that input tkeep is always all ones or if
+    --! downstream modules can accept non-packet packets, then
     --! set this to false to save resources.
     G_PACK_OUTPUT : boolean := true;
-    --! Add an extra pipeline register to the datapath of this module.
-    G_DATA_PIPE : boolean := false;
+    --! Only applicable if G_PACK_OUTPUT is true.
+    --! Only set this to true if it is possible for input packets to have a
+    --! fully nulled-out tlast. 
+    G_SUPPORT_NULL_TLAST : boolean := false;
+    --! Add an extra pipeline register to the internal datapath.
+    G_DATA_PIPE  : boolean  := false;
+    --! Add an extra pipeline register to the internal backpressure path.
+    G_READY_PIPE : boolean  := false
   );
   port (
     clk    : in    std_ulogic;
@@ -85,12 +92,12 @@ begin
   -- ---------------------------------------------------------------------------
   u_axis_pipe0 : entity work.axis_pipe
   generic map(
-    G_READY_PIPE => false,
+    G_READY_PIPE => G_READY_PIPE,
     G_DATA_PIPE  => G_DATA_PIPE
   )
   port map(
-    clk => clk,
-    srst => srst,
+    clk    => clk,
+    srst   => srst,
     s_axis => int0_axis,
     m_axis => int1_axis
   );
@@ -100,7 +107,7 @@ begin
 
     u_axis_pack : entity work.axis_pack
     generic map(
-      G_SUPPORT_NULL_TLAST => false
+      G_SUPPORT_NULL_TLAST => G_SUPPORT_NULL_TLAST
     )
     port map(
       clk    => clk,
