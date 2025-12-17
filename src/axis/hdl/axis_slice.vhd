@@ -26,7 +26,7 @@ entity axis_slice is
     m1_axis : view m_axis_v;
     --! Number of bytes from the start of the input to send to the first output
     --! port. The remaining input bytes, until tlast, will be sent to the
-    --! seconhd output port. Note tat this does not necessarily have to be
+    --! second output port. Note tat this does not necessarily have to be
     --! 8-bit bytes. For example, if data width is 32 and keep width is 2, then
     --! byte width would be 16.
     num_bytes  : in u_unsigned;
@@ -43,7 +43,7 @@ architecture rtl of axis_slice is
   constant DBW : integer := DW / KW;
   constant UBW : integer := UW / KW;
 
-  type state_t is (ST_IDLE, ST_TX0, ST_PARTIAL, ST_TX1, ST_PASSTHRU);
+  type state_t is (ST_IDLE, ST_TX0, ST_PARTIAL, ST_TX1);
   signal state : state_t;
 
   signal num_bytes_remaining_in_pkt0 : u_unsigned(num_bytes'range);
@@ -85,8 +85,8 @@ architecture rtl of axis_slice is
   signal pkt1_tlast : std_ulogic;
   signal int0_axis_oe : std_ulogic;
   signal s_axis_xact : std_ulogic;
-  signal int0_sel : u_unsigned(0 downto 0);
-  signal int1_sel : u_unsigned(0 downto 0);
+  signal int0_axis_tid : u_unsigned(0 downto 0);
+  signal int1_axis_tid : u_unsigned(0 downto 0);
 
   signal int0_axis : axis_t (
     tdata(s_axis.tdata'range),
@@ -105,7 +105,7 @@ begin
   -- ---------------------------------------------------------------------------
   num_bytes_in_this_beat <= cnt_ones(s_axis.tkeep);
   int0_axis_oe <= int0_axis.tready or not int0_axis.tvalid;
-  s_axis.tready <= int0_axis_oe and ((state = ST_TX0) or (state = ST_TX1) or (state = ST_PASSTHRU));
+  s_axis.tready <= int0_axis_oe and ((state = ST_TX0) or (state = ST_TX1));
   s_axis_xact <= s_axis.tvalid and s_axis.tready;
   sliced_tkeep <= calc_sliced_tkeep(
     s_axis.tkeep, 
@@ -128,10 +128,8 @@ begin
           if s_axis.tvalid then
             if num_bytes /= 0 then
               num_bytes_remaining_in_pkt0 <= num_bytes;
-              int0_sel <= "0";
               state    <= ST_TX0;
             else 
-              int0_sel <= "1";
               state    <= ST_TX1;
             end if;
           end if;
@@ -143,9 +141,10 @@ begin
             int0_axis.tvalid  <= '1';
             int0_axis.tdata   <= s_axis.tdata;
             int0_axis.tuser   <= s_axis.tuser;
+            int0_axis_tid     <= "0";
 
             if num_bytes_remaining_in_pkt0 > num_bytes_in_this_beat then
-              -- In the middle of creating packet0
+              -- In the middle of sending packet0
               int0_axis.tkeep   <= s_axis.tkeep;
               --
               if s_axis.tlast then
@@ -159,7 +158,9 @@ begin
               end if;
               --
             elsif num_bytes_remaining_in_pkt0 = num_bytes_in_this_beat then
-              -- Don't need to slice the last beat
+              -- Don't need to slice the last beat because the number of bytes
+              -- in the current beat matches up perfectly with the number
+              -- of remaining bytes in packet0.
               int0_axis.tlast   <= '1';
               int0_axis.tkeep   <= s_axis.tkeep;
               num_bytes_remaining_in_pkt0 <= (others => '0');
@@ -168,7 +169,6 @@ begin
                 sts_err_runt <= '1';
                 state <= ST_IDLE;
               else
-                int0_sel <= "1";
                 state <= ST_TX1;
               end if;
               --
@@ -178,13 +178,16 @@ begin
               int0_axis.tkeep   <= sliced_tkeep.pkt0_tkeep;
               --
               if s_axis.tlast then
+                -- If we are slicing on a tlast beat, then tlast needs to be
+                -- asserted for the last beat of packet0 output as well as for
+                -- the first beat of packet1 output. We register this
+                -- information here and use it in the next state.
                 pkt1_tlast <= '1';
               else
                 pkt1_tlast <= '0';
               end if;
               num_bytes_remaining_in_pkt0 <= (others => '0');
               pkt1_tkeep <= sliced_tkeep.pkt1_tkeep;
-              int0_sel <= "1";
               state <= ST_PARTIAL;
             end if;
           end if;
@@ -196,11 +199,13 @@ begin
             int0_axis.tkeep   <= pkt1_tkeep;
             int0_axis.tdata   <= int0_axis.tdata;
             int0_axis.tuser   <= int0_axis.tuser;
+            int0_axis_tid     <= "1";
             --
             if pkt1_tlast then
               int0_axis.tlast <= '1';
               state <= ST_IDLE;
-            else 
+            else
+              int0_axis.tlast <= '0';
               state <= ST_TX1;
             end if;
             pkt1_tlast <= '0';
@@ -212,6 +217,7 @@ begin
             int0_axis.tkeep   <= s_axis.tkeep;
             int0_axis.tdata   <= s_axis.tdata;
             int0_axis.tuser   <= s_axis.tuser;
+            int0_axis_tid     <= "1";
             --
             if s_axis.tlast then
               int0_axis.tlast  <= '1';
@@ -228,7 +234,6 @@ begin
       if srst then
         int0_axis.tvalid <= '0';
         sts_err_runt     <= '0';
-        int0_sel <= "0";
         state            <= ST_IDLE;
       end if;
     end if;
@@ -237,19 +242,19 @@ begin
   -- ---------------------------------------------------------------------------
   gen_packer : if G_PACK_OUTPUT generate
 
-    signal int0_tuser_tid : std_ulogic_vector(UW + (int0_sel'length * KW) - 1 downto 0);
-    signal int1_tuser_tid : std_ulogic_vector(UW + (int0_sel'length * KW) - 1 downto 0);
-    constant ID_UBW : natural := UBW + int0_sel'length;
+    signal int0_tuser_tid : std_ulogic_vector(UW + (int0_axis_tid'length * KW) - 1 downto 0);
+    signal int1_tuser_tid : std_ulogic_vector(UW + (int0_axis_tid'length * KW) - 1 downto 0);
+    constant ID_UBW : natural := UBW + int0_axis_tid'length;
   
   begin
 
-    -- Hijack the upper bits of tuser to pass along the tid information through
-    -- the packer stage. The packer can have variable latency, so the stream ID
-    -- has to be transported with the stream.
+    -- Hijack the upper bits of each tuser byte to pass along the tid
+    -- information through the packer stage. The packer can have variable
+    -- latency, so the stream ID must be transported with the stream.
     gen_tuser_sel : for i in 0 to KW - 1 generate begin
 
       int0_tuser_tid((i * ID_UBW) + ID_UBW - 1 downto (i * ID_UBW)) <= 
-        std_ulogic_vector(int0_sel) & 
+        std_ulogic_vector(int0_axis_tid) & 
         int0_axis.tuser((i * UBW) + UBW - 1 downto (i * UBW));
     
       int1_axis.tuser((i * UBW) + UBW - 1 downto (i * UBW)) <=
@@ -257,7 +262,7 @@ begin
 
     end generate;
 
-    int1_sel <= u_unsigned(int1_tuser_tid(ID_UBW - 1 downto UBW));
+    int1_axis_tid <= u_unsigned(int1_tuser_tid(ID_UBW - 1 downto UBW));
 
     u_axis_pack : entity work.axis_pack
     generic map(
@@ -296,7 +301,7 @@ begin
       m_axis => int1_axis
     );
 
-    int1_sel <= int0_sel;
+    int1_axis_tid <= int0_axis_tid;
 
   end generate;
 
@@ -307,11 +312,11 @@ begin
     m1_axis.tvalid <= '0';
     int1_axis.tready <= '0';
 
-    if int1_sel = "0" then
+    if int1_axis_tid = "0" then
       m0_axis.tvalid <= int1_axis.tvalid and int1_axis.tready;
       int1_axis.tready <= m0_axis.tready;
     
-    elsif int1_sel = "1" then
+    elsif int1_axis_tid = "1" then
       m1_axis.tvalid <= int1_axis.tvalid and int1_axis.tready;
       int1_axis.tready <= m1_axis.tready;
     end if;
@@ -319,13 +324,13 @@ begin
   end process;
 
   m0_axis.tlast  <= int1_axis.tlast;
-  m0_axis.tdata  <= int1_axis.tdata;
   m0_axis.tkeep  <= int1_axis.tkeep;
+  m0_axis.tdata  <= int1_axis.tdata;
   m0_axis.tuser  <= int1_axis.tuser;
 
   m1_axis.tlast  <= int1_axis.tlast;
-  m1_axis.tdata  <= int1_axis.tdata;
   m1_axis.tkeep  <= int1_axis.tkeep;
+  m1_axis.tdata  <= int1_axis.tdata;
   m1_axis.tuser  <= int1_axis.tuser;
 
 end architecture;
