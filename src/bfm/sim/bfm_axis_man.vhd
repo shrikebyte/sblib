@@ -72,13 +72,20 @@ entity bfm_axis_man is
     -- Must be the same length as data queue.
     -- The integer arrays will be deallocated after this BFM is done with them.
     G_USER_QUEUE : queue_t := null_queue;
-    -- If true - Generate random values for tkeep bits for each beat.
-    -- If false - Generate a packed stream, where every beat has all tkeep bits
-    -- set, expect for tlast, which will pack tkeep bits from low to high.
-    G_SPARSE_STREAM : boolean := false;
+    -- If true - Generate a continuous packet stream, where every beat has all
+    -- tkeep bits asserted, expect for tlast, which will pack tkeep bits from
+    -- low to high.
+    -- If false - Generate random values for tkeep bits for each beat.
+    G_PACKED_STREAM : boolean := true;
+    -- If true - Occasionally generate a tlast beat where all tkeep bits are
+    -- zero. While there aren't too many practical uses for this, it is still
+    -- allowed by the axi stream standard, so it's good to be able to generate
+    -- packets that do this for good test coverage.
+    G_NULL_TLAST : boolean := false;
     -- Assign non-zero to randomly insert jitter/stalling in the data stream.
     G_STALL_CONFIG : stall_configuration_t := zero_stall_configuration;
-    -- Suffix for error log messages. Can be used to differentiate between multiple instances.
+    -- Suffix for error log messages. Can be used to differentiate between
+    -- multiple instances.
     G_LOGGER_NAME_SUFFIX : string := ""
   );
   port (
@@ -142,6 +149,7 @@ begin
     variable byte_is_valid : boolean;
     variable seed : string_seed_t;
     variable rnd : RandomPType;
+    variable send_null_tlast : boolean := false;
   begin
 
     -- Use salt so that parallel instances of this entity get unique random
@@ -170,10 +178,10 @@ begin
 
       while i < packet_length_bytes loop
 
-        if G_SPARSE_STREAM then
-          byte_is_valid := true when rnd.RandInt(0, 1) = 1 else false;
-        else
+        if G_PACKED_STREAM then
           byte_is_valid := true;
+        else
+          byte_is_valid := true when rnd.RandInt(0, 1) = 1 else false;
         end if;
 
         if byte_is_valid then
@@ -186,27 +194,36 @@ begin
           user_value := get(user_packet, i);
           int_axis_tuser((k + 1) * UBW - 1 downto k * UBW) <=
             std_ulogic_vector(to_unsigned(user_value, UBW));
-        
-        else 
-          int_axis_tkeep(k) <= '0';
         end if;
 
         is_last_byte := (i = (packet_length_bytes - 1)) and byte_is_valid;
 
         if (k = (KW - 1)) or is_last_byte then
 
-          int_axis_tlast <= to_sl(is_last_byte);
+          if G_NULL_TLAST and is_last_byte then
+            send_null_tlast := true when rnd.RandInt(0, 1) = 1 else false;
+          else 
+            send_null_tlast := false; 
+          end if;
+
+          int_axis_tlast <= to_sl(is_last_byte and not send_null_tlast);
 
           wait until m_axis.tready and m_axis.tvalid and rising_edge(clk);
 
           -- Default for next beat. We will fill in the byte lanes that are used.
           int_axis_tkeep <= (others => '0');
           int_axis_tdata <= (others => DRIVE_INVALID_VALUE);
+          int_axis_tuser <= (others => DRIVE_INVALID_VALUE);
         end if;
 
         k := (k + 1) mod KW;
         i := i + to_int(byte_is_valid);
       end loop;
+
+      if send_null_tlast then
+        int_axis_tlast <= '1';
+        wait until m_axis.tready and m_axis.tvalid and rising_edge(clk);
+      end if;
 
       -- Deallocate after we are done with the data.
       deallocate(data_packet);

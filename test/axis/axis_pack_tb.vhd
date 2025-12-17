@@ -170,10 +170,11 @@ begin
 
   u_bfm_axis_man : entity work.bfm_axis_man
   generic map(
-    G_DATA_QUEUE   => DATA_QUEUE,
-    G_USER_QUEUE   => USER_QUEUE,
-    G_STALL_CONFIG => STALL_CFG,
-    G_SPARSE_STREAM => true
+    G_DATA_QUEUE    => DATA_QUEUE,
+    G_USER_QUEUE    => USER_QUEUE,
+    G_STALL_CONFIG  => STALL_CFG,
+    G_PACKED_STREAM => false,
+    G_NULL_TLAST    => G_SUPPORT_NULL_TLAST
   )
   port map(
     clk    => clk,

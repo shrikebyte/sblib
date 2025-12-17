@@ -35,9 +35,9 @@ architecture tb of axis_slice_tb is
   constant RESET_TIME  : time     := 50 ns;
   constant CLK_PERIOD  : time     := 5 ns;
   constant NUM_OUTPUTS : integer  := 2;
-  constant KW          : integer  := 2;
-  constant DW          : integer  := 16;
-  constant UW          : integer  := 8;
+  constant KW          : integer  := 4;
+  constant DW          : integer  := 64;
+  constant UW          : integer  := 32;
   constant DBW         : integer  := DW / KW;
   constant UBW         : integer  := UW / KW;
 
@@ -89,24 +89,24 @@ begin
     variable rnd : randomptype;
     variable num_tests : nat_arr_t(m_axis'range) := (others => 0);
 
-    procedure send_random (
-      packet_length_bytes : natural; 
-      split_length_bytes : natural
-    ) is
+    procedure send_random is
+
+      constant PACKET_LENGTH_BYTES : natural := rnd.Uniform(1, 4 * KW);
+      constant SPLIT_LENGTH_BYTES : natural := rnd.Uniform(0, 5 * KW);
 
       impure function get_m0_len return natural is
       begin
-        if (packet_length_bytes > split_length_bytes) then
-          return split_length_bytes;
+        if (PACKET_LENGTH_BYTES > SPLIT_LENGTH_BYTES) then
+          return SPLIT_LENGTH_BYTES;
         else 
-          return packet_length_bytes;
+          return PACKET_LENGTH_BYTES;
         end if;
       end function;
 
       impure function get_m1_len return natural is
       begin
-        if (packet_length_bytes > split_length_bytes) then
-          return packet_length_bytes - split_length_bytes;
+        if (PACKET_LENGTH_BYTES > SPLIT_LENGTH_BYTES) then
+          return PACKET_LENGTH_BYTES - SPLIT_LENGTH_BYTES;
         else 
           return 0;
         end if;
@@ -117,7 +117,7 @@ begin
 
       variable s_data : integer_array_t :=
         new_1d (
-          length => packet_length_bytes,
+          length => PACKET_LENGTH_BYTES,
           bit_width => DBW,
           is_signed => false
       );
@@ -161,6 +161,12 @@ begin
 
     begin
 
+      assert SPLIT_LENGTH_BYTES >= 0 and SPLIT_LENGTH_BYTES < 2**UBW
+        report 
+          "ERROR: SPLIT_LENGTH_BYTES > 0 and SPLIT_LENGTH_BYTES < " &
+          to_string(2**UBW)
+        severity error;      
+
       -- Random test data packet
       random_integer_array (
         rnd           => rnd,
@@ -170,15 +176,12 @@ begin
         is_signed     => false
       );
 
-      -- Random user packet
-      random_integer_array (
-        rnd           => rnd,
-        integer_array => s_user,
-        width         => PACKET_LENGTH_BYTES,
-        bits_per_word => UBW,
-        is_signed     => false
-      );
+      -- Use user packet for the split length input
+      for i in 0 to PACKET_LENGTH_BYTES - 1 loop
+        set(s_user, i, SPLIT_LENGTH_BYTES);
+      end loop;
 
+      -- Generated expected packet for output0
       j := 0;
       if M0_LEN /= 0 then
         for i in 0 to M0_LEN - 1 loop
@@ -188,6 +191,7 @@ begin
         end loop;
       end if;
 
+      -- Generated expected packet for output1
       if M1_LEN /= 0 then
         for i in 0 to M1_LEN - 1 loop
           set(m1_data, i, get(s_data, j));
@@ -223,7 +227,7 @@ begin
 
     if run("test_random_data") then
       for test_idx in 0 to 50 loop
-        send_random(13, 7);
+        send_random;
       end loop;
     end if;
 
@@ -281,5 +285,8 @@ begin
       num_packets_checked => num_packets_checked(i)
     );
   end generate;
+
+  -- ---------------------------------------------------------------------------
+  num_bytes <= u_unsigned(s_axis.tuser(UBW-1 downto 0));
 
 end architecture;
