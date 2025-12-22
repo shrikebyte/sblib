@@ -66,17 +66,17 @@ architecture rtl of axis_slice is
     for i in 0 to KW-1 loop
       if num_bytes_remain /= 0 then
         mask(i) := '1';
-        if tkeep(i) then 
+        if tkeep(i) then
           num_bytes_remain := num_bytes_remain - 1;
         end if;
-      else 
+      else
         mask(i) := '0';
       end if;
     end loop;
 
     result.pkt0_tkeep := tkeep and mask;
     result.pkt1_tkeep := tkeep and not mask;
-    
+
     return result;
   end function;
 
@@ -108,7 +108,7 @@ begin
   s_axis.tready <= int0_axis_oe and ((state = ST_TX0) or (state = ST_TX1));
   s_axis_xact <= s_axis.tvalid and s_axis.tready;
   sliced_tkeep <= calc_sliced_tkeep(
-    s_axis.tkeep, 
+    s_axis.tkeep,
     num_bytes_remaining_in_pkt0
   );
 
@@ -129,7 +129,7 @@ begin
             if num_bytes /= 0 then
               num_bytes_remaining_in_pkt0 <= num_bytes;
               state    <= ST_TX0;
-            else 
+            else
               state    <= ST_TX1;
             end if;
           end if;
@@ -222,7 +222,7 @@ begin
             if s_axis.tlast then
               int0_axis.tlast  <= '1';
               state            <= ST_IDLE;
-            else 
+            else
               int0_axis.tlast  <= '0';
             end if;
           end if;
@@ -245,7 +245,7 @@ begin
     signal int0_tuser_tid : std_ulogic_vector(UW + (int0_axis_tid'length * KW) - 1 downto 0);
     signal int1_tuser_tid : std_ulogic_vector(UW + (int0_axis_tid'length * KW) - 1 downto 0);
     constant ID_UBW : natural := UBW + int0_axis_tid'length;
-  
+
   begin
 
     -- Hijack the upper bits of each tuser byte to pass along the tid
@@ -253,10 +253,10 @@ begin
     -- latency, so the stream ID must be transported with the stream.
     gen_tuser_sel : for i in 0 to KW - 1 generate begin
 
-      int0_tuser_tid((i * ID_UBW) + ID_UBW - 1 downto (i * ID_UBW)) <= 
-        std_ulogic_vector(int0_axis_tid) & 
+      int0_tuser_tid((i * ID_UBW) + ID_UBW - 1 downto (i * ID_UBW)) <=
+        std_ulogic_vector(int0_axis_tid) &
         int0_axis.tuser((i * UBW) + UBW - 1 downto (i * UBW));
-    
+
       int1_axis.tuser((i * UBW) + UBW - 1 downto (i * UBW)) <=
         int1_tuser_tid((i * ID_UBW) + UBW - 1 downto (i * ID_UBW));
 
@@ -265,9 +265,6 @@ begin
     int1_axis_tid <= u_unsigned(int1_tuser_tid(ID_UBW - 1 downto UBW));
 
     u_axis_pack : entity work.axis_pack
-    generic map(
-      G_SUPPORT_NULL_TLAST => false
-    )
     port map(
       clk    => clk,
       srst   => srst,
@@ -315,7 +312,7 @@ begin
     if int1_axis_tid = "0" then
       m0_axis.tvalid <= int1_axis.tvalid and int1_axis.tready;
       int1_axis.tready <= m0_axis.tready;
-    
+
     elsif int1_axis_tid = "1" then
       m1_axis.tvalid <= int1_axis.tvalid and int1_axis.tready;
       int1_axis.tready <= m1_axis.tready;

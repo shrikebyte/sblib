@@ -82,7 +82,7 @@ begin
   -- ---------------------------------------------------------------------------
   test_runner_watchdog(runner, 100 us);
   prc_main : process is
-    
+
     variable rnd : randomptype;
     variable num_tests : natural := 0;
 
@@ -118,7 +118,7 @@ begin
         bits_per_word => DBW,
         is_signed     => false
       );
-      
+
       -- Random s1 data packet
       random_integer_array (
         rnd           => rnd,
@@ -224,7 +224,7 @@ begin
   clk <= not clk after CLK_PERIOD / 2;
 
   -- ---------------------------------------------------------------------------
-  u_axis_merge : entity work.axis_cat
+  u_axis_cat : entity work.axis_cat
   generic map (
     G_DATA_PIPE   => true,
     G_PACK_OUTPUT => true

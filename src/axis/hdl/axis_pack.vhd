@@ -3,11 +3,7 @@
 --# Auth : David Gussler
 --# Lang : VHDL'19
 --# ============================================================================
---! Removes nulled out bytes, where tkeep is low. Can accept
---! any sparse input stream, including beats where all bytes are null.
---! If tuser is used, it must be byte oriented, meaning tuser width must be
---! an integer multiple of tkeep width. Tuser bits will be dropped along with
---! the corresponding data if tkeep for that byte is nulled.
+--!
 --##############################################################################
 
 library ieee;
@@ -17,14 +13,6 @@ use work.util_pkg.all;
 use work.axis_pkg.all;
 
 entity axis_pack is
-  generic (
-    --! If true, this module will support a fully nulled-out tlast input
-    --! transfer. This adds one additional cycle of latency, along with a larger
-    --! area footprint. If the user can guarantee that tlast transfers will
-    --! always contain at least one valid byte, then set this to false to
-    --! save area and latency.
-    G_SUPPORT_NULL_TLAST : boolean := false
-  );
   port (
     clk    : in    std_ulogic;
     srst   : in    std_ulogic;
@@ -54,12 +42,6 @@ architecture rtl of axis_pack is
   signal resid_tkeep : std_ulogic_vector(m_axis.tkeep'range);
   signal resid_tdata : std_ulogic_vector(m_axis.tdata'range);
   signal resid_tuser : std_ulogic_vector(m_axis.tuser'range);
-
-  signal int_axis : axis_t (
-    tdata(m_axis.tdata'range),
-    tkeep(m_axis.tkeep'range),
-    tuser(m_axis.tuser'range)
-  );
 
   -- Represents packed data type, comprising of 2 back-to-back beats with
   -- some tkeep bits unset in one or both beats.
@@ -103,9 +85,9 @@ architecture rtl of axis_pack is
       if lo_tkeep(i) = '1' then
         -- Pack byte from lower input to packed output
         result.packed_tkeep(j) := '1';
-        result.packed_tdata(j * DBW + DBW - 1 downto j * DBW) := 
+        result.packed_tdata(j * DBW + DBW - 1 downto j * DBW) :=
             lo_tdata(i * DBW + DBW - 1 downto i * DBW);
-        result.packed_tuser(j * UBW + UBW - 1 downto j * UBW) := 
+        result.packed_tuser(j * UBW + UBW - 1 downto j * UBW) :=
             lo_tuser(i * UBW + UBW - 1 downto i * UBW);
         j := j + 1;
       end if;
@@ -116,17 +98,17 @@ architecture rtl of axis_pack is
         if j < KW then
           -- Pack byte from upper input to packed output
           result.packed_tkeep(j) := '1';
-          result.packed_tdata(j * DBW + DBW - 1 downto j * DBW) := 
+          result.packed_tdata(j * DBW + DBW - 1 downto j * DBW) :=
               hi_tdata(i * DBW + DBW - 1 downto i * DBW);
-          result.packed_tuser(j * UBW + UBW - 1 downto j * UBW) := 
+          result.packed_tuser(j * UBW + UBW - 1 downto j * UBW) :=
               hi_tuser(i * UBW + UBW - 1 downto i * UBW);
           j := j + 1;
-        else 
+        else
           -- Pack byte from upper input to residual output
           result.resid_tkeep(k) := '1';
-          result.resid_tdata(k * DBW + DBW - 1 downto k * DBW) := 
+          result.resid_tdata(k * DBW + DBW - 1 downto k * DBW) :=
               hi_tdata(i * DBW + DBW - 1 downto i * DBW);
-          result.resid_tuser(k * UBW + UBW - 1 downto k * UBW) := 
+          result.resid_tuser(k * UBW + UBW - 1 downto k * UBW) :=
               hi_tuser(i * UBW + UBW - 1 downto i * UBW);
           k := k + 1;
         end if;
@@ -140,21 +122,60 @@ architecture rtl of axis_pack is
   signal packed_at_least_one_is_valid : std_ulogic;
   signal resid_at_least_one_is_valid : std_ulogic;
 
+
+  -- Not synthesized. Only for assertion check.
+  function is_contiguous(vec : std_ulogic_vector) return boolean is
+    variable saw_zero : boolean := false;
+  begin
+    for i in vec'low to vec'high loop
+      if vec(i) = '0' then
+        saw_zero := true;
+      elsif saw_zero then
+        -- Found a '1' after seeing a '0' - not contiguous!
+        return false;
+      end if;
+    end loop;
+    return true;
+  end function;
+
 begin
 
   -- ---------------------------------------------------------------------------
-  oe <= int_axis.tready or not int_axis.tvalid;
+  assert DW mod KW = 0
+    report "axis_pack: Data width must be evenly divisible by keep width."
+    severity error;
+
+  assert UW mod KW = 0
+    report "axis_pack: User width must be evenly divisible by keep width."
+    severity error;
+
+  prc_assert : process (clk) begin
+    if rising_edge(clk) then
+      assert not (s_axis.tvalid = '1' and s_axis.tlast = '1' and (nor s_axis.tkeep))
+        report "axis_pack: Null tlast beat detected on input. At " &
+          "least one tkeep bit must be set on tlast."
+        severity error;
+
+      assert not (s_axis.tvalid = '1' and not is_contiguous(s_axis.tkeep))
+        report "Non-contiguous tkeep detected on input. tkeep must be " &
+        "contiguous (e.g., 0001, 0011, 0111, but not 0101 or 0100)."
+        severity error;
+    end if;
+  end process;
+
+  -- ---------------------------------------------------------------------------
+  oe <= m_axis.tready or not m_axis.tvalid;
   s_axis.tready <= oe and (state = ST_PACK);
   packed_all_are_valid <= and pack.packed_tkeep;
   packed_at_least_one_is_valid <= or pack.packed_tkeep;
   resid_at_least_one_is_valid <= or pack.resid_tkeep;
 
   pack <= calc_pack(
-    lo_tkeep => resid_tkeep, 
-    lo_tdata => resid_tdata, 
-    lo_tuser => resid_tuser, 
-    hi_tkeep => s_axis.tkeep, 
-    hi_tdata => s_axis.tdata, 
+    lo_tkeep => resid_tkeep,
+    lo_tdata => resid_tdata,
+    lo_tuser => resid_tuser,
+    hi_tkeep => s_axis.tkeep,
+    hi_tdata => s_axis.tdata,
     hi_tuser => s_axis.tuser
   );
 
@@ -164,8 +185,8 @@ begin
 
       -- By default, clear m_valid if m_ready. The FSM might override this
       --  if it has new data to send.
-      if int_axis.tready then
-        int_axis.tvalid <= '0';
+      if m_axis.tready then
+        m_axis.tvalid <= '0';
       end if;
 
       case state is
@@ -175,9 +196,9 @@ begin
           if s_axis.tvalid and s_axis.tready then
             -- If new input beat
 
-            int_axis.tkeep <= pack.packed_tkeep;
-            int_axis.tdata <= pack.packed_tdata;
-            int_axis.tuser <= pack.packed_tuser;
+            m_axis.tkeep <= pack.packed_tkeep;
+            m_axis.tdata <= pack.packed_tdata;
+            m_axis.tuser <= pack.packed_tuser;
 
             if packed_all_are_valid then
               -- If a new packed beat is ready, then shift out the packed data
@@ -197,34 +218,26 @@ begin
 
             if s_axis.tlast then
 
-              if G_SUPPORT_NULL_TLAST then
-                -- If last input beat and ANY of the packed output beats are
-                -- valid, then output is valid.
-                int_axis.tvalid <= packed_at_least_one_is_valid;
-              else
-                -- In this mode, the user guarantees the input stream will never
-                -- have a null tlast beat, so we can save a bit of logic here.
-                int_axis.tvalid <= '1';
-              end if;
+              m_axis.tvalid <= '1';
 
               if resid_at_least_one_is_valid then
                 -- If there are ANY residual bytes, we need to transmit
                 -- one additional beat to finish the packet.
-                int_axis.tlast <= '0';
-                state          <= ST_LAST;
+                m_axis.tlast <= '0';
+                state        <= ST_LAST;
               else
                 -- Otherwise, if there are no residual bytes left at this point,
                 -- we're done.
-                int_axis.tlast <= '1';
-                resid_tkeep    <= (others => '0');
+                m_axis.tlast <= '1';
+                resid_tkeep  <= (others => '0');
               end if;
 
             else
 
               -- If normal input beat and ALL of the packed output beats are
               -- valid, then output is valid.
-              int_axis.tvalid <= packed_all_are_valid;
-              int_axis.tlast  <= '0';
+              m_axis.tvalid <= packed_all_are_valid;
+              m_axis.tlast  <= '0';
             end if;
 
           end if;
@@ -233,11 +246,11 @@ begin
         when ST_LAST =>
           if oe then
             -- If output is ready
-            int_axis.tvalid <= '1';
-            int_axis.tdata  <= resid_tdata;
-            int_axis.tuser  <= resid_tuser;
-            int_axis.tkeep  <= resid_tkeep;
-            int_axis.tlast  <= '1';
+            m_axis.tvalid <= '1';
+            m_axis.tdata  <= resid_tdata;
+            m_axis.tuser  <= resid_tuser;
+            m_axis.tkeep  <= resid_tkeep;
+            m_axis.tlast  <= '1';
             resid_tkeep     <= (others => '0');
             state           <= ST_PACK;
           end if;
@@ -247,62 +260,11 @@ begin
       end case;
 
       if srst then
-        int_axis.tvalid  <= '0';
+        m_axis.tvalid  <= '0';
         resid_tkeep      <= (others => '0');
         state            <= ST_PACK;
       end if;
     end if;
   end process;
-
-
-  -- ---------------------------------------------------------------------------
-  gen_output_reg : if G_SUPPORT_NULL_TLAST generate
-
-    int_axis.tready <= m_axis.tready or not m_axis.tvalid;
-
-    prc_output_reg : process (clk) begin
-      if rising_edge(clk) then
-        if int_axis.tvalid and int_axis.tready then
-          m_axis.tvalid   <= '1'; 
-          m_axis.tdata    <= int_axis.tdata; 
-          m_axis.tkeep    <= int_axis.tkeep; 
-          m_axis.tuser    <= int_axis.tuser;
-
-          -- If next output beat is packed / valid but current input beat is
-          -- a null tlast beat, then the FSM will invalidate the null
-          -- tlast beat's data. It is expected behavior to drop the null data,
-          -- but we cannot drop the tlast indicator. To solve this, tlast needs
-          -- to be "pulled forward" to the next output beat.
-          -- This extra output register is required to support null tlast beats
-          -- because we need to be able to look ahead in time by one
-          -- transaction.
-          if s_axis.tvalid and s_axis.tready and s_axis.tlast and 
-             (nor pack.packed_tkeep)
-          then
-            m_axis.tlast <= '1';
-          else 
-            m_axis.tlast <= int_axis.tlast; 
-          end if;
-        
-        elsif m_axis.tready then
-          m_axis.tvalid   <= '0';
-        end if;
-
-        if srst then
-          m_axis.tvalid <= '0';
-        end if;
-      end if;
-    end process;
-
-  else generate
-
-    int_axis.tready <= m_axis.tready;
-    m_axis.tvalid   <= int_axis.tvalid; 
-    m_axis.tdata    <= int_axis.tdata; 
-    m_axis.tkeep    <= int_axis.tkeep; 
-    m_axis.tuser    <= int_axis.tuser;
-    m_axis.tlast    <= int_axis.tlast;
-
-  end generate;
 
 end architecture;

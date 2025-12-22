@@ -75,13 +75,10 @@ entity bfm_axis_man is
     -- If true - Generate a continuous packet stream, where every beat has all
     -- tkeep bits asserted, expect for tlast, which will pack tkeep bits from
     -- low to high.
-    -- If false - Generate random values for tkeep bits for each beat.
+    -- If false - Generate partial beats in the middle of a packet that only
+    -- have some or none of their tkeep bits set. tkeep bits will always
+    -- be set contiguously from low to high.
     G_PACKED_STREAM : boolean := true;
-    -- If true - Occasionally generate a tlast beat where all tkeep bits are
-    -- zero. While there aren't too many practical uses for this, it is still
-    -- allowed by the axi stream standard, so it's good to be able to generate
-    -- packets that do this for good test coverage.
-    G_NULL_TLAST : boolean := false;
     -- Assign non-zero to randomly insert jitter/stalling in the data stream.
     G_STALL_CONFIG : stall_configuration_t := zero_stall_configuration;
     -- Suffix for error log messages. Can be used to differentiate between
@@ -103,7 +100,7 @@ architecture sim of bfm_axis_man is
   -- This is to avoid a DUT sampling the values in the wrong clock cycle.
   constant DRIVE_INVALID_VALUE : std_ulogic := 'X';
 
-  constant BASE_ERROR_MESSAGE : string := "bfm_axis_man - " & 
+  constant BASE_ERROR_MESSAGE : string := "bfm_axis_man - " &
     G_LOGGER_NAME_SUFFIX & ": ";
 
   -- ---------------------------------------------------------------------------
@@ -114,12 +111,12 @@ architecture sim of bfm_axis_man is
   constant DBW : integer := DW / KW;
   constant UBW : integer := UW / KW;
 
-  signal int_axis_tdata : std_ulogic_vector(DW-1 downto 0) := 
+  signal int_axis_tdata : std_ulogic_vector(DW-1 downto 0) :=
     (others => DRIVE_INVALID_VALUE);
-  signal int_axis_tkeep : std_ulogic_vector(KW-1 downto 0) := 
+  signal int_axis_tkeep : std_ulogic_vector(KW-1 downto 0) :=
     (others => '0');
   signal int_axis_tlast : std_ulogic := DRIVE_INVALID_VALUE;
-  signal int_axis_tuser : std_ulogic_vector(UW-1 downto 0) := 
+  signal int_axis_tuser : std_ulogic_vector(UW-1 downto 0) :=
         (others => DRIVE_INVALID_VALUE);
   signal data_is_valid : std_ulogic := '0';
 
@@ -144,12 +141,10 @@ begin
     variable data_value : natural := 0;
     variable user_value : natural := 0;
     variable i : natural := 0;
-    variable k : natural range 0 to KW - 1 := 0;
     variable is_last_byte : boolean := false;
-    variable byte_is_valid : boolean;
     variable seed : string_seed_t;
     variable rnd : RandomPType;
-    variable send_null_tlast : boolean := false;
+    variable num_bytes_in_this_beat : integer := 0;
   begin
 
     -- Use salt so that parallel instances of this entity get unique random
@@ -164,13 +159,12 @@ begin
       end loop;
 
       i := 0;
-      k := 0;
       data_packet := pop_ref(G_DATA_QUEUE);
       user_packet := pop_ref(G_USER_QUEUE);
       packet_length_bytes := length(data_packet);
       user_packet_length_bytes := length(user_packet);
 
-      assert packet_length_bytes = user_packet_length_bytes 
+      assert packet_length_bytes = user_packet_length_bytes
         report BASE_ERROR_MESSAGE &
         "Length mismatch between data packet and user packet.";
 
@@ -179,51 +173,36 @@ begin
       while i < packet_length_bytes loop
 
         if G_PACKED_STREAM then
-          byte_is_valid := true;
+          num_bytes_in_this_beat := minimum(KW, packet_length_bytes - i);
         else
-          byte_is_valid := true when rnd.RandInt(0, 1) = 1 else false;
+          num_bytes_in_this_beat := minimum(rnd.RandInt(0, KW), packet_length_bytes - i);
         end if;
 
-        if byte_is_valid then
+        for k in 0 to num_bytes_in_this_beat - 1 loop
           int_axis_tkeep(k) <= '1';
 
-          data_value := get(data_packet, i);
+          data_value := get(data_packet, i + k);
           int_axis_tdata((k + 1) * DBW - 1 downto k * DBW) <=
             std_ulogic_vector(to_unsigned(data_value, DBW));
 
-          user_value := get(user_packet, i);
+          user_value := get(user_packet, i + k);
           int_axis_tuser((k + 1) * UBW - 1 downto k * UBW) <=
             std_ulogic_vector(to_unsigned(user_value, UBW));
-        end if;
+        end loop;
 
-        is_last_byte := (i = (packet_length_bytes - 1)) and byte_is_valid;
+        i := i + num_bytes_in_this_beat;
 
-        if (k = (KW - 1)) or is_last_byte then
+        int_axis_tlast <= to_sl(num_bytes_in_this_beat > 0 and i = packet_length_bytes);
 
-          if G_NULL_TLAST and is_last_byte then
-            send_null_tlast := true when rnd.RandInt(0, 1) = 1 else false;
-          else 
-            send_null_tlast := false; 
-          end if;
-
-          int_axis_tlast <= to_sl(is_last_byte and not send_null_tlast);
-
-          wait until m_axis.tready and m_axis.tvalid and rising_edge(clk);
-
-          -- Default for next beat. We will fill in the byte lanes that are used.
-          int_axis_tkeep <= (others => '0');
-          int_axis_tdata <= (others => DRIVE_INVALID_VALUE);
-          int_axis_tuser <= (others => DRIVE_INVALID_VALUE);
-        end if;
-
-        k := (k + 1) mod KW;
-        i := i + to_int(byte_is_valid);
-      end loop;
-
-      if send_null_tlast then
-        int_axis_tlast <= '1';
         wait until m_axis.tready and m_axis.tvalid and rising_edge(clk);
-      end if;
+
+        -- Default for next beat. We will fill in the byte lanes that are used.
+        int_axis_tlast <= '0';
+        int_axis_tkeep <= (others => '0');
+        int_axis_tdata <= (others => DRIVE_INVALID_VALUE);
+        int_axis_tuser <= (others => DRIVE_INVALID_VALUE);
+
+      end loop;
 
       -- Deallocate after we are done with the data.
       deallocate(data_packet);

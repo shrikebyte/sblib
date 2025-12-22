@@ -48,11 +48,15 @@ begin
 
   -- ---------------------------------------------------------------------------
   assert S_DBW = M_DBW
-    report "S_DBW must match M_DBW. Data byte widths are implicitly defined as the ratio of data width to keep width."
+    report "axis_resize: Input and output data byte widths must be " &
+      "equal. They are implicitly defined as the ratio of data width to keep " &
+      "width."
     severity error;
 
   assert S_UBW = M_UBW
-    report "S_UBW must match M_UBW. User byte widths are implicitly defined as the ratio of user width to keep width."
+  report "axis_resize: Input and output user byte widths must be " &
+    "equal. They are implicitly defined as the ratio of user width to keep " &
+    "width."
     severity error;
 
 
@@ -118,7 +122,7 @@ begin
 
         end if;
 
-        if srst then 
+        if srst then
           m_axis.tvalid <= '0';
           keep_reg <= (others => '0');
         end if;
@@ -169,13 +173,13 @@ begin
           m_axis.tvalid <= '0';
         end if;
 
-        if srst then 
+        if srst then
           m_axis.tvalid <= '0';
           cnt <= 0;
         end if;
       end if;
     end process;
-  
+
   end generate;
 
 end architecture;

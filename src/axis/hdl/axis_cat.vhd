@@ -24,10 +24,6 @@ entity axis_cat is
     --! downstream modules can accept non-packet packets, then
     --! set this to false to save resources.
     G_PACK_OUTPUT : boolean := true;
-    --! Only applicable if G_PACK_OUTPUT is true.
-    --! Only set this to true if it is possible for input packets to have a
-    --! fully nulled-out tlast. 
-    G_SUPPORT_NULL_TLAST : boolean := false;
     --! Add an extra pipeline register to the internal datapath.
     G_DATA_PIPE  : boolean  := false;
     --! Add an extra pipeline register to the internal backpressure path.
@@ -65,7 +61,7 @@ begin
   prc_switch_on_tlast : process (clk) begin
     if rising_edge(clk) then
       if s_axis(sel).tvalid and s_axis(sel).tready and s_axis(sel).tlast then
-        if sel = s_axis'high then 
+        if sel = s_axis'high then
           sel <= s_axis'low;
         else
           sel <= sel + 1;
@@ -106,9 +102,6 @@ begin
   gen_packer : if G_PACK_OUTPUT generate
 
     u_axis_pack : entity work.axis_pack
-    generic map(
-      G_SUPPORT_NULL_TLAST => G_SUPPORT_NULL_TLAST
-    )
     port map(
       clk    => clk,
       srst   => srst,
