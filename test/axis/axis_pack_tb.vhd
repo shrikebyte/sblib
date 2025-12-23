@@ -27,8 +27,8 @@ entity axis_pack_tb is
     RUNNER_CFG      : string;
     G_ENABLE_JITTER : boolean := false;
     G_KW            : integer := 4;
-    G_DW            : integer := 32;
-    G_UW            : integer := 32;
+    G_DW            : integer := 16;
+    G_UW            : integer := 4;
     G_PACKED_INPUT_STREAM : boolean := false
   );
 end entity;

@@ -25,78 +25,6 @@ end entity;
 
 architecture rtl of axis_pack is
 
-  constant DW : integer := m_axis.tdata'length;
-  constant KW : integer := m_axis.tkeep'length;
-  constant UW : integer := m_axis.tuser'length;
-  constant DBW : integer := DW / KW;
-  constant UBW : integer := UW / KW;
-
-  type state_t is (ST_IDLE, ST_PACK, ST_LAST);
-  signal state : state_t;
-
-  -- Output enable
-  signal oe : std_ulogic;
-
-  -- Residual tdata and tkeep. Stores leftover bytes that need to be
-  -- sent after the current packed beat has been sent.
-  signal resid_tkeep_reg : std_ulogic_vector(m_axis.tkeep'range);
-  signal resid_tdata_reg : std_ulogic_vector(m_axis.tdata'range);
-  signal resid_tuser_reg : std_ulogic_vector(m_axis.tuser'range);
-
-
-  -- Represents packed data type, comprising of 2 back-to-back beats with
-  -- some tkeep bits unset in one or both beats.
-  type pack_t is record
-    packed_tkeep : std_ulogic_vector(KW-1 downto 0);
-    packed_tdata : std_ulogic_vector(DW-1 downto 0);
-    packed_tuser : std_ulogic_vector(UW-1 downto 0);
-    resid_tkeep  : std_ulogic_vector(KW-1 downto 0);
-    resid_tdata  : std_ulogic_vector(DW-1 downto 0);
-    resid_tuser  : std_ulogic_vector(UW-1 downto 0);
-  end record;
-
-  signal pack : pack_t;
-
-  -- ---------------------------------------------------------------------------
-  impure function calc_pack (
-    lo_count : integer range 0 to KW;
-    lo_tdata : std_ulogic_vector(DW-1 downto 0);
-    lo_tuser : std_ulogic_vector(UW-1 downto 0);
-    hi_count : integer range 0 to KW;
-    hi_tdata : std_ulogic_vector(DW-1 downto 0);
-    hi_tuser : std_ulogic_vector(UW-1 downto 0);
-  ) return pack_t
-  is
-    variable tkeep : std_ulogic_vector(KW * 2 - 1 downto 0) := (others => '0');
-    variable tdata : std_ulogic_vector(DW * 2 - 1 downto 0) := (others => '-');
-    variable tuser : std_ulogic_vector(UW * 2 - 1 downto 0) := (others => '-');
-    variable combined_count : integer range 0 to KW * 2 := lo_count + hi_count;
-    variable result : pack_t;
-  begin
-
-    tdata(lo_count * DBW - 1 downto 0) := lo_tdata(lo_count * DBW - 1 downto 0);
-    tuser(lo_count * UBW - 1 downto 0) := lo_tuser(lo_count * UBW - 1 downto 0);
-
-    tdata(combined_count * DBW - 1 downto lo_count * DBW) := hi_tdata(hi_count * DBW - 1 downto 0);
-    tuser(combined_count * UBW - 1 downto lo_count * UBW) := hi_tuser(hi_count * UBW - 1 downto 0);
-
-    tkeep(combined_count - 1 downto 0) := (others=>'1');
-
-    result.packed_tkeep := tkeep(KW - 1 downto 0);
-    result.packed_tdata := tdata(DW - 1 downto 0);
-    result.packed_tuser := tuser(UW - 1 downto 0);
-    result.resid_tkeep  := tkeep(KW * 2 - 1 downto KW);
-    result.resid_tdata  := tdata(DW * 2 - 1 downto DW);
-    result.resid_tuser  := tuser(UW * 2 - 1 downto UW);
-
-    return result;
-  end function;
-
-  signal packed_all_are_valid : std_ulogic;
-  signal packed_at_least_one_is_valid : std_ulogic;
-  signal resid_at_least_one_is_valid : std_ulogic;
-
-
   -- Not synthesized. Only for assertion check.
   function is_contiguous(vec : std_ulogic_vector) return boolean is
     variable saw_zero : boolean := false;
@@ -112,8 +40,40 @@ architecture rtl of axis_pack is
     return true;
   end function;
 
-  signal resid_count : integer range 0 to KW;
-  signal input_count : integer range 0 to KW;
+  constant DW : integer := m_axis.tdata'length;
+  constant KW : integer := m_axis.tkeep'length;
+  constant UW : integer := m_axis.tuser'length;
+  constant DBW : integer := DW / KW;
+  constant UBW : integer := UW / KW;
+
+  constant KW_ZEROS : std_ulogic_vector(KW-1 downto 0) := (others=>'0');
+
+  type state_t is (ST_PACK, ST_LAST);
+  signal state_nxt : state_t;
+  signal state_reg : state_t;
+
+  signal pipe0_axis : axis_t (
+    tkeep(KW - 1 downto 0),
+    tdata(DW - 1 downto 0),
+    tuser(UW - 1 downto 0)
+  );
+
+  signal pipe1_axis_nxt : axis_t (
+    tkeep(KW * 2 - 1 downto 0),
+    tdata(DW * 2 - 1 downto 0),
+    tuser(UW * 2 - 1 downto 0)
+  );
+
+  signal pipe1_axis_reg : axis_t (
+    tkeep(KW * 2 - 1 downto 0),
+    tdata(DW * 2 - 1 downto 0),
+    tuser(UW * 2 - 1 downto 0)
+  );
+
+  signal pipe0_axis_cnt : integer range 0 to KW;
+
+  signal offset_nxt : integer range 0 to KW - 1;
+  signal offset_reg : integer range 0 to KW - 1;
 
 begin
 
@@ -141,110 +101,135 @@ begin
   end process;
 
   -- ---------------------------------------------------------------------------
-  resid_count <= cnt_ones(resid_tkeep_reg);
-  input_count <= cnt_ones(s_axis.tkeep);
-  oe <= m_axis.tready or not m_axis.tvalid;
-  s_axis.tready <= oe and (state = ST_PACK);
-  packed_all_are_valid <= and pack.packed_tkeep;
-  packed_at_least_one_is_valid <= or pack.packed_tkeep;
-  resid_at_least_one_is_valid <= or pack.resid_tkeep;
-
-  pack <= calc_pack (
-    lo_count => resid_count,
-    lo_tdata => resid_tdata_reg,
-    lo_tuser => resid_tuser_reg,
-    hi_count => input_count,
-    hi_tdata => s_axis.tdata,
-    hi_tuser => s_axis.tuser
-  );
-
+  s_axis.tready <= (pipe0_axis.tready or not pipe0_axis.tvalid);
+  pipe0_axis.tready <= (pipe1_axis_reg.tready or not pipe1_axis_reg.tvalid) and (state_reg = ST_PACK);
 
   -- ---------------------------------------------------------------------------
-  prc_fsm : process (clk) begin
+  -- Pre-calculate pipe0_axis_cnt for better timing
+  prc_pipe0 : process (clk) begin
     if rising_edge(clk) then
-
-      -- By default, clear m_valid if m_ready. The FSM might override this
-      --  if it has new data to send.
-      if m_axis.tready then
-        m_axis.tvalid <= '0';
-      end if;
-
-      case state is
-
-        -- ---------------------------------------------------------------------
-        when ST_PACK =>
-          if s_axis.tvalid and s_axis.tready then
-            -- If new input beat
-
-            m_axis.tkeep <= pack.packed_tkeep;
-            m_axis.tdata <= pack.packed_tdata;
-            m_axis.tuser <= pack.packed_tuser;
-
-            if packed_all_are_valid then
-              -- If a new packed beat is ready, then shift out the packed data
-              -- to be transmitted on the next cycle and shift in the residual
-              -- data to be transmitted the next time we have a new full output
-              -- beat.
-              resid_tkeep_reg  <= pack.resid_tkeep;
-              resid_tdata_reg  <= pack.resid_tdata;
-              resid_tuser_reg  <= pack.resid_tuser;
-            else
-              -- Otherwise, store the partially-packed output data in the
-              -- residual buffer.
-              resid_tkeep_reg  <= pack.packed_tkeep;
-              resid_tdata_reg  <= pack.packed_tdata;
-              resid_tuser_reg  <= pack.packed_tuser;
-            end if;
-
-            if s_axis.tlast then
-
-              m_axis.tvalid <= '1';
-
-              if resid_at_least_one_is_valid then
-                -- If there are ANY residual bytes, we need to transmit
-                -- one additional beat to finish the packet.
-                m_axis.tlast <= '0';
-                state        <= ST_LAST;
-              else
-                -- Otherwise, if there are no residual bytes left at this point,
-                -- we're done.
-                m_axis.tlast <= '1';
-                resid_tkeep_reg  <= (others => '0');
-              end if;
-
-            else
-
-              -- If normal input beat and ALL of the packed output beats are
-              -- valid, then output is valid.
-              m_axis.tvalid <= packed_all_are_valid;
-              m_axis.tlast  <= '0';
-            end if;
-
-          end if;
-
-        -- ---------------------------------------------------------------------
-        when ST_LAST =>
-          if oe then
-            -- If output is ready
-            m_axis.tvalid <= '1';
-            m_axis.tdata  <= resid_tdata_reg;
-            m_axis.tuser  <= resid_tuser_reg;
-            m_axis.tkeep  <= resid_tkeep_reg;
-            m_axis.tlast  <= '1';
-            resid_tkeep_reg     <= (others => '0');
-            state           <= ST_PACK;
-          end if;
-
-        when others =>
-          null;
-      end case;
-
-      if srst then
-        m_axis.tvalid  <= '0';
-        resid_tkeep_reg      <= (others => '0');
-        state            <= ST_PACK;
+      if s_axis.tvalid and s_axis.tready then
+        pipe0_axis.tvalid   <= '1';
+        pipe0_axis.tlast    <= s_axis.tlast;
+        pipe0_axis.tdata    <= s_axis.tdata;
+        pipe0_axis.tkeep    <= s_axis.tkeep;
+        pipe0_axis.tuser    <= s_axis.tuser;
+        --
+        pipe0_axis_cnt   <= cnt_ones(s_axis.tkeep);
+      elsif pipe0_axis.tready then
+        pipe0_axis.tvalid <= '0';
       end if;
     end if;
   end process;
+
+  -- ---------------------------------------------------------------------------
+  prc_fsm_comb : process (all) begin
+    pipe1_axis_nxt.tvalid <= pipe1_axis_reg.tvalid;
+    pipe1_axis_nxt.tlast  <= pipe1_axis_reg.tlast ;
+    pipe1_axis_nxt.tkeep(pipe1_axis_nxt.tkeep'range)  <= pipe1_axis_reg.tkeep(pipe1_axis_nxt.tkeep'range) ;
+    pipe1_axis_nxt.tdata(pipe1_axis_nxt.tdata'range)  <= pipe1_axis_reg.tdata(pipe1_axis_nxt.tdata'range) ;
+    pipe1_axis_nxt.tuser(pipe1_axis_nxt.tuser'range)  <= pipe1_axis_reg.tuser(pipe1_axis_nxt.tuser'range) ;
+    --
+    offset_nxt <= offset_reg;
+    state_nxt <= state_reg;
+
+    case state_reg is
+
+      -- -----------------------------------------------------------------------
+      when ST_PACK =>
+        if pipe0_axis.tvalid and pipe0_axis.tready then
+
+          if pipe0_axis.tlast then
+            offset_nxt <= 0;
+            if pipe1_axis_nxt.tkeep(KW) then
+              pipe1_axis_nxt.tlast <= '0';
+              state_nxt <= ST_LAST;
+            else
+              pipe1_axis_nxt.tlast <= '1';
+            end if;
+          else
+            offset_nxt <= (offset_reg + pipe0_axis_cnt) mod KW;
+            pipe1_axis_nxt.tlast <= '0';
+          end if;
+
+          if pipe1_axis_nxt.tkeep(KW-1) or pipe0_axis.tlast then
+            pipe1_axis_nxt.tvalid <= '1';
+          else
+            pipe1_axis_nxt.tvalid <= '0';
+          end if;
+
+          if pipe1_axis_reg.tkeep(KW-1) or pipe1_axis_reg.tlast then
+            -- Shift in AND shift out
+            pipe1_axis_nxt.tkeep <= KW_ZEROS & pipe1_axis_reg.tkeep(KW * 2 - 1 downto KW);
+            pipe1_axis_nxt.tkeep(offset_reg + KW - 1 downto offset_reg) <= pipe0_axis.tkeep;
+            --
+            pipe1_axis_nxt.tdata(DW - 1 downto 0) <= pipe1_axis_reg.tdata(DW * 2 - 1 downto DW);
+            pipe1_axis_nxt.tdata((offset_reg * DBW) + DW - 1 downto (offset_reg * DBW)) <= pipe0_axis.tdata;
+            --
+            pipe1_axis_nxt.tuser(UW - 1 downto 0) <= pipe1_axis_reg.tuser(UW * 2 - 1 downto UW);
+            pipe1_axis_nxt.tuser((offset_reg * UBW) + UW - 1 downto (offset_reg * UBW)) <= pipe0_axis.tuser;
+          else
+            -- Accumulate
+            pipe1_axis_nxt.tkeep(offset_reg + KW - 1 downto offset_reg) <= pipe0_axis.tkeep;
+            --
+            pipe1_axis_nxt.tdata((offset_reg * DBW) + DW - 1 downto (offset_reg * DBW)) <= pipe0_axis.tdata;
+            --
+            pipe1_axis_nxt.tuser((offset_reg * UBW) + UW - 1 downto (offset_reg * UBW)) <= pipe0_axis.tuser;
+          end if;
+        elsif pipe1_axis_reg.tready then
+          pipe1_axis_nxt.tvalid <= '0';
+        end if;
+
+      -- -----------------------------------------------------------------------
+      when ST_LAST =>
+        if pipe1_axis_reg.tready then
+          -- We already know that pipe1_axis_reg.tvalid is high here because it
+          -- was set by the prev state.
+          pipe1_axis_nxt.tvalid <= '1';
+          pipe1_axis_nxt.tlast <= '1';
+          --
+          -- Shift out
+          pipe1_axis_nxt.tkeep <= KW_ZEROS & pipe1_axis_reg.tkeep(KW * 2 - 1 downto KW);
+          pipe1_axis_nxt.tdata(DW - 1 downto 0) <= pipe1_axis_reg.tdata(DW * 2 - 1 downto DW);
+          pipe1_axis_nxt.tuser(UW - 1 downto 0) <= pipe1_axis_reg.tuser(UW * 2 - 1 downto UW);
+          --
+          state_nxt <= ST_PACK;
+        end if;
+
+    end case;
+
+  end process;
+
+  -- ---------------------------------------------------------------------------
+  prc_fsm_ff : process (clk) begin
+    if rising_edge(clk) then
+      pipe1_axis_reg.tvalid <= pipe1_axis_nxt.tvalid;
+      pipe1_axis_reg.tlast  <= pipe1_axis_nxt.tlast ;
+      pipe1_axis_reg.tkeep  <= pipe1_axis_nxt.tkeep ;
+      pipe1_axis_reg.tdata  <= pipe1_axis_nxt.tdata ;
+      pipe1_axis_reg.tuser  <= pipe1_axis_nxt.tuser ;
+      --
+      offset_reg <= offset_nxt;
+      state_reg  <= state_nxt;
+
+      if srst then
+        pipe1_axis_reg.tvalid <= '0';
+        pipe1_axis_reg.tkeep  <= (others=>'0');
+        --
+        offset_reg <= 0;
+        state_reg  <= ST_PACK;
+      end if;
+    end if;
+  end process;
+
+
+  -- ---------------------------------------------------------------------------
+  pipe1_axis_reg.tready <= m_axis.tready;
+
+  m_axis.tvalid <= pipe1_axis_reg.tvalid;
+  m_axis.tlast  <= pipe1_axis_reg.tlast;
+  m_axis.tkeep  <= pipe1_axis_reg.tkeep(KW - 1 downto 0);
+  m_axis.tdata  <= pipe1_axis_reg.tdata(DW - 1 downto 0);
+  m_axis.tuser  <= pipe1_axis_reg.tuser(UW - 1 downto 0);
 
 end architecture;
