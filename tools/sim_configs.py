@@ -200,3 +200,20 @@ def add_configs(lib):
                 "G_PACKED_INPUT_STREAM": packed_input_stream,
             },
         )
+
+    ############################################################################
+    tb = lib.test_bench("axis_slice_tb")
+
+    enable_jitter = [True, False]
+    packed_input_stream = [True, False]
+
+    for enable_jitter, packed_input_stream in product(
+        enable_jitter, packed_input_stream
+    ):
+        sim_utils.named_config(
+            tb,
+            {
+                "G_ENABLE_JITTER": enable_jitter,
+                "G_PACKED_INPUT_STREAM": packed_input_stream,
+            },
+        )

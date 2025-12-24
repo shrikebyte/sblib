@@ -31,8 +31,6 @@ architecture rtl of axis_pack is
   constant DBW : integer := DW / KW;
   constant UBW : integer := UW / KW;
 
-  constant KW_ZEROS : std_ulogic_vector(KW-1 downto 0) := (others=>'0');
-
   -- Not synthesized. Only for assertion check.
   function is_contiguous(vec : std_ulogic_vector) return boolean is
     variable saw_zero : boolean := false;
@@ -123,6 +121,10 @@ begin
       elsif pipe0_axis.tready then
         pipe0_axis.tvalid <= '0';
       end if;
+
+      if srst then
+        pipe0_axis.tvalid <= '0';
+      end if;
     end if;
   end process;
 
@@ -146,40 +148,49 @@ begin
           if pipe0_axis.tlast then
             offset_nxt <= 0;
             if pipe1_axis_nxt.tkeep(KW) then
+              -- If there will be residual bytes leftover in the buffer when
+              -- we get an input tlast, then we need to stall the input for one
+              -- transaction and send one extra output beat to transmit
+              -- the residuals. This situation arises when a partial beat
+              -- has already been accumulated and a tlast input beat causes
+              -- the buffer to overflow past the number of bytes in one beat.
               pipe1_axis_nxt.tlast <= '0';
               state_nxt <= ST_LAST;
             else
+              -- Otherwise, send the last on the next beat and continue on
+              -- with business as usual.
               pipe1_axis_nxt.tlast <= '1';
             end if;
           else
+            -- Increment the buffer offset by the number of new input bytes.
+            -- The offset uses natural unsigned rollover when keep width
+            -- is a power of 2. That's what the modulous operator synthesizes
+            -- to here. Its the same thing as using an unsigned type with
+            -- automatic rollover, but using an integer is more convenient here.
             offset_nxt <= (offset_reg + pipe0_axis_cnt) mod KW;
             pipe1_axis_nxt.tlast <= '0';
           end if;
 
           if pipe1_axis_nxt.tkeep(KW-1) or pipe0_axis.tlast then
+            -- If the next output buffer will be full or the current input
+            -- is a tlast, then the next output should be valid
             pipe1_axis_nxt.tvalid <= '1';
           else
             pipe1_axis_nxt.tvalid <= '0';
           end if;
 
           if pipe1_axis_reg.tkeep(KW-1) or pipe1_axis_reg.tlast then
-            -- Shift in AND shift out
-            pipe1_axis_nxt.tkeep <= KW_ZEROS & pipe1_axis_reg.tkeep(KW * 2 - 1 downto KW);
-            pipe1_axis_nxt.tkeep(offset_reg + KW - 1 downto offset_reg) <= pipe0_axis.tkeep;
-            --
+            -- If the current output beat is full / last, then shift out.
+            pipe1_axis_nxt.tkeep <= std_ulogic_vector(shift_right(unsigned(pipe1_axis_reg.tkeep), KW));
             pipe1_axis_nxt.tdata(DW - 1 downto 0) <= pipe1_axis_reg.tdata(DW * 2 - 1 downto DW);
-            pipe1_axis_nxt.tdata((offset_reg * DBW) + DW - 1 downto (offset_reg * DBW)) <= pipe0_axis.tdata;
-            --
             pipe1_axis_nxt.tuser(UW - 1 downto 0) <= pipe1_axis_reg.tuser(UW * 2 - 1 downto UW);
-            pipe1_axis_nxt.tuser((offset_reg * UBW) + UW - 1 downto (offset_reg * UBW)) <= pipe0_axis.tuser;
-          else
-            -- Accumulate
-            pipe1_axis_nxt.tkeep(offset_reg + KW - 1 downto offset_reg) <= pipe0_axis.tkeep;
-            --
-            pipe1_axis_nxt.tdata((offset_reg * DBW) + DW - 1 downto (offset_reg * DBW)) <= pipe0_axis.tdata;
-            --
-            pipe1_axis_nxt.tuser((offset_reg * UBW) + UW - 1 downto (offset_reg * UBW)) <= pipe0_axis.tuser;
           end if;
+
+          -- Store the new input data at the buffer offset.
+          pipe1_axis_nxt.tkeep(offset_reg + KW - 1 downto offset_reg) <= pipe0_axis.tkeep;
+          pipe1_axis_nxt.tdata((offset_reg * DBW) + DW - 1 downto (offset_reg * DBW)) <= pipe0_axis.tdata;
+          pipe1_axis_nxt.tuser((offset_reg * UBW) + UW - 1 downto (offset_reg * UBW)) <= pipe0_axis.tuser;
+
         elsif pipe1_axis_reg.tready then
           pipe1_axis_nxt.tvalid <= '0';
         end if;
@@ -188,12 +199,12 @@ begin
       when ST_LAST =>
         if pipe1_axis_reg.tready then
           -- We already know that pipe1_axis_reg.tvalid is high here because it
-          -- was set by the prev state.
+          -- was set by the prev state, so no need to check for it.
           pipe1_axis_nxt.tvalid <= '1';
           pipe1_axis_nxt.tlast <= '1';
           --
           -- Shift out
-          pipe1_axis_nxt.tkeep <= KW_ZEROS & pipe1_axis_reg.tkeep(KW * 2 - 1 downto KW);
+          pipe1_axis_nxt.tkeep <= std_ulogic_vector(shift_right(unsigned(pipe1_axis_reg.tkeep), KW));
           pipe1_axis_nxt.tdata(DW - 1 downto 0) <= pipe1_axis_reg.tdata(DW * 2 - 1 downto DW);
           pipe1_axis_nxt.tuser(UW - 1 downto 0) <= pipe1_axis_reg.tuser(UW * 2 - 1 downto UW);
           --

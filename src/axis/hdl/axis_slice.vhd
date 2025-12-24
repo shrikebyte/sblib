@@ -4,6 +4,8 @@
 --# Lang : VHDL'19
 --# ============================================================================
 --! Slice one input packet into several output packets
+--! TODO: Potentially improve thruput by removing the tready wait at the
+--! start of each new packet.
 --##############################################################################
 
 library ieee;
@@ -14,7 +16,7 @@ use work.axis_pkg.all;
 
 entity axis_slice is
   generic (
-    G_MAX_M0_BYTES : positive := 2048;
+    G_MAX_M0_BYTES : positive := 2047;
     G_PACK_OUTPUT : boolean := true;
   );
   port (
@@ -48,6 +50,7 @@ architecture rtl of axis_slice is
   signal state : state_t;
 
   signal remain_cnt : natural range 0 to G_MAX_M0_BYTES;
+  signal pipe0_num_bytes : natural range 0 to G_MAX_M0_BYTES;
   signal pipe0_axis_cnt : natural range 0 to KW;
 
   signal partial_tkeep : std_ulogic_vector(s_axis.tkeep'range);
@@ -93,8 +96,13 @@ begin
         pipe0_axis.tkeep    <= s_axis.tkeep;
         pipe0_axis.tuser    <= s_axis.tuser;
         --
-        pipe0_axis_cnt   <= cnt_ones_contig(s_axis.tkeep);
+        pipe0_axis_cnt <= cnt_ones_contig(s_axis.tkeep);
+        pipe0_num_bytes <= num_bytes;
       elsif pipe0_axis.tready then
+        pipe0_axis.tvalid <= '0';
+      end if;
+
+      if srst then
         pipe0_axis.tvalid <= '0';
       end if;
     end if;
@@ -114,8 +122,8 @@ begin
         -- ---------------------------------------------------------------------
         when ST_IDLE =>
           if pipe0_axis.tvalid then
-            if num_bytes /= 0 then
-              remain_cnt <= num_bytes;
+            if pipe0_num_bytes /= 0 then
+              remain_cnt <= pipe0_num_bytes;
               state    <= ST_TX0;
             else
               state    <= ST_TX1;
@@ -177,12 +185,11 @@ begin
               end if;
               remain_cnt <= 0;
 
-              -- Store the upper bytes of the partial beat for the next output
-              -- beat
-              partial_tkeep(KW - remain_cnt - 1 downto 0) <= pipe0_axis.tkeep(KW - 1 downto remain_cnt);
-              partial_tkeep(KW - 1 downto KW - remain_cnt) <= (others=>'0');
-              partial_tdata((KW - remain_cnt) * DBW - 1 downto 0) <= pipe0_axis.tdata(KW * DBW - 1 downto remain_cnt * DBW);
-              partial_tuser((KW - remain_cnt) * UBW - 1 downto 0) <= pipe0_axis.tuser(KW * UBW - 1 downto remain_cnt * UBW);
+              -- Shift and store the upper bytes of the partial beat for the
+              -- next output beat.
+              partial_tkeep <= std_ulogic_vector(shift_right(unsigned(pipe0_axis.tkeep), remain_cnt));
+              partial_tdata <= std_ulogic_vector(shift_right(unsigned(pipe0_axis.tdata), remain_cnt * DBW));
+              partial_tuser <= std_ulogic_vector(shift_right(unsigned(pipe0_axis.tuser), remain_cnt * UBW));
 
               state <= ST_PARTIAL;
             end if;
@@ -191,8 +198,8 @@ begin
         -- ---------------------------------------------------------------------
         when ST_PARTIAL =>
           if int0_axis.tready then
-            -- We already know that pipe1_axis_reg.tvalid is high here because
-            -- it was set by the prev state.
+            -- We already know that int0_axis.tvalid is high here because
+            -- it was set by the prev state, so no need to check for it.
             int0_axis.tvalid  <= '1';
             int0_axis.tkeep   <= partial_tkeep;
             int0_axis.tdata   <= partial_tdata;

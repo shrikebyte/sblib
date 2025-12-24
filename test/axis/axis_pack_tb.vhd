@@ -25,7 +25,7 @@ use work.bfm_pkg.all;
 entity axis_pack_tb is
   generic (
     RUNNER_CFG      : string;
-    G_ENABLE_JITTER : boolean := false;
+    G_ENABLE_JITTER : boolean := true;
     G_KW            : integer := 4;
     G_DW            : integer := 16;
     G_UW            : integer := 4;

@@ -25,7 +25,8 @@ use work.bfm_pkg.all;
 entity axis_slice_tb is
   generic (
     RUNNER_CFG      : string;
-    G_ENABLE_JITTER : boolean := false;
+    G_ENABLE_JITTER : boolean := true;
+    G_PACKED_INPUT_STREAM : boolean := false
   );
 end entity;
 
@@ -36,7 +37,7 @@ architecture tb of axis_slice_tb is
   constant CLK_PERIOD  : time     := 5 ns;
   constant NUM_OUTPUTS : integer  := 2;
   constant KW          : integer  := 4;
-  constant DW          : integer  := 64;
+  constant DW          : integer  := 32;
   constant UW          : integer  := 32;
   constant DBW         : integer  := DW / KW;
   constant UBW         : integer  := UW / KW;
@@ -95,20 +96,24 @@ begin
       constant PACKET_LENGTH_BYTES : natural := rnd.Uniform(1, 4 * KW);
       constant SPLIT_LENGTH_BYTES : natural := rnd.Uniform(0, 5 * KW);
 
-      impure function get_m0_len return natural is
+      function get_m0_len return natural is
       begin
         if (PACKET_LENGTH_BYTES > SPLIT_LENGTH_BYTES) then
+          -- Normal case. Packet gets split.
           return SPLIT_LENGTH_BYTES;
         else
+          -- Runt packet.
           return PACKET_LENGTH_BYTES;
         end if;
       end function;
 
-      impure function get_m1_len return natural is
+      function get_m1_len return natural is
       begin
         if (PACKET_LENGTH_BYTES > SPLIT_LENGTH_BYTES) then
+          -- Normal case. Remaining bytes get sent down m1.
           return PACKET_LENGTH_BYTES - SPLIT_LENGTH_BYTES;
         else
+          -- Runt packet. Nothing gets sent down m1.
           return 0;
         end if;
       end function;
@@ -267,7 +272,8 @@ begin
   generic map(
     G_DATA_QUEUE   => DATA_QUEUE,
     G_USER_QUEUE   => USER_QUEUE,
-    G_STALL_CONFIG => STALL_CFG
+    G_STALL_CONFIG => STALL_CFG,
+    G_PACKED_STREAM => G_PACKED_INPUT_STREAM
   )
   port map(
     clk    => clk,
@@ -279,6 +285,7 @@ begin
     generic map(
       G_REF_DATA_QUEUE => REF_DATA_QUEUES(i),
       G_REF_USER_QUEUE => REF_USER_QUEUES(i),
+      G_LOGGER_NAME_SUFFIX => to_string(i),
       G_STALL_CONFIG   => STALL_CFG
     )
     port map(
