@@ -72,6 +72,7 @@ architecture tb of axis_slice_tb is
     max_stall_cycles  => 3
   );
 
+  constant NUM_BYTES_QUEUE : queue_t := new_queue;
   constant DATA_QUEUE : queue_t := new_queue;
   constant USER_QUEUE : queue_t := new_queue;
 
@@ -144,7 +145,7 @@ begin
 
       variable s_user : integer_array_t :=
         new_1d (
-          length => packet_length_bytes,
+          length => PACKET_LENGTH_BYTES,
           bit_width => UBW,
           is_signed => false
       );
@@ -206,6 +207,7 @@ begin
         end loop;
       end if;
 
+      push(NUM_BYTES_QUEUE, SPLIT_LENGTH_BYTES);
       push_ref(DATA_QUEUE, s_data);
       push_ref(USER_QUEUE, s_user);
       if M0_LEN /= 0 then
@@ -296,6 +298,13 @@ begin
   end generate;
 
   -- ---------------------------------------------------------------------------
-  num_bytes <= to_integer(u_unsigned(s_axis.tuser(UBW-1 downto 0)));
+  prc_num_bytes : process is
+  begin
+    while is_empty(NUM_BYTES_QUEUE) loop
+      wait until rising_edge(clk);
+    end loop;
+    num_bytes <= pop(NUM_BYTES_QUEUE);
+    wait until s_axis.tvalid and s_axis.tready and s_axis.tlast and rising_edge(clk);
+  end process;
 
 end architecture;
