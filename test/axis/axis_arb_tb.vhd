@@ -68,14 +68,14 @@ architecture tb of axis_arb_tb is
     max_stall_cycles  => 3
   );
 
-  constant DATA_QUEUES : queue_vec_t(s_axis'range) := 
-    get_new_queues(s_axis'length);  
-  constant USER_QUEUES  : queue_vec_t(s_axis'range) := 
-    get_new_queues(s_axis'length);  
-  constant REF_DATA_QUEUES  : queue_vec_t(s_axis'range) := 
-    get_new_queues(s_axis'length);  
-  constant REF_USER_QUEUES : queue_vec_t(s_axis'range) := 
-    get_new_queues(s_axis'length);  
+  constant DATA_QUEUES : queue_vec_t(s_axis'range) :=
+    get_new_queues(s_axis'length);
+  constant USER_QUEUES  : queue_vec_t(s_axis'range) :=
+    get_new_queues(s_axis'length);
+  constant REF_DATA_QUEUES  : queue_vec_t(s_axis'range) :=
+    get_new_queues(s_axis'length);
+  constant REF_USER_QUEUES : queue_vec_t(s_axis'range) :=
+    get_new_queues(s_axis'length);
 
   signal num_packets_checked : nat_arr_t(s_axis'range) := (others => 0);
   signal bfm_m_tvalid : std_ulogic_vector(s_axis'range) := (others => '0');
@@ -86,7 +86,7 @@ begin
   -- ---------------------------------------------------------------------------
   test_runner_watchdog(runner, 100 us);
   prc_main : process
-  
+
     variable rnd : RandomPType;
     variable num_tests : nat_arr_t(s_axis'range) := (others => 0);
 
@@ -114,7 +114,7 @@ begin
 
       assert INPUT_IDX >= 0 and INPUT_IDX < 2**UW
         report "ERROR: INPUT_IDX > 0 and INPUT_IDX <" & to_string(2**UW)
-        severity error;      
+        severity error;
 
       -- Random test data packet
       random_integer_array (
@@ -173,7 +173,7 @@ begin
   clk <= not clk after CLK_PERIOD / 2;
 
   -- ---------------------------------------------------------------------------
-  u_axis_mux : entity work.axis_arb
+  u_axis_arb : entity work.axis_arb
   generic map (
     G_LOW_AREA => G_LOW_AREA
   )

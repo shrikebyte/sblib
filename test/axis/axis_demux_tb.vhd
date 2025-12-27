@@ -25,7 +25,6 @@ use work.bfm_pkg.all;
 entity axis_demux_tb is
   generic (
     RUNNER_CFG      : string;
-    G_LOW_AREA      : boolean := false;
     G_ENABLE_JITTER : boolean := true
   );
 end entity;
@@ -90,7 +89,7 @@ begin
   -- ---------------------------------------------------------------------------
   test_runner_watchdog(runner, 100 us);
   prc_main : process is
-    
+
     variable rnd : randomptype;
     variable num_tests : natural := 0;
 
@@ -166,9 +165,6 @@ begin
 
   -- ---------------------------------------------------------------------------
   u_axis_demux : entity work.axis_demux
-  generic map (
-    G_LOW_AREA => G_LOW_AREA
-  )
   port map (
     clk    => clk,
     srst   => srst,
