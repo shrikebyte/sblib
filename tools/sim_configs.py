@@ -102,21 +102,6 @@ def add_configs(lib):
         )
 
     ############################################################################
-    tb = lib.test_bench("axis_mux_tb")
-
-    enable_jitter = [True]
-    low_area = [True, False]
-
-    for enable_jitter, low_area in product(enable_jitter, low_area):
-        sim_utils.named_config(
-            tb,
-            {
-                "G_ENABLE_JITTER": enable_jitter,
-                "G_LOW_AREA": low_area,
-            },
-        )
-
-    ############################################################################
     tb = lib.test_bench("axis_arb_tb")
 
     enable_jitter = [True]

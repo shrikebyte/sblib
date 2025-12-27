@@ -18,12 +18,6 @@ use work.util_pkg.all;
 use work.axis_pkg.all;
 
 entity axis_arb is
-  generic (
-    --! Use a lower area implementation. This results in one bubble cycle per
-    --! packet. For large packet sizes, or where throughput is a less of a
-    --! concern than utilization, this alternate implementation makes sense.
-    G_LOW_AREA : boolean := false
-  );
   port (
     clk    : in    std_ulogic;
     srst   : in    std_ulogic;
@@ -51,9 +45,6 @@ begin
 
   -- ---------------------------------------------------------------------------
   u_axis_mux : entity work.axis_mux
-  generic map(
-    G_LOW_AREA => G_LOW_AREA
-  )
   port map(
     clk => clk,
     srst => srst,

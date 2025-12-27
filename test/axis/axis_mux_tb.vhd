@@ -26,7 +26,6 @@ entity axis_mux_tb is
   generic (
     RUNNER_CFG        : string;
     G_ENABLE_JITTER   : boolean := true;
-    G_LOW_AREA        : boolean := false;
   );
 end entity;
 
@@ -70,14 +69,14 @@ architecture tb of axis_mux_tb is
     max_stall_cycles  => 3
   );
 
-  constant DATA_QUEUES : queue_vec_t(s_axis'range) := 
-    get_new_queues(s_axis'length);  
-  constant USER_QUEUES  : queue_vec_t(s_axis'range) := 
-    get_new_queues(s_axis'length);  
-  constant REF_DATA_QUEUES  : queue_vec_t(s_axis'range) := 
-    get_new_queues(s_axis'length);  
-  constant REF_USER_QUEUES : queue_vec_t(s_axis'range) := 
-    get_new_queues(s_axis'length);  
+  constant DATA_QUEUES : queue_vec_t(s_axis'range) :=
+    get_new_queues(s_axis'length);
+  constant USER_QUEUES  : queue_vec_t(s_axis'range) :=
+    get_new_queues(s_axis'length);
+  constant REF_DATA_QUEUES  : queue_vec_t(s_axis'range) :=
+    get_new_queues(s_axis'length);
+  constant REF_USER_QUEUES : queue_vec_t(s_axis'range) :=
+    get_new_queues(s_axis'length);
 
   signal num_packets_checked : nat_arr_t(s_axis'range)  := (others => 0);
   signal bfm_m_tvalid : std_ulogic_vector(s_axis'range) := (others => '0');
@@ -116,7 +115,7 @@ begin
 
       assert INPUT_IDX >= 0 and INPUT_IDX < 2**UW
         report "ERROR: INPUT_IDX > 0 and INPUT_IDX <" & to_string(2**UW)
-        severity error;      
+        severity error;
 
       -- Random test data packet
       random_integer_array (
@@ -176,9 +175,6 @@ begin
 
   -- ---------------------------------------------------------------------------
   u_axis_mux : entity work.axis_mux
-  generic map (
-    G_LOW_AREA => G_LOW_AREA
-  )
   port map (
     clk    => clk,
     srst   => srst,

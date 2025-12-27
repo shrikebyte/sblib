@@ -26,7 +26,6 @@ entity axis_arb_tb is
   generic (
     RUNNER_CFG        : string;
     G_ENABLE_JITTER   : boolean := true;
-    G_LOW_AREA        : boolean := false;
   );
 end entity;
 
@@ -174,9 +173,6 @@ begin
 
   -- ---------------------------------------------------------------------------
   u_axis_arb : entity work.axis_arb
-  generic map (
-    G_LOW_AREA => G_LOW_AREA
-  )
   port map (
     clk    => clk,
     srst   => srst,
