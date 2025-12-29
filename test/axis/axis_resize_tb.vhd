@@ -67,9 +67,9 @@ architecture tb of axis_resize_tb is
   );
 
   signal m_axis : axis_t (
-    tdata(S_DW - 1 downto 0),
-    tkeep(S_KW - 1 downto 0),
-    tuser(S_UW - 1 downto 0)
+    tdata(M_DW - 1 downto 0),
+    tkeep(M_KW - 1 downto 0),
+    tuser(M_UW - 1 downto 0)
   );
 
   -- ---------------------------------------------------------------------------
@@ -99,7 +99,7 @@ begin
 
     procedure send_random is
 
-      constant PACKET_LENGTH_BYTES : natural := rnd.Uniform(1, 3 * S_KW);
+      constant PACKET_LENGTH_BYTES : natural := rnd.Uniform(1, 3 * maximum(M_KW, S_KW));
 
       variable data      : integer_array_t := null_integer_array;
       variable data_copy : integer_array_t := null_integer_array;
@@ -168,7 +168,6 @@ begin
   clk <= not clk after CLK_PERIOD / 2;
 
   -- ---------------------------------------------------------------------------
-  -- DUT
   u_axis_resize : entity work.axis_resize
   port map (
     clk    => clk,

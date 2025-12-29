@@ -249,6 +249,16 @@ package util_pkg is
     arr : pos_arr_t
   ) return integer;
 
+  function expand_bits(
+    vec : std_ulogic_vector;
+    N : positive
+  ) return std_ulogic_vector;
+
+  function contract_bits(
+    vec : std_ulogic_vector;
+    N : positive
+  ) return std_ulogic_vector;
+
 end package;
 
 package body util_pkg is
@@ -551,6 +561,49 @@ package body util_pkg is
       end if;
     end loop;
     return rtn;
+  end function;
+
+
+  function expand_bits(
+    vec : std_ulogic_vector;
+    N : positive
+  ) return std_ulogic_vector is
+    constant VEC_LEN : natural := vec'length;
+    constant OUT_LEN : natural := VEC_LEN * N;
+    variable result  : std_ulogic_vector(OUT_LEN - 1 downto 0);
+    variable vec_norm : std_ulogic_vector(VEC_LEN - 1 downto 0);
+  begin
+    vec_norm := vec;
+
+    for i in 0 to VEC_LEN - 1 loop
+      for j in 0 to N - 1 loop
+        result((i * N) + j) := vec_norm(i);
+      end loop;
+    end loop;
+
+    return result;
+  end function;
+
+  function contract_bits(
+    vec : std_ulogic_vector;
+    N : positive
+  ) return std_ulogic_vector is
+    constant VEC_LEN : natural := vec'length;
+    constant OUT_LEN : natural := VEC_LEN / N;
+    variable result  : std_ulogic_vector(OUT_LEN - 1 downto 0);
+    variable vec_norm : std_ulogic_vector(VEC_LEN - 1 downto 0);
+  begin
+    assert (VEC_LEN mod N) = 0
+      report "contract_bits: Vector length must be divisible by N."
+      severity failure;
+
+    vec_norm := vec;
+
+    for i in 0 to OUT_LEN - 1 loop
+      result(i) := vec_norm(i * N);
+    end loop;
+
+    return result;
   end function;
 
 end package body;

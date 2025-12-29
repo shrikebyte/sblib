@@ -138,80 +138,144 @@ def add_configs(lib):
     ############################################################################
     tb = lib.test_bench("axis_resize_tb")
 
-    # No change
-    sim_utils.named_config(
-        tb,
-        {
-            "G_ENABLE_JITTER": True,
-            "G_PACKED_STREAM": False,
-            "G_S_KW": 8,
-            "G_S_DW": 64,
-            "G_S_UW": 8,
-            "G_M_KW": 8,
-            "G_M_DW": 64,
-            "G_M_UW": 8,
-        },
-    )
+    enable_jitter = [True]
+    packed_stream = [True]
 
-    # Upsize
-    sim_utils.named_config(
-        tb,
-        {
-            "G_ENABLE_JITTER": True,
-            "G_PACKED_STREAM": True,
-            "G_S_KW": 2,
-            "G_S_DW": 16,
-            "G_S_UW": 4,
-            "G_M_KW": 8,
-            "G_M_DW": 64,
-            "G_M_UW": 16,
-        },
-    )
+    for enable_jitter, packed_stream in product(enable_jitter, packed_stream):
+        # No change 8->8
+        sim_utils.named_config(
+            tb,
+            {
+                "G_ENABLE_JITTER": enable_jitter,
+                "G_PACKED_STREAM": packed_stream,
+                "G_S_KW": 8,
+                "G_S_DW": 64,
+                "G_S_UW": 16,
+                "G_M_KW": 8,
+                "G_M_DW": 64,
+                "G_M_UW": 16,
+            },
+        )
 
-    # Upsize
-    sim_utils.named_config(
-        tb,
-        {
-            "G_ENABLE_JITTER": False,
-            "G_PACKED_STREAM": True,
-            "G_S_KW": 2,
-            "G_S_DW": 16,
-            "G_S_UW": 2,
-            "G_M_KW": 64,
-            "G_M_DW": 512,
-            "G_M_UW": 64,
-        },
-    )
+        # Upsize 4->8
+        sim_utils.named_config(
+            tb,
+            {
+                "G_ENABLE_JITTER": enable_jitter,
+                "G_PACKED_STREAM": packed_stream,
+                "G_S_KW": 4,
+                "G_S_DW": 32,
+                "G_S_UW": 8,
+                "G_M_KW": 8,
+                "G_M_DW": 64,
+                "G_M_UW": 16,
+            },
+        )
 
-    # Downsize
-    sim_utils.named_config(
-        tb,
-        {
-            "G_ENABLE_JITTER": True,
-            "G_PACKED_STREAM": False,
-            "G_S_KW": 16,
-            "G_S_DW": 128,
-            "G_S_UW": 32,
-            "G_M_KW": 4,
-            "G_M_DW": 32,
-            "G_M_UW": 8,
-        },
-    )
+        # Upsize 2->64
+        sim_utils.named_config(
+            tb,
+            {
+                "G_ENABLE_JITTER": enable_jitter,
+                "G_PACKED_STREAM": packed_stream,
+                "G_S_KW": 2,
+                "G_S_DW": 16,
+                "G_S_UW": 2,
+                "G_M_KW": 64,
+                "G_M_DW": 512,
+                "G_M_UW": 64,
+            },
+        )
 
-    # Downsize
-    sim_utils.named_config(
-        tb,
-        {
-            "G_ENABLE_JITTER": False,
-            "G_PACKED_STREAM": True,
-            "G_S_KW": 2,
-            "G_S_DW": 16,
-            "G_S_UW": 32,
-            "G_M_KW": 1,
-            "G_M_DW": 8,
-            "G_M_UW": 16,
-        },
-    )
+        # Upsize 1->2
+        sim_utils.named_config(
+            tb,
+            {
+                "G_ENABLE_JITTER": enable_jitter,
+                "G_PACKED_STREAM": packed_stream,
+                "G_S_KW": 1,
+                "G_S_DW": 8,
+                "G_S_UW": 1,
+                "G_M_KW": 2,
+                "G_M_DW": 16,
+                "G_M_UW": 2,
+            },
+        )
+
+        # Upsize 1->3
+        sim_utils.named_config(
+            tb,
+            {
+                "G_ENABLE_JITTER": enable_jitter,
+                "G_PACKED_STREAM": packed_stream,
+                "G_S_KW": 1,
+                "G_S_DW": 8,
+                "G_S_UW": 1,
+                "G_M_KW": 3,
+                "G_M_DW": 24,
+                "G_M_UW": 3,
+            },
+        )
+
+        # Downsize 4->2
+        sim_utils.named_config(
+            tb,
+            {
+                "G_ENABLE_JITTER": enable_jitter,
+                "G_PACKED_STREAM": packed_stream,
+                "G_S_KW": 4,
+                "G_S_DW": 32,
+                "G_S_UW": 4,
+                "G_M_KW": 2,
+                "G_M_DW": 16,
+                "G_M_UW": 2,
+            },
+        )
+
+        # Downsize 16->2
+        sim_utils.named_config(
+            tb,
+            {
+                "G_ENABLE_JITTER": enable_jitter,
+                "G_PACKED_STREAM": packed_stream,
+                "G_S_KW": 16,
+                "G_S_DW": 128,
+                "G_S_UW": 32,
+                "G_M_KW": 2,
+                "G_M_DW": 16,
+                "G_M_UW": 4,
+            },
+        )
+
+        # Downsize 2->1
+        sim_utils.named_config(
+            tb,
+            {
+                "G_ENABLE_JITTER": enable_jitter,
+                "G_PACKED_STREAM": packed_stream,
+                "G_S_KW": 2,
+                "G_S_DW": 16,
+                "G_S_UW": 32,
+                "G_M_KW": 1,
+                "G_M_DW": 8,
+                "G_M_UW": 16,
+            },
+        )
+
+        # Downsize 3->1
+        sim_utils.named_config(
+            tb,
+            {
+                "G_ENABLE_JITTER": enable_jitter,
+                "G_PACKED_STREAM": packed_stream,
+                "G_S_KW": 3,
+                "G_S_DW": 24,
+                "G_S_UW": 3,
+                "G_M_KW": 1,
+                "G_M_DW": 8,
+                "G_M_UW": 1,
+            },
+        )
 
     ############################################################################
     tb = lib.test_bench("axis_pack_tb")

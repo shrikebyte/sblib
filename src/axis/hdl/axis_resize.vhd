@@ -90,14 +90,31 @@ begin
   -- ---------------------------------------------------------------------------
   -- Downsize mode
   elsif S_DW > M_DW generate
-    signal last_reg  : std_ulogic;
+    constant RATIO : integer := S_DW / M_DW;
+    signal last_reg  : std_ulogic_vector(RATIO - 1 downto 0);
     signal data_reg : std_ulogic_vector(S_DW-1 downto 0);
     signal user_reg : std_ulogic_vector(S_UW-1 downto 0);
     signal keep_reg : std_ulogic_vector(S_KW-1 downto 0);
+    signal last_reg_shft : std_ulogic_vector(RATIO - 1 downto 0);
     signal data_reg_shft : std_ulogic_vector(S_DW-1 downto 0);
     signal user_reg_shft : std_ulogic_vector(S_UW-1 downto 0);
     signal keep_reg_shft : std_ulogic_vector(S_KW-1 downto 0);
     signal keep_reg_shft_is_zero : std_logic;
+    signal tkeep_contracted : std_ulogic_vector(RATIO - 1 downto 0);
+
+    function find_last_idx (
+      vec : std_ulogic_vector
+    ) return natural is
+      variable tmp : natural := 0;
+    begin
+      for i in vec'low to vec'high loop
+        if vec(i) then
+          tmp := i;
+        end if;
+      end loop;
+      return tmp;
+    end function;
+
   begin
 
     -- Input is ready whenever there is room in the output buffer AND the
@@ -107,31 +124,35 @@ begin
     data_reg_shft <= std_ulogic_vector(shift_right(u_unsigned(data_reg), M_DW));
     user_reg_shft <= std_ulogic_vector(shift_right(u_unsigned(user_reg), M_UW));
     keep_reg_shft <= std_ulogic_vector(shift_right(u_unsigned(keep_reg), M_KW));
+    last_reg_shft <= std_ulogic_vector(shift_right(u_unsigned(last_reg), 1));
     keep_reg_shft_is_zero <= and (not keep_reg_shft);
+
+    tkeep_contracted <= contract_bits(s_axis.tkeep, M_KW);
 
     prc_downsize : process (clk) begin
       if rising_edge(clk) then
 
         if s_axis.tvalid and s_axis.tready then
-          -- New wide beat at input... Send the first narrow output beat.
+          -- New wide beat at input... send the first narrow output beat.
 
           m_axis.tvalid <= '1';
-          last_reg <= s_axis.tlast;
           data_reg <= s_axis.tdata;
           user_reg <= s_axis.tuser;
           keep_reg <= s_axis.tkeep;
+          last_reg <= (others=>'0');
+          last_reg(find_last_idx(tkeep_contracted)) <= s_axis.tlast;
 
         elsif m_axis.tvalid and m_axis.tready then
-          -- Shift out the narrow output data from the wide input data.
+          -- Shift out the narrow output data from the rest of the
+          -- wide input data until the shift register is empty.
 
           data_reg <= data_reg_shft;
           user_reg <= user_reg_shft;
           keep_reg <= keep_reg_shft;
+          last_reg <= last_reg_shft;
 
-          -- Stop sending output data when the shift register is empty.
           if keep_reg_shft_is_zero then
             m_axis.tvalid <= '0';
-            last_reg <= '0';
           end if;
 
         end if;
@@ -146,7 +167,7 @@ begin
     m_axis.tdata <= data_reg(m_axis.tdata'range);
     m_axis.tuser <= user_reg(m_axis.tuser'range);
     m_axis.tkeep <= keep_reg(m_axis.tkeep'range);
-    m_axis.tlast <= last_reg and keep_reg_shft_is_zero;
+    m_axis.tlast <= last_reg(0);
 
 
   -- ---------------------------------------------------------------------------
