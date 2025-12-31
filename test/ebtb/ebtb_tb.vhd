@@ -32,7 +32,8 @@
 --!
 --! 3  November 2020: Frans Schreuder:
 --!   - Translated to VHDL, added UVVM testbench
---!   - Original verilog code: http://asics.chuckbenz.com/#My_open_source_8b10b_encoderdecoder
+--!   - Original verilog code:
+--!     http://asics.chuckbenz.com/#My_open_source_8b10b_encoderdecoder
 --!
 --! 1  April 2025: David Gussler
 --!   - Updated TB to use VUnit to match the rest of the library
@@ -94,8 +95,11 @@ architecture tb of ebtb_tb is
 
   signal code : code_type_t;
 
-  signal legal    : std_logic_vector(1023 downto 0); -- mark every used 10b symbol as legal, leave rest marked as not
-  signal okdisp   : std_logic_vector(2047 downto 0); -- now mark every used combination of symbol and starting disparity
+  -- mark every used 10b symbol as legal, leave rest marked as not
+  signal legal : std_logic_vector(1023 downto 0);
+
+  -- now mark every used combination of symbol and starting disparity
+  signal okdisp   : std_logic_vector(2047 downto 0);
   signal mapcode  : slv9_array_t(1023 downto 0);
   signal decodein : std_logic_vector(9 downto 0) := (others => '0');
 
@@ -117,7 +121,10 @@ begin
       if run("test_0") then
         wait until srst = '0';
         wait until rising_edge(clk);
-        info("First, test by trying all 268 (256 Dx.y and 12 Kx.y) valid inputs, with both + and - starting disparity.");
+        info(
+          "First, test by trying all 268 (256 Dx.y and 12 Kx.y) " &
+          "valid inputs, with both + and - starting disparity."
+        );
         info("We check that the encoder output and ending disparity is correct.");
         info("We also check that the decoder matches.");
 
@@ -126,11 +133,24 @@ begin
           wait until rising_edge(clk);
           decodein <= encodeout;
           wait until rising_edge(clk);
-          check_equal((((encodeout /= code.val_10b_neg) and (encodeout /= code.val_10b_pos))), false, "Check encoding", error);
+
+          check_equal(
+            (((encodeout /= code.val_10b_neg) and (encodeout /= code.val_10b_pos))),
+            false,
+            "Check encoding",
+            error
+          );
+
           decodein <= encodeout;
           wait until rising_edge(clk);
           decodein <= encodeout;
-          check_equal(encodein_p3(8 downto 0), decodeout(8 downto 0), "Encoder input should match decoder output", error);
+
+          check_equal(
+            encodein_p3(8 downto 0), decodeout(8 downto 0),
+            "Encoder input should match decoder output",
+            error
+          );
+
           check_equal(decodeerr, '0', "Check decode error", error);
           check_equal(disperr, '0', "Check disparity error", error);
         end loop;
@@ -140,8 +160,9 @@ begin
         legal  <= (others => '0');
         okdisp <= (others => '0');
         for il in 0 to 267 loop
-          i                                               <= il;
+          i <= il;
           wait until rising_edge(clk);
+
           legal(to_integer(unsigned(code.val_10b_neg)))   <= '1';
           legal(to_integer(unsigned(code.val_10b_pos)))   <= '1';
           mapcode(to_integer(unsigned(code.val_10b_neg))) <= code.k & code.val_8b;
@@ -151,13 +172,26 @@ begin
         info("Now lets test all (legal and illegal) codes into the decoder.");
         info("Checking all possible decode inputs.");
         for il in 0 to 1023 loop
-          i        <= il;
+          i <= il;
           wait until rising_edge(clk);
+
           decodein <= std_logic_vector(to_unsigned(i, 10));
           wait until rising_edge(clk);
           wait until rising_edge(clk);
-          check_equal(((legal(i) = '0') and (decodeerr /= '1')), false, "Detection of illegal code", warning);
-          check_equal((legal(i) = '1' and (mapcode(i) /= decodeout)), false, "Check decoder output", error);
+
+          check_equal(
+            ((legal(i) = '0') and (decodeerr /= '1')),
+            false,
+            "Detection of illegal code",
+            warning
+          );
+
+          check_equal(
+            (legal(i) = '1' and (mapcode(i) /= decodeout)),
+            false, "Check decoder output",
+            error
+          );
+
           wait until rising_edge(clk);
         end loop;
         info("SIMULATION COMPLETE");

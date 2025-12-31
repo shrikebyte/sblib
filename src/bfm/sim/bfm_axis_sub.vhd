@@ -57,11 +57,9 @@ library vunit_lib;
 use vunit_lib.check_pkg.all;
 use vunit_lib.integer_array_pkg.all;
 use vunit_lib.queue_pkg.all;
-
 use work.util_pkg.all;
 use work.axis_pkg.all;
 use work.bfm_pkg.all;
-
 
 entity bfm_axis_sub is
   generic (
@@ -98,15 +96,15 @@ entity bfm_axis_sub is
     G_ENABLE_TLAST : boolean := true
   );
   port (
-    clk : in std_ulogic;
+    clk : in    std_ulogic;
     --
     s_axis : view s_axis_v;
     --
     -- Optionally, the consuming and checking of data can be disabled.
     -- Can be done between or in the middle of packets.
-    enable : in std_ulogic := '1';
+    enable : in    std_ulogic := '1';
     -- Counter for the number of packets that have been consumed and checked against reference data.
-    num_packets_checked : out natural := 0
+    num_packets_checked : out   natural := 0
   );
 end entity;
 
@@ -122,7 +120,7 @@ architecture sim of bfm_axis_sub is
     G_LOGGER_NAME_SUFFIX & ": ";
 
   signal checker_is_ready : std_ulogic := '0';
-  signal data_is_ready : std_ulogic := '0';
+  signal data_is_ready    : std_ulogic := '0';
 
   signal mon_axis : axis_t(
     tdata(s_axis.tdata'range),
@@ -132,40 +130,38 @@ architecture sim of bfm_axis_sub is
 
 begin
 
-  assert DW mod KW = 0 report (
-    BASE_ERROR_MESSAGE &
-    "Data width must be an integer multiple of keep width."
-  );
+  assert DW mod KW = 0
+    report BASE_ERROR_MESSAGE &
+           "Data width must be an integer multiple of keep width.";
 
-  assert UW mod KW = 0 report (
-    BASE_ERROR_MESSAGE &
-    "User width must be an integer multiple of keep width."
-  );
+  assert UW mod KW = 0
+    report BASE_ERROR_MESSAGE &
+           "User width must be an integer multiple of keep width.";
 
   -- ---------------------------------------------------------------------------
-  prc_main : process
-    variable data_packet : integer_array_t := null_integer_array;
-    variable user_packet : integer_array_t := null_integer_array;
-    variable packet_length_bytes : positive := 1;
-    variable user_packet_length_bytes : positive := 1;
-    variable i : natural := 0;
-    variable is_last_beat : boolean := false;
-    variable num_bytes_in_this_beat : integer := 0;
+  prc_main : process is
+    variable data_packet              : integer_array_t := null_integer_array;
+    variable user_packet              : integer_array_t := null_integer_array;
+    variable packet_length_bytes      : positive        := 1;
+    variable user_packet_length_bytes : positive        := 1;
+    variable i                        : natural         := 0;
+    variable is_last_beat             : boolean         := false;
+    variable num_bytes_in_this_beat   : integer         := 0;
   begin
 
     while is_empty(G_REF_DATA_QUEUE) or enable /= '1' loop
       wait until rising_edge(clk);
     end loop;
 
-    i := 0;
-    data_packet := pop_ref(G_REF_DATA_QUEUE);
-    user_packet := pop_ref(G_REF_USER_QUEUE);
-    packet_length_bytes := length(data_packet);
+    i                        := 0;
+    data_packet              := pop_ref(G_REF_DATA_QUEUE);
+    user_packet              := pop_ref(G_REF_USER_QUEUE);
+    packet_length_bytes      := length(data_packet);
     user_packet_length_bytes := length(user_packet);
 
     assert packet_length_bytes = user_packet_length_bytes
       report BASE_ERROR_MESSAGE &
-      "Length mismatch between data packet and user packet.";
+             "Length mismatch between data packet and user packet.";
 
     checker_is_ready <= '1';
 
@@ -195,7 +191,9 @@ begin
 
       if G_ENABLE_TKEEP then
         for k in 0 to KW - 1 loop
-          check_equal(s_axis.tkeep(k), to_sl(k < num_bytes_in_this_beat),
+          check_equal(
+            s_axis.tkeep(k),
+            to_sl(k < num_bytes_in_this_beat),
             (
               BASE_ERROR_MESSAGE
               & "'tkeep' check at packet_idx="
@@ -249,14 +247,13 @@ begin
 
   data_is_ready <= checker_is_ready and enable;
 
-
   ------------------------------------------------------------------------------
   u_bfm_handshake_sub : entity work.bfm_handshake_sub
-  generic map(
-    g_stall_config => g_stall_config,
-    g_well_behaved_stall => g_well_behaved_stall
+  generic map (
+    G_STALL_CONFIG       => G_STALL_CONFIG,
+    G_WELL_BEHAVED_STALL => G_WELL_BEHAVED_STALL
   )
-  port map(
+  port map (
     clk => clk,
     --
     data_is_ready => data_is_ready,
@@ -264,7 +261,6 @@ begin
     ready => s_axis.tready,
     valid => s_axis.tvalid
   );
-
 
   ------------------------------------------------------------------------------
   u_bfm_axis_protocol_check : entity work.bfm_axis_protocol_check
@@ -279,9 +275,9 @@ begin
 
   mon_axis.tready <= s_axis.tready;
   mon_axis.tvalid <= s_axis.tvalid;
-  mon_axis.tlast  <= s_axis.tlast ;
-  mon_axis.tkeep  <= s_axis.tkeep ;
-  mon_axis.tdata  <= s_axis.tdata ;
+  mon_axis.tlast  <= s_axis.tlast;
+  mon_axis.tkeep  <= s_axis.tkeep;
+  mon_axis.tdata  <= s_axis.tdata;
   mon_axis.tuser  <= s_axis.tuser;
 
 end architecture;

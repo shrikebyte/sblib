@@ -15,7 +15,7 @@ package gpio_pkg is
 
   type gpio_mode_t is (GPIO_MODE_OUT, GPIO_MODE_IN, GPIO_MODE_INOUT, GPIO_MODE_DISABLE);
 
-  type gpio_mode_arr_t is array (natural range <>) of gpio_mode_t;
+  type gpio_mode_arr_t is array(natural range <>) of gpio_mode_t;
 
   subtype gpio_range is gpio_chan_range;
 

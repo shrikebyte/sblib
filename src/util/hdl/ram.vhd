@@ -46,7 +46,8 @@ entity ram is
 
     --! Data to initialize the ram with at FPGA startup. Only compatible with
     --! SRAM-based FPGAs.
-    G_RAM_INIT : slv_arr_t(0 to (2 ** G_ADDR_WIDTH) - 1)(G_BYTES_PER_ROW * G_BYTE_WIDTH - 1 downto 0) := (others=> (others=> '0'));
+    G_RAM_INIT : slv_arr_t(0 to (2 ** G_ADDR_WIDTH) - 1)(G_BYTES_PER_ROW * G_BYTE_WIDTH - 1 downto 0) :=
+      (others=> (others=> '0'));
 
     --! Read latency
     G_RD_LATENCY : positive := 1

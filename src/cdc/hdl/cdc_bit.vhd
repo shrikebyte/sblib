@@ -40,7 +40,7 @@ end entity;
 architecture rtl of cdc_bit is
 
   -- ---------------------------------------------------------------------------
-  type cdc_regs_t is array (natural range 0 to G_SYNC_LEN - 1) of
+  type cdc_regs_t is array(natural range 0 to G_SYNC_LEN - 1) of
     std_logic_vector(G_WIDTH - 1 downto 0);
 
   -- ---------------------------------------------------------------------------

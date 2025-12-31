@@ -49,7 +49,7 @@ use ieee.numeric_std.all;
 use ieee.std_logic_1164.all;
 
 library osvvm;
-use osvvm.RandomPkg.RandomPType;
+use osvvm.randompkg.randomptype;
 
 library vunit_lib;
 use vunit_lib.check_pkg.all;
@@ -57,7 +57,6 @@ use vunit_lib.integer_array_pkg.all;
 use vunit_lib.queue_pkg.all;
 use vunit_lib.run_pkg.all;
 use vunit_lib.run_types_pkg.all;
-
 use work.util_pkg.all;
 use work.axis_pkg.all;
 use work.bfm_pkg.all;
@@ -86,11 +85,11 @@ entity bfm_axis_man is
     G_LOGGER_NAME_SUFFIX : string := ""
   );
   port (
-    clk : in std_ulogic;
+    clk : in    std_ulogic;
     --
     m_axis : view m_axis_v;
     --
-    num_packets_sent : out natural := 0
+    num_packets_sent : out   natural := 0
   );
 end entity;
 
@@ -111,44 +110,42 @@ architecture sim of bfm_axis_man is
   constant DBW : integer := DW / KW;
   constant UBW : integer := UW / KW;
 
-  signal int_axis_tdata : std_ulogic_vector(DW-1 downto 0) :=
-    (others => DRIVE_INVALID_VALUE);
-  signal int_axis_tkeep : std_ulogic_vector(KW-1 downto 0) :=
-    (others => '0');
-  signal int_axis_tlast : std_ulogic := DRIVE_INVALID_VALUE;
-  signal int_axis_tuser : std_ulogic_vector(UW-1 downto 0) :=
-        (others => DRIVE_INVALID_VALUE);
-  signal data_is_valid : std_ulogic := '0';
+  signal int_axis_tdata : std_ulogic_vector(DW - 1 downto 0) :=
+  (others => DRIVE_INVALID_VALUE);
+  signal int_axis_tkeep : std_ulogic_vector(KW - 1 downto 0) :=
+  (others => '0');
+  signal int_axis_tlast : std_ulogic                         := DRIVE_INVALID_VALUE;
+  signal int_axis_tuser : std_ulogic_vector(UW - 1 downto 0) :=
+  (others => DRIVE_INVALID_VALUE);
+  signal data_is_valid  : std_ulogic                         := '0';
 
 begin
 
-  assert DW mod KW = 0 report (
-    BASE_ERROR_MESSAGE &
-    "Data width must be an integer multiple of keep width."
-  );
+  assert DW mod KW = 0
+    report BASE_ERROR_MESSAGE &
+           "Data width must be an integer multiple of keep width.";
 
-  assert UW mod KW = 0 report (
-    BASE_ERROR_MESSAGE &
-    "User width must be an integer multiple of keep width."
-  );
+  assert UW mod KW = 0
+    report BASE_ERROR_MESSAGE &
+           "User width must be an integer multiple of keep width.";
 
   -- ---------------------------------------------------------------------------
-  prc_tdata_main : process
-    variable data_packet : integer_array_t := null_integer_array;
-    variable user_packet : integer_array_t := null_integer_array;
-    variable packet_length_bytes : positive := 1;
-    variable user_packet_length_bytes : positive := 1;
-    variable data_value : natural := 0;
-    variable user_value : natural := 0;
-    variable i : natural := 0;
-    variable seed : string_seed_t;
-    variable rnd : RandomPType;
-    variable num_bytes_in_this_beat : integer := 0;
+  prc_tdata_main : process is
+    variable data_packet              : integer_array_t := null_integer_array;
+    variable user_packet              : integer_array_t := null_integer_array;
+    variable packet_length_bytes      : positive        := 1;
+    variable user_packet_length_bytes : positive        := 1;
+    variable data_value               : natural         := 0;
+    variable user_value               : natural         := 0;
+    variable i                        : natural         := 0;
+    variable seed                     : string_seed_t;
+    variable rnd                      : randomptype;
+    variable num_bytes_in_this_beat   : integer         := 0;
   begin
 
     -- Use salt so that parallel instances of this entity get unique random
     -- sequences.
-    get_seed(seed, salt=>bfm_axis_man'path_name);
+    get_seed(seed, salt=> bfm_axis_man'path_name);
     rnd.InitSeed(seed);
 
     loop
@@ -157,15 +154,15 @@ begin
         wait until rising_edge(clk);
       end loop;
 
-      i := 0;
-      data_packet := pop_ref(G_DATA_QUEUE);
-      user_packet := pop_ref(G_USER_QUEUE);
-      packet_length_bytes := length(data_packet);
+      i                        := 0;
+      data_packet              := pop_ref(G_DATA_QUEUE);
+      user_packet              := pop_ref(G_USER_QUEUE);
+      packet_length_bytes      := length(data_packet);
       user_packet_length_bytes := length(user_packet);
 
       assert packet_length_bytes = user_packet_length_bytes
         report BASE_ERROR_MESSAGE &
-        "Length mismatch between data packet and user packet.";
+               "Length mismatch between data packet and user packet.";
 
       data_is_valid <= '1';
 
@@ -180,13 +177,11 @@ begin
         for k in 0 to num_bytes_in_this_beat - 1 loop
           int_axis_tkeep(k) <= '1';
 
-          data_value := get(data_packet, i + k);
-          int_axis_tdata((k + 1) * DBW - 1 downto k * DBW) <=
-            std_ulogic_vector(to_unsigned(data_value, DBW));
+          data_value                                       := get(data_packet, i + k);
+          int_axis_tdata((k + 1) * DBW - 1 downto k * DBW) <= std_ulogic_vector(to_unsigned(data_value, DBW));
 
-          user_value := get(user_packet, i + k);
-          int_axis_tuser((k + 1) * UBW - 1 downto k * UBW) <=
-            std_ulogic_vector(to_unsigned(user_value, UBW));
+          user_value                                       := get(user_packet, i + k);
+          int_axis_tuser((k + 1) * UBW - 1 downto k * UBW) <= std_ulogic_vector(to_unsigned(user_value, UBW));
         end loop;
 
         i := i + num_bytes_in_this_beat;
@@ -216,13 +211,12 @@ begin
     end loop;
   end process;
 
-
   -- ---------------------------------------------------------------------------
   u_bfm_handshake_man : entity work.bfm_handshake_man
-  generic map(
+  generic map (
     G_STALL_CONFIG => G_STALL_CONFIG
   )
-  port map(
+  port map (
     clk => clk,
     --
     data_is_valid => data_is_valid,
@@ -232,7 +226,7 @@ begin
   );
 
   -- ---------------------------------------------------------------------------
-  prc_assign_tdata_invalid : process(all) begin
+  prc_assign_tdata_invalid : process (all) is begin
     if m_axis.tvalid then
       m_axis.tlast <= int_axis_tlast;
       m_axis.tdata <= int_axis_tdata;

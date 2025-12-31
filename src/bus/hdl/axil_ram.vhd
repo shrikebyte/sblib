@@ -72,7 +72,7 @@ begin
     b_en   => '1',
     b_wen  => b"0000",
     b_addr => ram_req.raddr(G_ADDR_WIDTH - 1 + 2 downto 2),
-    b_wdat => (others=>'0'),
+    b_wdat => (others=> '0'),
     b_rdat => ram_rsp.rdata
   );
 

@@ -11,13 +11,12 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library vunit_lib;
-context vunit_lib.vunit_context;
-context vunit_lib.vc_context;
+  context vunit_lib.vunit_context;
+  context vunit_lib.vc_context;
 use vunit_lib.random_pkg.all;
 
 library osvvm;
 use osvvm.randompkg.all;
-
 use work.util_pkg.all;
 use work.axis_pkg.all;
 use work.bfm_pkg.all;
@@ -33,14 +32,14 @@ end entity;
 architecture tb of axis_slice_tb is
 
   -- TB Constants
-  constant RESET_TIME  : time     := 50 ns;
-  constant CLK_PERIOD  : time     := 5 ns;
-  constant NUM_OUTPUTS : integer  := 2;
-  constant KW          : integer  := 4;
-  constant DW          : integer  := 64;
-  constant UW          : integer  := 32;
-  constant DBW         : integer  := DW / KW;
-  constant UBW         : integer  := UW / KW;
+  constant RESET_TIME   : time    := 50 ns;
+  constant CLK_PERIOD   : time    := 5 ns;
+  constant NUM_OUTPUTS  : integer := 2;
+  constant KW           : integer := 4;
+  constant DW           : integer := 64;
+  constant UW           : integer := 32;
+  constant DBW          : integer := DW / KW;
+  constant UBW          : integer := UW / KW;
   constant MAX_M0_BYTES : integer := 2048;
 
   -- TB Signals
@@ -51,19 +50,19 @@ architecture tb of axis_slice_tb is
 
   -- DUT Signal
   signal s_axis : axis_t (
-    tdata(DW-1 downto 0),
-    tkeep(KW-1 downto 0),
-    tuser(UW-1 downto 0)
+    tdata(DW - 1 downto 0),
+    tkeep(KW - 1 downto 0),
+    tuser(UW - 1 downto 0)
   );
 
-  signal m_axis :  axis_arr_t(0 to NUM_OUTPUTS - 1)(
-    tdata(DW-1 downto 0),
-    tkeep(KW-1 downto 0),
-    tuser(UW-1 downto 0)
+  signal m_axis : axis_arr_t(0 to NUM_OUTPUTS - 1)(
+    tdata(DW - 1 downto 0),
+    tkeep(KW - 1 downto 0),
+    tuser(UW - 1 downto 0)
   );
 
-  signal  num_bytes    :  natural range 0 to MAX_M0_BYTES;
-  signal  sts_err_runt :  std_ulogic;
+  signal num_bytes    : natural range 0 to MAX_M0_BYTES;
+  signal sts_err_runt : std_ulogic;
 
   -- Testbench BFMs
   constant STALL_CFG : stall_configuration_t := (
@@ -73,8 +72,8 @@ architecture tb of axis_slice_tb is
   );
 
   constant NUM_BYTES_QUEUE : queue_t := new_queue;
-  constant DATA_QUEUE : queue_t := new_queue;
-  constant USER_QUEUE : queue_t := new_queue;
+  constant DATA_QUEUE      : queue_t := new_queue;
+  constant USER_QUEUE      : queue_t := new_queue;
 
   constant REF_DATA_QUEUES : queue_vec_t(m_axis'range) :=
     get_new_queues(m_axis'length);
@@ -87,19 +86,20 @@ begin
 
   -- ---------------------------------------------------------------------------
   test_runner_watchdog(runner, 100 us);
+
   prc_main : process is
 
-    variable rnd : randomptype;
+    variable rnd       : randomptype;
     variable num_tests : nat_arr_t(m_axis'range) := (others => 0);
 
     procedure send_random is
 
       constant PACKET_LENGTH_BYTES : natural := rnd.Uniform(1, 4 * KW);
-      constant SPLIT_LENGTH_BYTES : natural := rnd.Uniform(0, 5 * KW);
+      constant SPLIT_LENGTH_BYTES  : natural := rnd.Uniform(0, 5 * KW);
 
       function get_m0_len return natural is
       begin
-        if (PACKET_LENGTH_BYTES > SPLIT_LENGTH_BYTES) then
+        if PACKET_LENGTH_BYTES > SPLIT_LENGTH_BYTES then
           -- Normal case. Packet gets split.
           return SPLIT_LENGTH_BYTES;
         else
@@ -110,7 +110,7 @@ begin
 
       function get_m1_len return natural is
       begin
-        if (PACKET_LENGTH_BYTES > SPLIT_LENGTH_BYTES) then
+        if PACKET_LENGTH_BYTES > SPLIT_LENGTH_BYTES then
           -- Normal case. Remaining bytes get sent down m1.
           return PACKET_LENGTH_BYTES - SPLIT_LENGTH_BYTES;
         else
@@ -123,55 +123,55 @@ begin
       constant M1_LEN : integer := get_m1_len;
 
       variable s_data : integer_array_t :=
-        new_1d (
-          length => PACKET_LENGTH_BYTES,
-          bit_width => DBW,
-          is_signed => false
-      );
+              new_1d (
+                     length    => PACKET_LENGTH_BYTES,
+                     bit_width => DBW,
+                     is_signed => false
+                    );
 
       variable m0_data : integer_array_t :=
-        new_1d (
-          length => M0_LEN,
-          bit_width => DBW,
-          is_signed => false
-      );
+              new_1d (
+                     length    => M0_LEN,
+                     bit_width => DBW,
+                     is_signed => false
+                    );
 
       variable m1_data : integer_array_t :=
-        new_1d (
-          length => M1_LEN,
-          bit_width => DBW,
-          is_signed => false
-      );
+              new_1d (
+                     length    => M1_LEN,
+                     bit_width => DBW,
+                     is_signed => false
+                    );
 
       variable s_user : integer_array_t :=
-        new_1d (
-          length => PACKET_LENGTH_BYTES,
-          bit_width => UBW,
-          is_signed => false
-      );
+              new_1d (
+                     length    => PACKET_LENGTH_BYTES,
+                     bit_width => UBW,
+                     is_signed => false
+                    );
 
       variable m0_user : integer_array_t :=
-        new_1d (
-          length => M0_LEN,
-          bit_width => UBW,
-          is_signed => false
-      );
+              new_1d (
+                     length    => M0_LEN,
+                     bit_width => UBW,
+                     is_signed => false
+                    );
 
       variable m1_user : integer_array_t :=
-        new_1d (
-          length => M1_LEN,
-          bit_width => UBW,
-          is_signed => false
-      );
+              new_1d (
+                     length    => M1_LEN,
+                     bit_width => UBW,
+                     is_signed => false
+                    );
 
       variable j : integer := 0;
 
     begin
 
-      assert SPLIT_LENGTH_BYTES >= 0 and SPLIT_LENGTH_BYTES < 2**UBW
+      assert SPLIT_LENGTH_BYTES >= 0 and SPLIT_LENGTH_BYTES < 2 ** UBW
         report
-          "ERROR: SPLIT_LENGTH_BYTES > 0 and SPLIT_LENGTH_BYTES < " &
-          to_string(2**UBW)
+               "ERROR: SPLIT_LENGTH_BYTES > 0 and SPLIT_LENGTH_BYTES < " &
+               to_string(2 ** UBW)
         severity error;
 
       -- Random test data packet
@@ -270,42 +270,42 @@ begin
   );
 
   u_bfm_axis_man : entity work.bfm_axis_man
-  generic map(
+  generic map (
     G_DATA_QUEUE    => DATA_QUEUE,
     G_USER_QUEUE    => USER_QUEUE,
     G_PACKED_STREAM => G_PACKED_STREAM,
     G_STALL_CONFIG  => STALL_CFG
   )
-  port map(
+  port map (
     clk    => clk,
     m_axis => s_axis
   );
 
   u_bfm_axis_sub0 : entity work.bfm_axis_sub
-  generic map(
+  generic map (
     G_REF_DATA_QUEUE     => REF_DATA_QUEUES(0),
     G_REF_USER_QUEUE     => REF_USER_QUEUES(0),
     G_LOGGER_NAME_SUFFIX => to_string(0),
     G_PACKED_STREAM      => G_PACKED_STREAM,
     G_STALL_CONFIG       => STALL_CFG
   )
-  port map(
-    clk    => clk,
-    s_axis => m_axis(0),
+  port map (
+    clk                 => clk,
+    s_axis              => m_axis(0),
     num_packets_checked => num_packets_checked(0)
   );
 
   u_bfm_axis_sub1 : entity work.bfm_axis_sub
-  generic map(
+  generic map (
     G_REF_DATA_QUEUE     => REF_DATA_QUEUES(1),
     G_REF_USER_QUEUE     => REF_USER_QUEUES(1),
     G_LOGGER_NAME_SUFFIX => to_string(1),
-    G_PACKED_STREAM      => false, -- Always false. Second output stream not guarenteed to be packed.
+    G_PACKED_STREAM      => false,
     G_STALL_CONFIG       => STALL_CFG
   )
-  port map(
-    clk    => clk,
-    s_axis => m_axis(1),
+  port map (
+    clk                 => clk,
+    s_axis              => m_axis(1),
     num_packets_checked => num_packets_checked(1)
   );
 

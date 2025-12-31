@@ -11,13 +11,12 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library vunit_lib;
-context vunit_lib.vunit_context;
-context vunit_lib.vc_context;
+  context vunit_lib.vunit_context;
+  context vunit_lib.vc_context;
 use vunit_lib.random_pkg.all;
 
 library osvvm;
 use osvvm.randompkg.all;
-
 use work.util_pkg.all;
 use work.axis_pkg.all;
 use work.bfm_pkg.all;
@@ -39,16 +38,16 @@ end entity;
 architecture tb of axis_resize_tb is
 
   -- TB Constants
-  constant RESET_TIME   : time := 50 ns;
-  constant CLK_PERIOD   : time := 5 ns;
-  constant S_KW         : integer := G_S_KW;
-  constant S_DW         : integer := G_S_DW;
-  constant S_UW         : integer := G_S_UW;
-  constant S_DBW        : integer := S_DW / S_KW;
-  constant S_UBW        : integer := S_UW / S_KW;
-  constant M_KW         : integer := G_M_KW;
-  constant M_DW         : integer := G_M_DW;
-  constant M_UW         : integer := G_M_UW;
+  constant RESET_TIME : time    := 50 ns;
+  constant CLK_PERIOD : time    := 5 ns;
+  constant S_KW       : integer := G_S_KW;
+  constant S_DW       : integer := G_S_DW;
+  constant S_UW       : integer := G_S_UW;
+  constant S_DBW      : integer := S_DW / S_KW;
+  constant S_UBW      : integer := S_UW / S_KW;
+  constant M_KW       : integer := G_M_KW;
+  constant M_DW       : integer := G_M_DW;
+  constant M_UW       : integer := G_M_UW;
 
   -- TB Signals
   signal clk   : std_ulogic := '1';
@@ -91,7 +90,7 @@ begin
 
   prc_main : process is
 
-    variable rnd : randomptype;
+    variable rnd       : randomptype;
     variable num_tests : natural := 0;
 
     procedure send_random is
@@ -174,27 +173,27 @@ begin
   );
 
   u_bfm_axis_man : entity work.bfm_axis_man
-  generic map(
+  generic map (
     G_DATA_QUEUE    => DATA_QUEUE,
     G_USER_QUEUE    => USER_QUEUE,
     G_PACKED_STREAM => G_PACKED_STREAM,
     G_STALL_CONFIG  => STALL_CFG
   )
-  port map(
+  port map (
     clk    => clk,
     m_axis => s_axis
   );
 
   u_bfm_axis_sub : entity work.bfm_axis_sub
-  generic map(
+  generic map (
     G_REF_DATA_QUEUE => REF_DATA_QUEUE,
     G_REF_USER_QUEUE => REF_USER_QUEUE,
     G_PACKED_STREAM  => G_PACKED_STREAM,
     G_STALL_CONFIG   => STALL_CFG
   )
-  port map(
-    clk    => clk,
-    s_axis => m_axis,
+  port map (
+    clk                 => clk,
+    s_axis              => m_axis,
     num_packets_checked => num_packets_checked
   );
 

@@ -52,9 +52,9 @@ architecture rtl of cdc_reset is
   )
     return std_logic
   is
-    variable tmp : std_logic_vector(arst_slv'length-1 downto 0) := (others=> '0');
+    variable tmp : std_logic_vector(arst_slv'length - 1 downto 0) := (others=> '0');
   begin
-    for i in 0 to arst_slv'length-1 loop
+    for i in 0 to arst_slv'length - 1 loop
       tmp(i) := '1' when arst_slv(i) = arst_lvl(i) else '0';
     end loop;
     return or tmp;

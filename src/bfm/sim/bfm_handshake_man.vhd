@@ -38,23 +38,21 @@ use vunit_lib.run_pkg.all;
 use vunit_lib.run_types_pkg.all;
 
 library osvvm;
-use osvvm.RandomPkg.RandomPType;
-
+use osvvm.randompkg.randomptype;
 use work.bfm_pkg.all;
-
 
 entity bfm_handshake_man is
   generic (
     G_STALL_CONFIG : stall_configuration_t
   );
   port (
-    clk : in std_ulogic;
+    clk : in    std_ulogic;
     --
     -- Set by testbench when there is data available.
-    data_is_valid : in std_ulogic := '1';
+    data_is_valid : in    std_ulogic := '1';
     --
-    ready : in std_ulogic := '1';
-    valid : out std_ulogic := '0'
+    ready : in    std_ulogic := '1';
+    valid : out   std_ulogic := '0'
   );
 end entity;
 
@@ -66,23 +64,22 @@ begin
 
   valid <= data_is_valid and let_data_through;
 
-
   -- ---------------------------------------------------------------------------
   gen_toggle_stall : if G_STALL_CONFIG.stall_probability > 0.0 generate
 
     -- -------------------------------------------------------------------------
-    prc_toggle_stall : process
+    prc_toggle_stall : process is
       variable seed : string_seed_t;
-      variable rnd : RandomPType;
+      variable rnd  : randomptype;
     begin
       -- Use salt so that parallel instances of this entity get unique random
       -- sequences.
-      get_seed(seed, salt=>bfm_handshake_man'path_name);
+      get_seed(seed, salt=> bfm_handshake_man'path_name);
       rnd.InitSeed(seed);
 
       loop
         let_data_through <= '0';
-        random_stall(stall_config=>G_STALL_CONFIG, rnd=>rnd, clk=>clk);
+        random_stall(stall_config=> G_STALL_CONFIG, rnd=> rnd, clk=> clk);
         let_data_through <= '1';
 
         wait until (ready and valid) = '1' and rising_edge(clk);

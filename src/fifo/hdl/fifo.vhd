@@ -44,7 +44,7 @@ architecture rtl of fifo is
 
   constant DEPTH : positive := 2 ** G_DEPTH_P2;
 
-  type ram_t is array (natural range 0 to DEPTH - 1) of
+  type ram_t is array(natural range 0 to DEPTH - 1) of
     std_logic_vector(G_WIDTH - 1 downto 0);
 
   signal ram         : ram_t;

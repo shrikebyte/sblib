@@ -34,14 +34,12 @@ use ieee.numeric_std.all;
 use ieee.std_logic_1164.all;
 
 library osvvm;
-use osvvm.RandomPkg.RandomPType;
+use osvvm.randompkg.randomptype;
 
 library vunit_lib;
 use vunit_lib.run_pkg.all;
 use vunit_lib.run_types_pkg.all;
-
 use work.bfm_pkg.all;
-
 
 entity bfm_handshake_sub is
   generic (
@@ -53,14 +51,14 @@ entity bfm_handshake_sub is
     G_WELL_BEHAVED_STALL : boolean := false
   );
   port (
-    clk : in std_ulogic;
+    clk : in    std_ulogic;
     --# {{}}
     -- Can be set to '0' by testbench when it is not yet ready to receive data.
-    data_is_ready : in std_ulogic := '1';
+    data_is_ready : in    std_ulogic := '1';
     --# {{}}
-    ready : out std_ulogic := '0';
+    ready : out   std_ulogic := '0';
     -- Must be connected if 'G_WELL_BEHAVED_STALL' is true. Otherwise it has no effect.
-    valid : in std_ulogic := '0'
+    valid : in    std_ulogic := '0'
   );
 end entity;
 
@@ -72,23 +70,22 @@ begin
 
   ready <= data_is_ready and let_data_through;
 
-
   -- ---------------------------------------------------------------------------
   gen_toggle_stall : if G_STALL_CONFIG.stall_probability > 0.0 generate
 
     -- -------------------------------------------------------------------------
-    prc_toggle_stall : process
+    prc_toggle_stall : process is
       variable seed : string_seed_t;
-      variable rnd : RandomPType;
+      variable rnd  : randomptype;
     begin
       -- Use salt so that parallel instances of this entity get unique random
       -- sequences.
-      get_seed(seed, salt=>bfm_handshake_sub'path_name);
+      get_seed(seed, salt=> bfm_handshake_sub'path_name);
       rnd.InitSeed(seed);
 
       loop
         let_data_through <= '0';
-        random_stall(stall_config=>G_STALL_CONFIG, rnd=>rnd, clk=>clk);
+        random_stall(stall_config=> G_STALL_CONFIG, rnd=> rnd, clk=> clk);
         let_data_through <= '1';
 
         wait until (valid = '1' or not G_WELL_BEHAVED_STALL) and rising_edge(clk);

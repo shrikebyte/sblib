@@ -14,16 +14,16 @@ package axis_pkg is
 
   -- AXI-Stream type
   type axis_t is record
-    tready     : std_ulogic;
-    tvalid     : std_ulogic;
-    tlast      : std_ulogic;
-    tdata      : std_ulogic_vector;
-    tkeep      : std_ulogic_vector;
-    tuser      : std_ulogic_vector;
+    tready : std_ulogic;
+    tvalid : std_ulogic;
+    tlast  : std_ulogic;
+    tdata  : std_ulogic_vector;
+    tkeep  : std_ulogic_vector;
+    tuser  : std_ulogic_vector;
   end record;
 
   -- AXI-Stream array
-  type axis_arr_t is array (natural range <>) of axis_t;
+  type axis_arr_t is array(natural range <>) of axis_t;
 
   -- Manager view
 	view m_axis_v of axis_t is

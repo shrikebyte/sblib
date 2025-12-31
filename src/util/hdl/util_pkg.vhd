@@ -19,13 +19,9 @@ package util_pkg is
   constant AXIL_ADDR_WIDTH : integer := 32;
 
   subtype axil_data_range is natural range AXIL_DATA_WIDTH - 1 downto 0;
-
   subtype axil_addr_range is natural range AXIL_ADDR_WIDTH - 1 downto 0;
-
   subtype axil_strb_range is natural range AXIL_DATA_WIDTH / 8 - 1 downto 0;
-
   subtype axil_prot_range is natural range 2 downto 0;
-
   subtype axil_resp_range is natural range 1 downto 0;
 
   constant AXI_RSP_OKAY   : std_logic_vector(AXIL_RESP_RANGE) := b"00";
@@ -58,9 +54,8 @@ package util_pkg is
     rresp   : std_logic_vector(AXIL_RESP_RANGE);
   end record;
 
-  type axil_req_arr_t is array (natural range <>) of axil_req_t;
-
-  type axil_rsp_arr_t is array (natural range <>) of axil_rsp_t;
+  type axil_req_arr_t is array(natural range <>) of axil_req_t;
+  type axil_rsp_arr_t is array(natural range <>) of axil_rsp_t;
 
   -- ---------------------------------------------------------------------------
   -- Wishbone (Non-pipelined)
@@ -79,9 +74,8 @@ package util_pkg is
     rdat : std_logic_vector(AXIL_DATA_RANGE);
   end record;
 
-  type wb_req_arr_t is array (natural range <>) of wb_req_t;
-
-  type wb_rsp_arr_t is array (natural range <>) of wb_rsp_t;
+  type wb_req_arr_t is array(natural range <>) of wb_req_t;
+  type wb_rsp_arr_t is array(natural range <>) of wb_rsp_t;
 
   -- ---------------------------------------------------------------------------
   -- Advanced Peripheral Bus
@@ -101,9 +95,8 @@ package util_pkg is
     pslverr : std_logic;
   end record;
 
-  type apb_req_arr_t is array (natural range <>) of apb_req_t;
-
-  type apb_rsp_arr_t is array (natural range <>) of apb_rsp_t;
+  type apb_req_arr_t is array(natural range <>) of apb_req_t;
+  type apb_rsp_arr_t is array(natural range <>) of apb_rsp_t;
 
   -- ---------------------------------------------------------------------------
   -- Register Bus
@@ -131,9 +124,8 @@ package util_pkg is
     werr  : std_logic;
   end record;
 
-  type reg_req_arr_t is array (natural range <>) of reg_req_t;
-
-  type reg_rsp_arr_t is array (natural range <>) of reg_rsp_t;
+  type reg_req_arr_t is array(natural range <>) of reg_req_t;
+  type reg_rsp_arr_t is array(natural range <>) of reg_rsp_t;
 
   -- ---------------------------------------------------------------------------
   -- Transaction type
@@ -147,26 +139,19 @@ package util_pkg is
     mask  : std_logic_vector(AXIL_DATA_RANGE);
   end record;
 
-  type bus_xact_arr_t is array (natural range <>) of bus_xact_t;
+  type bus_xact_arr_t is array(natural range <>) of bus_xact_t;
 
   -- ---------------------------------------------------------------------------
   -- Array types
-  type sl_arr_t is array (natural range <>) of std_logic;
-
-  type slv_arr_t is array (natural range <>) of std_logic_vector;
-
-  type unsigned_arr_t is array (natural range <>) of u_unsigned;
-  type signed_arr_t is array (natural range <>) of u_signed;
-
-  type int_arr_t is array (natural range <>) of integer;
-
-  type pos_arr_t is array (natural range <>) of positive;
-
-  type nat_arr_t is array (natural range <>) of natural;
-
-  type bool_arr_t is array (natural range <>) of boolean;
-
-  type string_arr_t is array (natural range <>) of string;
+  type sl_arr_t is array(natural range <>) of std_logic;
+  type slv_arr_t is array(natural range <>) of std_logic_vector;
+  type unsigned_arr_t is array(natural range <>) of u_unsigned;
+  type signed_arr_t is array(natural range <>) of u_signed;
+  type int_arr_t is array(natural range <>) of integer;
+  type pos_arr_t is array(natural range <>) of positive;
+  type nat_arr_t is array(natural range <>) of natural;
+  type bool_arr_t is array(natural range <>) of boolean;
+  type string_arr_t is array(natural range <>) of string;
 
   -- ---------------------------------------------------------------------------
   -- Functions
@@ -182,7 +167,7 @@ package util_pkg is
     vec : std_ulogic_vector
   ) return natural;
 
-  function is_contig(
+  function is_contig (
     vec : std_ulogic_vector
   ) return boolean;
 
@@ -218,12 +203,29 @@ package util_pkg is
     vec : std_logic_vector
   ) return natural;
 
-  function to_sl (val : boolean) return std_ulogic;
-  function to_sl(val : natural range 0 to 1) return std_ulogic;
-  function to_int(val : std_ulogic) return integer;
-  function to_int(val : boolean) return integer;
-  function to_bool(val : std_ulogic) return boolean;
-  function to_bool(val : natural range 0 to 1) return boolean;
+  function to_sl (
+    val : boolean
+  ) return std_ulogic;
+
+  function to_sl (
+    val : natural range 0 to 1
+  ) return std_ulogic;
+
+  function to_int (
+    val : std_ulogic
+  ) return integer;
+
+  function to_int (
+    val : boolean
+  ) return integer;
+
+  function to_bool (
+    val : std_ulogic
+  ) return boolean;
+
+  function to_bool (
+    val : natural range 0 to 1
+  ) return boolean;
 
   function find_max (
     arr : int_arr_t
@@ -249,14 +251,14 @@ package util_pkg is
     arr : pos_arr_t
   ) return integer;
 
-  function expand_bits(
+  function expand_bits (
     vec : std_ulogic_vector;
-    N : positive
+    n : positive
   ) return std_ulogic_vector;
 
-  function contract_bits(
+  function contract_bits (
     vec : std_ulogic_vector;
-    N : positive
+    n : positive
   ) return std_ulogic_vector;
 
 end package;
@@ -297,9 +299,9 @@ package body util_pkg is
   function cnt_ones_contig (
     vec : std_ulogic_vector
   ) return natural is
-    constant VEC_LEN : natural := vec'length;
+    constant VEC_LEN  : natural := vec'length;
     variable vec_norm : std_ulogic_vector(VEC_LEN - 1 downto 0);
-    variable result  : natural := 0;
+    variable result   : natural := 0;
   begin
     vec_norm := vec;
     for i in 0 to VEC_LEN - 1 loop
@@ -311,7 +313,9 @@ package body util_pkg is
   end function;
 
   -- Return true if a vector has contiguous ones from low to high.
-  function is_contig(vec : std_ulogic_vector) return boolean is
+  function is_contig (
+    vec : std_ulogic_vector
+  ) return boolean is
     variable saw_zero : boolean := false;
   begin
     for i in vec'low to vec'high loop
@@ -437,7 +441,9 @@ package body util_pkg is
 
   -- ---------------------------------------------------------------------------
   -- Convert a boolean to standard logic
-  function to_sl(val : boolean) return std_ulogic is
+  function to_sl (
+    val : boolean
+  ) return std_ulogic is
   begin
     if val then
       return '1';
@@ -445,7 +451,9 @@ package body util_pkg is
     return '0';
   end function;
 
-  function to_sl(val : natural range 0 to 1) return std_ulogic is
+  function to_sl (
+    val : natural range 0 to 1
+  ) return std_ulogic is
   begin
     if val = 1 then
       return '1';
@@ -453,7 +461,9 @@ package body util_pkg is
     return '0';
   end function;
 
-  function to_int(val : std_ulogic) return integer is
+  function to_int (
+    val : std_ulogic
+  ) return integer is
   begin
     if val = '1' then
       return 1;
@@ -462,7 +472,9 @@ package body util_pkg is
     end if;
   end function;
 
-  function to_int(val : boolean) return integer is
+  function to_int (
+    val : boolean
+  ) return integer is
   begin
     if val = true then
       return 1;
@@ -471,7 +483,9 @@ package body util_pkg is
     end if;
   end function;
 
-  function to_bool(val : std_ulogic) return boolean is
+  function to_bool (
+    val : std_ulogic
+  ) return boolean is
   begin
     if val = '1' then
       return true;
@@ -479,7 +493,9 @@ package body util_pkg is
     return false;
   end function;
 
-  function to_bool(val : natural range 0 to 1) return boolean is
+  function to_bool (
+    val : natural range 0 to 1
+  ) return boolean is
   begin
     return val = 1;
   end function;
@@ -566,20 +582,19 @@ package body util_pkg is
     return rtn;
   end function;
 
-
-  function expand_bits(
+  function expand_bits (
     vec : std_ulogic_vector;
-    N : positive
+    n : positive
   ) return std_ulogic_vector is
-    constant VEC_LEN : natural := vec'length;
-    constant OUT_LEN : natural := VEC_LEN * N;
-    variable result  : std_ulogic_vector(OUT_LEN - 1 downto 0);
+    constant VEC_LEN  : natural := vec'length;
+    constant OUT_LEN  : natural := VEC_LEN * n;
+    variable result   : std_ulogic_vector(OUT_LEN - 1 downto 0);
     variable vec_norm : std_ulogic_vector(VEC_LEN - 1 downto 0);
   begin
     vec_norm := vec;
 
     for i in 0 to VEC_LEN - 1 loop
-      for j in 0 to N - 1 loop
+      for j in 0 to n - 1 loop
         result((i * N) + j) := vec_norm(i);
       end loop;
     end loop;
@@ -587,23 +602,23 @@ package body util_pkg is
     return result;
   end function;
 
-  function contract_bits(
+  function contract_bits (
     vec : std_ulogic_vector;
-    N : positive
+    n : positive
   ) return std_ulogic_vector is
-    constant VEC_LEN : natural := vec'length;
-    constant OUT_LEN : natural := VEC_LEN / N;
-    variable result  : std_ulogic_vector(OUT_LEN - 1 downto 0);
+    constant VEC_LEN  : natural := vec'length;
+    constant OUT_LEN  : natural := VEC_LEN / n;
+    variable result   : std_ulogic_vector(OUT_LEN - 1 downto 0);
     variable vec_norm : std_ulogic_vector(VEC_LEN - 1 downto 0);
   begin
-    assert (VEC_LEN mod N) = 0
+    assert (VEC_LEN mod n) = 0
       report "contract_bits: Vector length must be divisible by N."
       severity failure;
 
     vec_norm := vec;
 
     for i in 0 to OUT_LEN - 1 loop
-      result(i) := vec_norm(i * N);
+      result(i) := vec_norm(i * n);
     end loop;
 
     return result;

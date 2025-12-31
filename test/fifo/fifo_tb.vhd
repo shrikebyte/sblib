@@ -82,7 +82,7 @@ begin
       tlast : std_logic;
     end record;
 
-    type axis_xfer_arr_t is array (natural range 0 to AXIS_MAX_QUEUED_XFERS - 1) of axis_xfer_t;
+    type axis_xfer_arr_t is array(natural range 0 to AXIS_MAX_QUEUED_XFERS - 1) of axis_xfer_t;
 
     variable xfers : axis_xfer_arr_t;
 
@@ -153,7 +153,7 @@ begin
       tlast : std_logic;
     end record;
 
-    type axis_xfer_arr_t is array (natural range 0 to AXIS_MAX_QUEUED_XFERS - 1) of axis_xfer_t;
+    type axis_xfer_arr_t is array(natural range 0 to AXIS_MAX_QUEUED_XFERS - 1) of axis_xfer_t;
 
     variable xfers : axis_xfer_arr_t;
 
@@ -183,7 +183,7 @@ begin
       tlast : std_logic;
     end record;
 
-    type axis_xfer_arr_t is array (natural range 0 to AXIS_MAX_QUEUED_XFERS - 1) of axis_xfer_t;
+    type axis_xfer_arr_t is array(natural range 0 to AXIS_MAX_QUEUED_XFERS - 1) of axis_xfer_t;
 
     variable xfers : axis_xfer_arr_t;
 

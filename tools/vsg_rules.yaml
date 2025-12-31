@@ -13,13 +13,13 @@ indent:
         token: current
 
 rule:
-  global: 
+  global:
     indent_size: 2
-    indent_style: spaces 
+    indent_style: spaces
   architecture_003:
     style: allow_comment
   architecture_024:
-    action: 'remove'
+    action: "remove"
   architecture_025:
     disable: false
     names:
@@ -27,7 +27,7 @@ rule:
       - tb
       - sim
   block_007:
-    action: 'remove'
+    action: "remove"
   block_601:
     disable: false
     prefixes:
@@ -43,10 +43,10 @@ rule:
   case_201:
     disable: true
   comment_012:
-    disable: false
-    keywords:
-      - TODO
-      - FIXME
+    disable: true
+    # keywords:
+    #   - TODO
+    #   - FIXME
   comment_100:
     exceptions:
       - --!
@@ -69,9 +69,12 @@ rule:
   concurrent_012:
     first_paren_new_line: no
     assign_on_single_line: ignore
+  concurrent_401:
+    align_left: yes
+    align_paren: no
   conditional_waveforms_001:
     allow_single_line: yes
-  constant_004: 
+  constant_004:
     case: upper
   constant_012:
     align_left: yes
@@ -92,7 +95,7 @@ rule:
     disable: false
   element_association_100:
     disable: true
-  entity_003: 
+  entity_003:
     style: allow_comment
   entity_019:
     action: remove
@@ -100,8 +103,8 @@ rule:
     style: allow_comment
   function_020:
     action: remove
-  # function_600: 
-  #   disable: false 
+  # function_600:
+  #   disable: false
   #   prefixes:
   #     - fn_
   generate_004:
@@ -136,12 +139,14 @@ rule:
     style: allow_comment
   instantiation_034:
     disable: true
+  instantiation_036:
+    action: remove
   instantiation_601:
     disable: false
     prefixes: u_
   length_001:
-    length: 80
-    severity: Warning
+    length: 120
+    severity: Error
   loop_statement_200:
     disable: true
   loop_statement_201:
@@ -161,10 +166,10 @@ rule:
   package_body_003:
     action: remove
   package_body_600:
-    disable: false 
+    disable: false
     suffixes:
       - _pkg
-  port_010: 
+  port_010:
     case: lower
   # port_011:
   #   disable: false
@@ -184,6 +189,9 @@ rule:
     action: remove
   procedure_200:
     style: allow_comment
+  procedure_call_400:
+    align_left: yes
+    align_paren: no
   process_010:
     disable: true
   process_015:
@@ -214,13 +222,20 @@ rule:
   sequential_004:
     align_left: yes
     align_paren: no
-  sequential_401:
-    disable: true
   sequential_009:
     first_paren_new_line: no
     assign_on_single_line: ignore
+  sequential_401:
+    disable: true
+  sequential_402:
+    align_left: yes
+    align_paren: no
   signal_007:
-    severity: Warning
+    disable: true
+    #severity: Warning
+  signal_400:
+    align_left: yes
+    align_paren: no
   subprogram_body_201:
     disable: true
   subprogram_body_202:
@@ -228,18 +243,23 @@ rule:
   subprogram_body_203:
     disable: true
   subprogram_body_204:
-    disable: true    
+    disable: true
+  subtype_201:
+    disable: true
+  subtype_202:
+    disable: true
   type_010:
-    style: allow_comment
+    disable: true
+    #style: allow_comment
   type_011:
     disable: true
   type_200:
-    disable: true  
+    disable: true
   type_500:
     case: upper
   type_600:
     disable: false
-    suffixes: 
+    suffixes:
       - _t
   variable_007:
     disable: true

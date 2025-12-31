@@ -1,50 +1,39 @@
 # Shrikebyte Open Source HDL Library
 
-This repository holds Shrikebyte's public, open source, VHDL library of
-generic and reusable HDL building blocks.
+This repository holds Shrikebyte's open source VHDL library of reusable HDL building blocks.
 
 ## Getting Started
 
 ### Get the Source Code
 
-This repository is hosted on [GitHub](https://github.com/shrikebyte/sblib)
-and can be directly cloned using this command:
+This repository is hosted on [GitHub](https://github.com/shrikebyte/sblib) and can be directly cloned using this command:
 
-`git clone https://github.com/shrikebyte/sblib-open.git`
+`git clone https://github.com/shrikebyte/sblib.git`
 
 ### Install Project Tools
 
-- HDL Registers 8.0.0
-- VHDL Style Guide 3.30.0
-- VUnit 5.0.0.dev6
-- GHDL latest
+- HDL Registers 8.1.0
+- VHDL Style Guide 3.35.0
+- VUnit 5.0.0.dev7
+- NVC latest
 
 #### Install Python Tools
 
-Assuming a relatively recent version of python3 and pip3 are already available
-on the system, run the following command to install the python tools.
-Optionally, you may want to use a python virtual environment.
+Assuming a relatively recent version of python3 and pip3 are already available on the system, run the following command to install the python tools. Optionally, you may want to use a python virtual environment.
 
-`python -m pip install hdl_registers==8.0.0 vsg==3.30.0 vunit_hdl==5.0.0.dev6`
+`python -m pip install hdl_registers==8.1.0 vsg==3.35.0 vunit_hdl==5.0.0.dev7`
 
-#### Install GHDL
+#### Install NVC
 
-GHDL is an open-source VHDL simulator.
+NVC is an open-source VHDL simulator.
 
-The latest version can be compiled from source and manually installed by
-cloning, building, and installing the open-source repo (recommended):
+The latest version can be compiled from source and manually installed by cloning, building, and installing the open-source repo (recommended):
 
-`git clone https://github.com/ghdl/ghdl.git`
+`git clone https://github.com/nickg/nvc.git`
 
-Alternatively, if using a Debian-based distro, an older version of GHDL can be
-installed with:
-
-`apt install ghdl`
+Alternatively, a pre-compiled release can be downloaded from [Github](https://github.com/nickg/nvc/releases), however, this is a rapidly evolving project so compiling the most up-to-date code yourself is the recommended approach.
 
 ### Test
-
-> [!WARNING]
-> Development happens on the main branch. As a consequence, main is not guaranteed to be stable or to build properly every time, as it is always in a state of progress. Use tagged releases for the most stable experience.
 
 Walk through the following steps to run the simulations.
 

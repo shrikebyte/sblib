@@ -24,36 +24,36 @@ use work.axis_pkg.all;
 
 entity axis_mux is
   port (
-    clk    : in    std_ulogic;
-    srst   : in    std_ulogic;
+    clk  : in    std_ulogic;
+    srst : in    std_ulogic;
     --
     s_axis : view (s_axis_v) of axis_arr_t;
     --
     m_axis : view m_axis_v;
     --! Input Select
-    sel    : in integer range s_axis'range
+    sel : in    integer range s_axis'range
   );
 end entity;
 
 architecture rtl of axis_mux is
 
-  type state_t is (ST_UNLOCKED, ST_LOCKED);
-  signal state : state_t;
+  type   state_t is (ST_UNLOCKED, ST_LOCKED);
+  signal state   : state_t;
   signal sel_reg : integer range s_axis'range;
-  signal oe : std_ulogic;
+  signal oe      : std_ulogic;
 
 begin
 
   -- ---------------------------------------------------------------------------
   oe <= m_axis.tready or not m_axis.tvalid;
+
   gen_assign_s_axis_tready : for i in s_axis'range generate
     s_axis(i).tready <= oe and to_sl(state = ST_LOCKED and sel_reg = i);
   end generate;
 
   -- ---------------------------------------------------------------------------
-  prc_select : process(clk) begin
+  prc_select : process (clk) is begin
     if rising_edge(clk) then
-
       if m_axis.tready then
         m_axis.tvalid <= '0';
       end if;
@@ -62,7 +62,7 @@ begin
         when ST_UNLOCKED =>
           if s_axis(sel).tvalid and oe then
             sel_reg <= sel;
-            state <= ST_LOCKED;
+            state   <= ST_LOCKED;
           end if;
 
         when ST_LOCKED =>
@@ -81,8 +81,8 @@ begin
 
       if srst then
         m_axis.tvalid <= '0';
-        sel_reg <= s_axis'low;
-        state  <= ST_UNLOCKED;
+        sel_reg       <= s_axis'low;
+        state         <= ST_UNLOCKED;
       end if;
     end if;
   end process;

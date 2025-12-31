@@ -30,12 +30,13 @@ architecture tb of axil_xbar_tb is
   constant NUM_MASTERS : positive := 4;
   constant NUM_SLAVES  : positive := 4;
 
-  constant BASEADDRS : slv_arr_t(0 to NUM_SLAVES - 1)(AXIL_ADDR_WIDTH - 1 downto 0) := (
-    0 => x"0000_0000",
-    1 => x"0001_0000",
-    2 => x"000F_0000",
-    3 => x"0110_0000"
-  );
+  constant BASEADDRS :
+    slv_arr_t(0 to NUM_SLAVES - 1)(AXIL_ADDR_WIDTH - 1 downto 0) := (
+      0 => x"0000_0000",
+      1 => x"0001_0000",
+      2 => x"000F_0000",
+      3 => x"0110_0000"
+    );
 
   -- DUT ports
   signal clk          : std_logic := '1';
@@ -45,7 +46,7 @@ architecture tb of axil_xbar_tb is
   signal axil_req_ram : axil_req_arr_t(0 to NUM_SLAVES - 1);
   signal axil_rsp_ram : axil_rsp_arr_t(0 to NUM_SLAVES - 1);
 
-  type bus_master_arr_t is array (natural range<>) of bus_master_t;
+  type bus_master_arr_t is array(natural range <>) of bus_master_t;
 
   -- Testbench BFMs
   constant AXIM : bus_master_arr_t(0 to NUM_MASTERS - 1) := (
@@ -101,7 +102,11 @@ begin
         for master in 0 to NUM_MASTERS - 1 loop
           for slave in 0 to NUM_SLAVES - 1 loop
             for transaction in 1 to 10 loop
-              addr  := BASEADDRS(slave) or (std_logic_vector(to_unsigned(transaction + (master * 16), AXIL_ADDR_WIDTH - 2)) & b"00");
+              addr  := BASEADDRS(slave) or (
+                std_logic_vector(
+                  to_unsigned(transaction + (master * 16), AXIL_ADDR_WIDTH - 2)
+                ) & b"00"
+              );
               data  := addr;
               wstrb := x"F";
               write_axi_lite(net, AXIM(master), addr, data, AXI_RSP_OKAY, wstrb);
@@ -113,7 +118,11 @@ begin
         for master in 0 to NUM_MASTERS - 1 loop
           for slave in 0 to NUM_SLAVES - 1 loop
             for transaction in 1 to 10 loop
-              addr := BASEADDRS(slave) or (std_logic_vector(to_unsigned(transaction + (master * 16), AXIL_ADDR_WIDTH - 2)) & b"00");
+              addr := BASEADDRS(slave) or (
+                std_logic_vector(
+                  to_unsigned(transaction + (master * 16), AXIL_ADDR_WIDTH - 2)
+                ) & b"00"
+              );
               data := addr;
               check_axi_lite(net, AXIM(master), addr, AXI_RSP_OKAY, data, "Check during read loop failed.");
             end loop;

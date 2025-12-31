@@ -21,8 +21,8 @@ use work.axis_pkg.all;
 
 entity axis_arb is
   port (
-    clk    : in    std_ulogic;
-    srst   : in    std_ulogic;
+    clk  : in    std_ulogic;
+    srst : in    std_ulogic;
     --
     s_axis : view (s_axis_v) of axis_arr_t;
     --
@@ -37,7 +37,7 @@ architecture rtl of axis_arb is
 begin
 
   -- ---------------------------------------------------------------------------
-  prc_arb_sel : process(all) begin
+  prc_arb_sel : process (all) is begin
 
     -- Default
     sel <= s_axis'low;
@@ -52,12 +52,12 @@ begin
 
   -- ---------------------------------------------------------------------------
   u_axis_mux : entity work.axis_mux
-  port map(
-    clk => clk,
-    srst => srst,
+  port map (
+    clk    => clk,
+    srst   => srst,
     s_axis => s_axis,
     m_axis => m_axis,
-    sel => sel
+    sel    => sel
   );
 
 end architecture;
