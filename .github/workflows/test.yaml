@@ -43,15 +43,14 @@ jobs:
             vsg==3.35.0 \
             vunit_hdl==5.0.0.dev7
 
-      - name: Setup GHDL
-        uses: ghdl/setup-ghdl@v1
+      - name: Setup NVC
+        uses: nickg/setup-nvc@v1
         with:
-          version: nightly
-          backend: mcode
+          version: latest
 
       - name: Set VUnit simulator env variable
         run: |
-          echo "VUNIT_SIMULATOR=ghdl" >> "$GITHUB_ENV"
+          echo "VUNIT_SIMULATOR=nvc" >> "$GITHUB_ENV"
 
       - name: Run simulation
         run: |
