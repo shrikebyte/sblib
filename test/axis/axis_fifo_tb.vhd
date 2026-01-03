@@ -61,6 +61,11 @@ architecture tb of axis_fifo_tb is
     tuser(UW - 1 downto 0)
   );
 
+  signal ctl_drop : std_ulogic := '0';
+  signal sts_dropped    : std_ulogic;
+  signal sts_depth_spec : u_unsigned(clog2(G_DEPTH) downto 0);
+  signal sts_depth_comm : u_unsigned(clog2(G_DEPTH) downto 0);
+
   -- Testbench BFMs
   constant STALL_CFG : stall_configuration_t := (
     stall_probability => 0.2 * to_real(G_ENABLE_JITTER),
@@ -151,7 +156,7 @@ begin
       bfm_sub_enable <= '0';
 
       -- Send data while fifo not full
-      while s_axis.tready loop
+      while sts_depth_spec /= G_DEPTH loop
         send_random;
         wait until rising_edge(clk);
       end loop;
@@ -196,8 +201,10 @@ begin
     s_axis => s_axis,
     m_axis => m_axis,
     --
-    ctl_drop => '0',
-    sts_depth => open
+    ctl_drop       => ctl_drop,
+    sts_dropped    => sts_dropped,
+    sts_depth_spec => sts_depth_spec,
+    sts_depth_comm => sts_depth_comm
   );
 
   u_bfm_axis_man : entity work.bfm_axis_man
