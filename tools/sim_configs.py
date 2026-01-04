@@ -328,3 +328,27 @@ def add_configs(lib):
                     "G_DROP_OVERSIZE": drop_oversize,
                 },
             )
+
+    ############################################################################
+    tb = lib.test_bench("axis_fifo_async_tb")
+
+    enable_jitter = [True, False]
+    clk_ratio = [12, 95, 106, 169, 200]
+    depth = [64]
+    packet_mode = [True, False]
+    drop_oversize = [True, False]
+
+    for enable_jitter, clk_ratio, depth, packet_mode, drop_oversize in product(
+        enable_jitter, clk_ratio, depth, packet_mode, drop_oversize
+    ):
+        if not (not packet_mode and drop_oversize):
+            sim_utils.named_config(
+                tb,
+                {
+                    "G_ENABLE_JITTER": enable_jitter,
+                    "G_CLK_RATIO": clk_ratio,
+                    "G_DEPTH": depth,
+                    "G_PACKET_MODE": packet_mode,
+                    "G_DROP_OVERSIZE": drop_oversize,
+                },
+            )

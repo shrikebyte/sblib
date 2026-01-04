@@ -13,7 +13,7 @@ set read_data [
   get_cells \
     -quiet \
     -filter {PRIMITIVE_GROUP==FLOP_LATCH || PRIMITIVE_GROUP==REGISTER} \
-    "ram_data_reg*"
+    "m_rd_data_reg*"
 ]
 
 # These registers exist as FFs when the RAM is implemented as distributed RAM (LUTRAM).
@@ -25,20 +25,6 @@ set read_data [
 # In recent Vivado versions (at least 2023.2), the cells show up even when the RAM is implemented as
 # BRAM, hence why we filter for the primitive type.
 if {${read_data} != "" && ${clk_write} != ""} {
-  puts "INFO: fifo_async.tcl: Setting false path to read data registers."
+  puts "INFO: axis_fifo_async.tcl: Setting false path to read data registers."
   set_false_path -setup -hold -from ${clk_write} -to ${read_data}
-
-  # Waive "LUTRAM read/write potential collision" warning to make reports a little cleaner.
-  # The 'report_cdc' command lists all the data bits as a warning, for example
-  # * From: asynchronous_fifo_inst/memory.mem_reg_0_15_0_5/RAMA_D1/CLK
-  # * To: asynchronous_fifo_inst/memory.memory_read_data_reg[0]
-  # The wildcards below aim to catch all these paths.
-  set cdc_from [get_pins -quiet "memory.mem_reg*/*/CLK"]
-  set cdc_to [get_pins -quiet "memory.memory_read_data_reg*/D"]
-  create_waiver \
-    -quiet \
-    -id "CDC-26" \
-    -from ${cdc_from} \
-    -to ${cdc_to} \
-    -description "Read/write pointer logic guarantees no collision"
 }

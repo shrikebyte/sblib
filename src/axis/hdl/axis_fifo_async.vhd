@@ -42,6 +42,7 @@ entity axis_fifo_async is
     -- Output interface
     m_clk  : in std_logic;
     m_axis : view m_axis_v;
+    m_sts_dropped : out   std_ulogic;
     m_sts_depth_spec : out   u_unsigned(clog2(G_DEPTH) downto 0);
     m_sts_depth_comm : out   u_unsigned(clog2(G_DEPTH) downto 0)
   );
@@ -141,8 +142,8 @@ begin
     end if;
   end process;
 
-  prc_status_m : process (s_clk) is begin
-    if rising_edge(s_clk) then
+  prc_status_m : process (m_clk) is begin
+    if rising_edge(m_clk) then
       m_sts_depth_spec <= m_wr_ptr_spec_cdc - m_rd_ptr;
       m_sts_depth_comm <= m_wr_ptr_comm_cdc - m_rd_ptr;
     end if;
@@ -209,6 +210,18 @@ begin
     src_cnt => m_rd_ptr,
     dst_clk => s_clk,
     dst_cnt => s_rd_ptr_cdc
+  );
+
+  u_cdc_pulse_sts_dropped : entity work.cdc_pulse
+  generic map (
+    G_SYNC_LEN => G_SYNC_LEN,
+    G_USE_FEEDBACK => true
+  )
+  port map (
+    src_clk   => s_clk,
+    src_pulse => s_sts_dropped,
+    dst_clk   => m_clk,
+    dst_pulse => m_sts_dropped
   );
 
   -- ---------------------------------------------------------------------------
@@ -290,7 +303,7 @@ begin
         m_axis.tvalid <= '0';
       end if;
 
-      if s_srst_cdc then
+      if m_srst_cdc then
         m_axis.tvalid <= '0';
         m_rd_ptr        <= (others => '0');
       end if;
