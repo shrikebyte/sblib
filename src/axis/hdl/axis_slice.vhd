@@ -47,7 +47,7 @@ entity axis_slice is
     --! byte width would be 16.
     num_bytes : in    natural range 0 to G_MAX_M0_BYTES;
     --! Pulses if the length of the input packet was shorter than split_bytes.
-    sts_err_runt : out   std_ulogic
+    sts_short : out   std_ulogic
   );
 end entity;
 
@@ -166,7 +166,7 @@ begin
   -- ---------------------------------------------------------------------------
   prc_fsm : process (clk) is begin
     if rising_edge(clk) then
-      sts_err_runt <= '0';
+      sts_short <= '0';
 
       if m0_axis.tready then
         m0_axis.tvalid <= '0';
@@ -200,7 +200,7 @@ begin
               int_axis_tkeep <= pipe0_axis.tkeep;
               --
               if pipe0_axis.tlast then
-                sts_err_runt   <= '1';
+                sts_short      <= '1';
                 int_axis_tlast <= '1';
                 remain_cnt     <= 0;
                 state          <= ST_IDLE;
@@ -218,8 +218,8 @@ begin
               remain_cnt     <= 0;
               --
               if pipe0_axis.tlast then
-                sts_err_runt <= '1';
-                state        <= ST_IDLE;
+                sts_short <= '1';
+                state     <= ST_IDLE;
               else
                 state <= ST_TX1;
               end if;
@@ -291,7 +291,7 @@ begin
       if srst then
         m0_axis.tvalid <= '0';
         m1_axis.tvalid <= '0';
-        sts_err_runt   <= '0';
+        sts_short      <= '0';
         state          <= ST_IDLE;
       end if;
     end if;

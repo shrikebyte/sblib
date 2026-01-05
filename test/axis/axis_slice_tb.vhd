@@ -62,7 +62,7 @@ architecture tb of axis_slice_tb is
   );
 
   signal num_bytes    : natural range 0 to MAX_M0_BYTES;
-  signal sts_err_runt : std_ulogic;
+  signal sts_short : std_ulogic;
 
   -- Testbench BFMs
   constant STALL_CFG : stall_configuration_t := (
@@ -253,13 +253,13 @@ begin
     G_MAX_M0_BYTES => MAX_M0_BYTES
   )
   port map (
-    clk          => clk,
-    srst         => srst,
-    s_axis       => s_axis,
-    m0_axis      => m_axis(0),
-    m1_axis      => m_axis(1),
-    num_bytes    => num_bytes,
-    sts_err_runt => sts_err_runt
+    clk       => clk,
+    srst      => srst,
+    s_axis    => s_axis,
+    m0_axis   => m_axis(0),
+    m1_axis   => m_axis(1),
+    num_bytes => num_bytes,
+    sts_short => sts_short
   );
 
   u_bfm_axis_man : entity work.bfm_axis_man

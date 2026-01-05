@@ -1,6 +1,6 @@
-# Shrikebyte Open Source HDL Library
+# Shrikebyte VHDL Library
 
-[![CI Status](https://github.com/shrikebyte/sblib/actions/workflows/test.yml/badge.svg?branch=main&event=push)](https://github.com/shrikebyte/sblib/actions)
+[![test](https://github.com/shrikebyte/sblib/actions/workflows/test.yaml/badge.svg)](https://github.com/shrikebyte/sblib/actions/workflows/test.yaml)
 
 This repository holds Shrikebyte's open source VHDL library of reusable HDL building blocks.
 
