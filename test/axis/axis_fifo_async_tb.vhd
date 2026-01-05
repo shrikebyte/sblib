@@ -24,7 +24,7 @@ use work.bfm_pkg.all;
 entity axis_fifo_async_tb is
   generic (
     RUNNER_CFG      : string;
-    G_ENABLE_JITTER : boolean  := true;
+    G_ENABLE_JITTER : boolean := true;
     -- Ratio of input to output clock. When < 100, the input clock
     -- is slower. When > 100, the input clock is faster.
     G_CLK_RATIO     : integer  := 35;
@@ -37,24 +37,24 @@ end entity;
 architecture tb of axis_fifo_async_tb is
 
   -- TB Constants
-  constant RESET_TIME : time    := 1 us;
-  constant CLK_PERIOD   : time     := 5 ns;
-  constant CLK_PERIOD_INPUT : time     := CLK_PERIOD * (real(G_CLK_RATIO) / 100.0);
-  constant CLK_PERIOD_OUTPUT : time     := CLK_PERIOD;
-  constant KW         : integer := 2;
-  constant DW         : integer := 16;
-  constant UW         : integer := 8;
-  constant DBW        : integer := DW / KW;
-  constant UBW        : integer := UW / KW;
+  constant RESET_TIME        : time    := 1 us;
+  constant CLK_PERIOD        : time    := 5 ns;
+  constant CLK_PERIOD_INPUT  : time    := CLK_PERIOD * (real(G_CLK_RATIO) / 100.0);
+  constant CLK_PERIOD_OUTPUT : time    := CLK_PERIOD;
+  constant KW                : integer := 2;
+  constant DW                : integer := 16;
+  constant UW                : integer := 8;
+  constant DBW               : integer := DW / KW;
+  constant UBW               : integer := UW / KW;
 
   -- TB Signals
-  signal s_clk        : std_logic := '1';
-  signal m_clk        : std_logic := '1';
-  signal arst         : std_logic := '1';
-  signal s_srst       : std_logic := '1';
-  signal s_srstn      : std_logic := '0';
-  signal m_srst       : std_logic := '1';
-  signal m_srstn      : std_logic := '0';
+  signal s_clk   : std_logic := '1';
+  signal m_clk   : std_logic := '1';
+  signal arst    : std_logic := '1';
+  signal s_srst  : std_logic := '1';
+  signal s_srstn : std_logic := '0';
+  signal m_srst  : std_logic := '1';
+  signal m_srstn : std_logic := '0';
 
   -- DUT Signals
   signal s_axis : axis_t (
@@ -91,7 +91,7 @@ architecture tb of axis_fifo_async_tb is
 
   signal num_packets_checked : natural    := 0;
   signal num_packets_sent    : natural    := 0;
-  signal m_bfm_sub_enable      : std_ulogic := '0';
+  signal m_bfm_sub_enable    : std_ulogic := '0';
 
 begin
 
@@ -189,7 +189,6 @@ begin
     arst <= '0';
 
     if run("test_random_data") then
-
       wait_m_clks(1);
       m_bfm_sub_enable <= '1';
 
@@ -213,7 +212,6 @@ begin
       -- Drain the fifo
       wait_m_clks(1);
       m_bfm_sub_enable <= '1';
-
     elsif run("test_oversized") then
       m_bfm_sub_enable <= '1';
 
@@ -225,15 +223,14 @@ begin
       send_packet(G_DEPTH);
       send_packet(G_DEPTH + 2, G_DROP_OVERSIZE);
       send_packet(G_DEPTH * 1 / 4);
-
     elsif run("test_drop") then
       m_bfm_sub_enable <= '1';
       s_ctl_drop       <= '0';
 
       -- Sometimes hold the drop signal during random packets
       for test_idx in 0 to 20 loop
-        drop     := to_bool(rnd.RandInt(0, 1));
-        len      := rnd.Uniform(1, 10);
+        drop       := to_bool(rnd.RandInt(0, 1));
+        len        := rnd.Uniform(1, 10);
         send_packet(len, G_PACKET_MODE and drop);
         s_ctl_drop <= to_sl(drop);
         wait until (s_axis.tvalid and s_axis.tready and s_axis.tlast) = '1' and
@@ -279,7 +276,6 @@ begin
       -- Non-dropped packet
       send_packet(2);
       wait_until_done;
-
     elsif run("test_fill_lasts") then
       m_bfm_sub_enable <= '0';
 
@@ -333,7 +329,7 @@ begin
   -- ---------------------------------------------------------------------------
   u_axis_fifo_async : entity work.axis_fifo_async
   generic map (
-    G_SYNC_LEN      => 2,
+    G_EXTRA_SYNC    => 0,
     G_DEPTH         => G_DEPTH,
     G_PACKET_MODE   => G_PACKET_MODE,
     G_DROP_OVERSIZE => G_DROP_OVERSIZE,
@@ -342,12 +338,12 @@ begin
     G_USE_TUSER     => true
   )
   port map (
-    arst   => arst,
+    arst => arst,
     --
     --
-    s_clk  => s_clk,
+    s_clk => s_clk,
     --
-    s_axis           => s_axis,
+    s_axis => s_axis,
     --
     s_ctl_drop       => s_ctl_drop,
     s_sts_dropped    => s_sts_dropped,
@@ -355,9 +351,9 @@ begin
     s_sts_depth_comm => s_sts_depth_comm,
     --
     --
-    m_clk  => m_clk,
+    m_clk => m_clk,
     --
-    m_axis           => m_axis,
+    m_axis => m_axis,
     --
     m_sts_dropped    => m_sts_dropped,
     m_sts_depth_spec => m_sts_depth_spec,
@@ -401,11 +397,11 @@ begin
     check_stable(
       clock => m_clk,
       en    => en,
-      -- Start check when valid arrives
+    -- Start check when valid arrives
       start_event => m_axis.tvalid,
-      -- End check when last arrives
+    -- End check when last arrives
       end_event => end_event,
-      -- Assert that valid is always asserted until last arrives
+    -- Assert that valid is always asserted until last arrives
       expr => m_axis.tvalid,
       msg  => "There was a bubble in m_axis.tvalid!"
     );

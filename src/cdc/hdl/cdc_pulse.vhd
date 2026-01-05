@@ -3,8 +3,7 @@
 --# Auth : David Gussler
 --# Lang : VHDL '08
 --# ============================================================================
---! Simple pulse synchronizer. This can be used to sync one or several
---! unrelated single-cycle pulses across clock domains.
+--# Pulse synchronizer.
 --##############################################################################
 
 library ieee;
@@ -12,8 +11,8 @@ use ieee.std_logic_1164.all;
 
 entity cdc_pulse is
   generic (
-    --! Number of synchronizer flip-flops
-    G_SYNC_LEN : positive := 2;
+    --! Number of additional synchronizer flip-flops
+    G_EXTRA_SYNC : natural := 0;
     --! Protect against pulse overloading at the input. If the user sends pulses
     --! infrequently or if the src clock is over 2x slower than the output clock
     --! then this can be set to false.
@@ -24,19 +23,21 @@ entity cdc_pulse is
     G_USE_FEEDBACK : boolean := true
   );
   port (
-    src_clk   : in    std_logic;
-    src_pulse : in    std_logic;
-    dst_clk   : in    std_logic;
-    dst_pulse : out   std_logic
+    src_clk   : in    std_ulogic;
+    src_pulse : in    std_ulogic;
+    dst_clk   : in    std_ulogic;
+    dst_pulse : out   std_ulogic
   );
 end entity;
 
 architecture rtl of cdc_pulse is
 
+  constant SYNC_LEN : positive := 2 + G_EXTRA_SYNC;
+
   -- ---------------------------------------------------------------------------
-  signal src_toggl     : std_logic                                 := '0';
-  signal dst_toggl_cdc : std_logic_vector(G_SYNC_LEN - 1 downto 0) := (others => '0');
-  signal dst_toggl_ff  : std_logic                                 := '0';
+  signal src_toggl     : std_ulogic                               := '0';
+  signal dst_toggl_cdc : std_ulogic_vector(SYNC_LEN - 1 downto 0) := (others => '0');
+  signal dst_toggl_ff  : std_ulogic                               := '0';
 
   -- ---------------------------------------------------------------------------
   attribute async_reg                      : string;
@@ -51,9 +52,9 @@ begin
   -- ---------------------------------------------------------------------------
   gen_src : if G_USE_FEEDBACK generate
 
-    signal src_toggl_fdbk_cdc : std_logic_vector(G_SYNC_LEN - 1 downto 0) := (others => '0');
-    signal src_toggl_fdbk_ff  : std_logic := '0';
-    signal src_locked         : std_logic := '0';
+    signal src_toggl_fdbk_cdc : std_ulogic_vector(SYNC_LEN - 1 downto 0) := (others => '0');
+    signal src_toggl_fdbk_ff  : std_ulogic := '0';
+    signal src_locked         : std_ulogic := '0';
 
     -- ---------------------------------------------------------------------------
     attribute async_reg of src_toggl_fdbk_cdc     : signal is "TRUE";
@@ -64,10 +65,10 @@ begin
     -- Create a toggle when src pulse is detected
     prc_src : process (src_clk) is begin
       if rising_edge(src_clk) then
-        src_toggl_fdbk_cdc <= src_toggl_fdbk_cdc(G_SYNC_LEN - 2 downto 0) & dst_toggl_cdc(G_SYNC_LEN - 1);
-        src_toggl_fdbk_ff  <= src_toggl_fdbk_cdc(G_SYNC_LEN - 1);
+        src_toggl_fdbk_cdc <= src_toggl_fdbk_cdc(SYNC_LEN - 2 downto 0) & dst_toggl_cdc(SYNC_LEN - 1);
+        src_toggl_fdbk_ff  <= src_toggl_fdbk_cdc(SYNC_LEN - 1);
 
-        if src_toggl_fdbk_cdc(G_SYNC_LEN - 1) xor src_toggl_fdbk_ff then
+        if src_toggl_fdbk_cdc(SYNC_LEN - 1) xor src_toggl_fdbk_ff then
           src_locked <= '0';
         end if;
 
@@ -95,12 +96,12 @@ begin
   -- CDC regs for destination toggle
   prc_dst : process (dst_clk) is begin
     if rising_edge(dst_clk) then
-      dst_toggl_cdc <= dst_toggl_cdc(G_SYNC_LEN - 2 downto 0) & src_toggl;
-      dst_toggl_ff  <= dst_toggl_cdc(G_SYNC_LEN - 1);
+      dst_toggl_cdc <= dst_toggl_cdc(SYNC_LEN - 2 downto 0) & src_toggl;
+      dst_toggl_ff  <= dst_toggl_cdc(SYNC_LEN - 1);
     end if;
   end process;
 
   -- Translate toggle to pulse
-  dst_pulse <= dst_toggl_cdc(G_SYNC_LEN - 1) xor dst_toggl_ff;
+  dst_pulse <= dst_toggl_cdc(SYNC_LEN - 1) xor dst_toggl_ff;
 
 end architecture;

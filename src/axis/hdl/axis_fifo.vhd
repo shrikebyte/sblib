@@ -64,7 +64,7 @@ architecture rtl of axis_fifo is
   constant UW : integer := if_then_else(G_USE_TUSER, m_axis.tuser'length, 0);
   constant LW : integer := if_then_else(G_USE_TLAST, 1, 0);
   constant RW : integer := DW + UW + KW + LW; -- Ram width
-  constant AW : integer := clog2(G_DEPTH); -- Address width
+  constant AW : integer := clog2(G_DEPTH);    -- Address width
 
   signal ram     : slv_arr_t(0 to G_DEPTH - 1)(RW - 1 downto 0);
   signal wr_data : std_ulogic_vector(RW - 1 downto 0);
@@ -103,21 +103,21 @@ begin
     wr_data(DW + KW - 1 downto DW) <= s_axis.tkeep;
     m_axis.tkeep                   <= rd_data(DW + KW - 1 downto DW);
   else generate
-    m_axis.tkeep <= (others=>'1');
+    m_axis.tkeep                   <= (others=> '1');
   end generate;
 
   gen_assign_tuser : if G_USE_TUSER generate
     wr_data(DW + KW + UW - 1 downto DW + KW) <= s_axis.tuser;
     m_axis.tuser                             <= rd_data(DW + KW + UW - 1 downto DW + KW);
   else generate
-    m_axis.tuser <= (others=>'0');
+    m_axis.tuser                             <= (others=> '0');
   end generate;
 
   gen_assign_tlast : if G_USE_TLAST generate
     wr_data(DW + KW + UW + LW - 1) <= s_axis.tlast;
     m_axis.tlast                   <= rd_data(DW + KW + UW + LW - 1);
   else generate
-    m_axis.tlast <= '1';
+    m_axis.tlast                   <= '1';
   end generate;
 
   -- FIFO is ready when not full, unless G_DROP_OVERSIZE is set, in which case

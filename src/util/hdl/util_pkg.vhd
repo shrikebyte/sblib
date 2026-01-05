@@ -143,7 +143,6 @@ package util_pkg is
 
   -- ---------------------------------------------------------------------------
   -- Array types
-  type sl_arr_t is array(natural range <>) of std_logic;
   type slv_arr_t is array(natural range <>) of std_logic_vector;
   type unsigned_arr_t is array(natural range <>) of u_unsigned;
   type signed_arr_t is array(natural range <>) of u_signed;
