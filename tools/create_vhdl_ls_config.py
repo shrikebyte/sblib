@@ -12,11 +12,12 @@ import rtoml
 if TYPE_CHECKING:
     from vunit.ui import VUnit
 
+
 def create_configuration(  # noqa: C901
     output_path: Path,
     vunit_proj: VUnit | None = None,
-    files: list[tuple[Path, str]] | None = None
-    ) -> None:
+    files: list[tuple[Path, str]] | None = None,
+) -> None:
     """
     Create a configuration file (``vhdl_ls.toml``) for the rust_hdl VHDL Language Server
     (https://github.com/VHDL-LS/rust_hdl).
@@ -56,7 +57,9 @@ def create_configuration(  # noqa: C901
 
     if vunit_proj is not None:
         for source_file in vunit_proj.get_compile_order():
-            add_file(file_path=Path(source_file.name), library_name=source_file.library.name)
+            add_file(
+                file_path=Path(source_file.name), library_name=source_file.library.name
+            )
 
     if files is not None:
         for file_path, library_name in files:

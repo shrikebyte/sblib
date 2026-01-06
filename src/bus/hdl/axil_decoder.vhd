@@ -1,12 +1,15 @@
 --##############################################################################
 --# File : axil_decoder.vhd
 --# Auth : David Gussler
---# Lang : VHDL '08
 --# ============================================================================
---! AXI Lite 1:N decoder
---! Designed for simplicity and low utilization.
---!
---! Heavily inspired by: https://github.com/hdl-modules/hdl-modules/blob/main/modules/axi_lite/src/axi_lite_mux.vhd
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
+--# ============================================================================
+--# AXI Lite 1:N decoder
+--# Designed for simplicity and low utilization.
+--#
+--# Heavily inspired by: https://github.com/hdl-modules/hdl-modules/blob/main/modules/axi_lite/src/axi_lite_mux.vhd
 --##############################################################################
 
 library ieee;

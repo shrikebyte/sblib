@@ -1,14 +1,17 @@
 --##############################################################################
 --# File : cdc_bit.vhd
 --# Auth : David Gussler
---# Lang : VHDL'08
 --# ============================================================================
---! Simple bit synchronizer. This can be used to sync one bit or several
---! unrelated bits to a common clock. Includes the option to register the
---! input signal before syncing. If the input signal comes from off-chip, then
---! there is likely no src_clk, but if there is a src_clk for src_bit
---! and the application can handle the extra cycle of latency, then it is
---! recommended to enable the 'G_USE_SRC_REG' generic.
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
+--# ============================================================================
+--# Simple bit synchronizer. This can be used to sync one bit or several
+--# unrelated bits to a common clock. Includes the option to register the
+--# input signal before syncing. If the input signal comes from off-chip, then
+--# there is likely no src_clk, but if there is a src_clk for src_bit
+--# and the application can handle the extra cycle of latency, then it is
+--# recommended to enable the 'G_USE_SRC_REG' generic.
 --##############################################################################
 
 library ieee;

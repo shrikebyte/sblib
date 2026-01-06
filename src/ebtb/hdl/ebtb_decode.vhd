@@ -1,45 +1,44 @@
 --##############################################################################
 --# File : ebtb_decode.vhd
 --# Auth : Chuck Benz, Frans Schreuder, with modifications by David Gussler
---# Lang : VHDL '08
 --# ============================================================================
---! Copyright 2002    Chuck Benz, Hollis, NH
---! Copyright 2020    Frans Schreuder
---!
---! Licensed under the Apache License, Version 2.0 (the "License");
---! you may not use this file except in compliance with the License.
---! You may obtain a copy of the License at
---!
---!     http://www.apache.org/licenses/LICENSE-2.0
---!
---! Unless required by applicable law or agreed to in writing, software
---! distributed under the License is distributed on an "AS IS" BASIS,
---! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
---! See the License for the specific language governing permissions and
---! limitations under the License.
---!
---! The information and description contained herein is the
---! property of Chuck Benz.
---!
---! Permission is granted for any reuse of this information
---! and description as long as this copyright notice is
---! preserved.  Modifications may be made as long as this
---! notice is preserved.
---!
---! Changelog:
---! 11 October  2002: Chuck Benz:
---!   - updated with clearer messages, and checking decodeout
---!
---! 3  November 2020: Frans Schreuder:
---!   - Translated to VHDL, added UVVM testbench
---!   - Original verilog code:
---!     http://asics.chuckbenz.com/#My_open_source_8b10b_encoderdecoder
---!
---! 8  January  2025: David Gussler:
---!   - Renamed module, code style update, changed reset to synchronous
---!   - Original VHDL code: https://github.com/fransschreuder/8b10b_VHDL
---!
---! per Widmer and Franaszek
+--# Copyright 2002    Chuck Benz, Hollis, NH
+--# Copyright 2020    Frans Schreuder
+--#
+--# Licensed under the Apache License, Version 2.0 (the "License");
+--# you may not use this file except in compliance with the License.
+--# You may obtain a copy of the License at
+--#
+--#     http://www.apache.org/licenses/LICENSE-2.0
+--#
+--# Unless required by applicable law or agreed to in writing, software
+--# distributed under the License is distributed on an "AS IS" BASIS,
+--# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+--# See the License for the specific language governing permissions and
+--# limitations under the License.
+--#
+--# The information and description contained herein is the
+--# property of Chuck Benz.
+--#
+--# Permission is granted for any reuse of this information
+--# and description as long as this copyright notice is
+--# preserved.  Modifications may be made as long as this
+--# notice is preserved.
+--# ============================================================================
+--# Changelog:
+--# 11 October  2002: Chuck Benz:
+--#   - updated with clearer messages, and checking decodeout
+--#
+--# 3  November 2020: Frans Schreuder:
+--#   - Translated to VHDL, added UVVM testbench
+--#   - Original verilog code:
+--#     http://asics.chuckbenz.com/#My_open_source_8b10b_encoderdecoder
+--#
+--# 8  January  2025: David Gussler:
+--#   - Renamed module, code style update, changed reset to synchronous
+--#   - Original VHDL code: https://github.com/fransschreuder/8b10b_VHDL
+--#
+--# per Widmer and Franaszek
 --##############################################################################
 
 library ieee;

@@ -30,6 +30,7 @@ package bfm_pkg is
     min_stall_cycles  : natural;
     max_stall_cycles  : natural;
   end record;
+
   constant ZERO_STALL_CONFIGURATION : stall_configuration_t := (
     stall_probability => 0.0,
     min_stall_cycles  => 0,

@@ -1,10 +1,13 @@
 --##############################################################################
 --# File : axil_arbiter.vhd
 --# Auth : David Gussler
---# Lang : VHDL '08
 --# ============================================================================
---! AXI Lite N:1 arbiter
---! Lowest master index has the highest priority. No round robin arbitration.
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
+--# ============================================================================
+--# AXI Lite N:1 arbiter
+--# Lowest master index has the highest priority. No round robin arbitration.
 --##############################################################################
 
 library ieee;

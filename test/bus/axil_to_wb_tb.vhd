@@ -1,9 +1,12 @@
 --##############################################################################
 --# File : axil_to_wb_tb.vhd
 --# Auth : David Gussler
---# Lang : VHDL '08
 --# ============================================================================
---! AXI Lite to Wishbone bridge testbench
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
+--# ============================================================================
+--# AXI Lite to Wishbone bridge testbench
 --##############################################################################
 
 library ieee;

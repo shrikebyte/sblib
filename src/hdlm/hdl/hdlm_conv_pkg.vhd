@@ -1,9 +1,12 @@
 --##############################################################################
 --# File : conv_pkg.vhd
 --# Auth : David Gussler
---# Lang : VHDL '08
 --# ============================================================================
---! Convert between util_pkg types and hdl-modules types
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
+--# ============================================================================
+--# Convert between util_pkg types and hdl-modules types
 --##############################################################################
 
 library ieee;

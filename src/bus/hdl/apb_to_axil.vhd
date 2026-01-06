@@ -1,9 +1,12 @@
 --##############################################################################
 --# File : apb_to_axil.vhd
 --# Auth : David Gussler
---# Lang : VHDL '08
 --# ============================================================================
---! APB to AXI Lite bridge.
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
+--# ============================================================================
+--# APB to AXI Lite bridge.
 --##############################################################################
 
 library ieee;

@@ -1,10 +1,13 @@
 --##############################################################################
 --# File : ram.vhd
 --# Auth : David Gussler
---# Lang : VHDL '08
 --# ============================================================================
---! Vendor agnostic read-first bram generator. Can be used as a tdpr, sdpr,
---! spr, rom, etc. Just leave unused ports disconnected.
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
+--# ============================================================================
+--# Vendor agnostic read-first bram generator. Can be used as a tdpr, sdpr,
+--# spr, rom, etc. Just leave unused ports disconnected.
 --##############################################################################
 
 library ieee;

@@ -1,11 +1,14 @@
 --#############################################################################
 --# File : cdc_grey.vhd
 --# Auth : David Gussler
---# Lang : VHDL '08
+--# ============================================================================
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
 --# ==========================================================================
---! Gray code counter synchronizer. The 'src_cnt' input may only increment by
---! one, decrement by one, or remain the same on each clock cycle to ensure
---! that the count is reliably transferred.
+--# Gray code counter synchronizer. The 'src_cnt' input may only increment by
+--# one, decrement by one, or remain the same on each clock cycle to ensure
+--# that the count is reliably transferred.
 --#############################################################################
 
 library ieee;

@@ -1,7 +1,10 @@
 --#############################################################################
 --# File : cdc_vector.vhd
 --# Auth : David Gussler
---# Lang : VHDL '08
+--# ============================================================================
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
 --# ===========================================================================
 --# Handshake vector synchronizer based on AXIS. If sync'ing counters, it is
 --# recommended to use cdc_gray for lower resource utilization and lower

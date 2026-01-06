@@ -1,11 +1,14 @@
 --##############################################################################
 --# File : axil_xbar.vhd
 --# Auth : David Gussler
---# Lang : VHDL '08
 --# ============================================================================
---! AXI Lite crossbar.
---! Designed for simplicity and low area. Only supports one
---! transaction at a time.
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
+--# ============================================================================
+--# AXI Lite crossbar.
+--# Designed for simplicity and low area. Only supports one
+--# transaction at a time.
 --##############################################################################
 
 library ieee;

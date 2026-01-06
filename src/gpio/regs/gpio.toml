@@ -1,8 +1,10 @@
 ################################################################################
 # File : gpio.toml
 # Auth : David Gussler
-# Lang : HDL-Registers TOML
-#        https://hdl-registers.com/rst/user_guide/getting_started.html
+# ==============================================================================
+# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+# Copyright (C) Shrikebyte, LLC
+# Licensed under the Apache 2.0 license, see LICENSE for details.
 # ==============================================================================
 # Registers for the GPIO (General Purpose Input Output) module
 ################################################################################
@@ -57,7 +59,7 @@ Write definition for each bit:
 * 0 = No effect
 * 1 = Clear interrupt status
 
-For the GPIO module, 
+For the GPIO module,
 an interrupt is latched for a specific bit if the bit is configured as an input
 and a 0->1 or 1->0 transition is detected. This implies that interrupts may only
 occur for a GPIO bit that has been configured as an input, either statically

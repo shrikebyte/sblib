@@ -1,10 +1,12 @@
 ################################################################################
 # File : stdver.toml
 # Auth : David Gussler
-# Lang : HDL-Registers TOML
-#        https://hdl-registers.com/rst/user_guide/getting_started.html
 # ==============================================================================
-# Registers for the stdver, Standard Version, module. These registers 
+# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+# Copyright (C) Shrikebyte, LLC
+# Licensed under the Apache 2.0 license, see LICENSE for details.
+# ==============================================================================
+# Registers for the stdver, Standard Version, module. These registers
 # should be instantiated at the base address of every FPGA design.
 ################################################################################
 
@@ -48,9 +50,9 @@ Format - 8-bit unsigned integers 0xZZAABBCC, where:
 * CC = patch version (0x00 to 0xFF)
 
 If ZZ is anything other than 0x00, then
-this indicates that the build is not a clean, official release build, but 
-rather an engineering development build. This information is stored in the 
-upper bits of the version register so that it is easy and obvious to tell when 
+this indicates that the build is not a clean, official release build, but
+rather an engineering development build. This information is stored in the
+upper bits of the version register so that it is easy and obvious to tell when
 an official release build has not been loaded.
 """
 

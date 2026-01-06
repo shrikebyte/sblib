@@ -1,9 +1,12 @@
 ################################################################################
-# File : fifo_async.tcl
+# File : axis_fifo_async.tcl
 # Auth : Lukas Vik, with minor edits by David Gussler
-# Lang : Xilinx Design Constraints (TCL)
 # ==============================================================================
-# Scoped constraint. Use: "read_xdc -ref fifo_async fifo_async.tcl"
+# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+# Copyright (C) Shrikebyte, LLC
+# Licensed under the Apache 2.0 license, see LICENSE for details.
+# ==============================================================================
+# Scoped constraint. Use: "read_xdc -ref axis_fifo_async axis_fifo_async.tcl"
 # Heavily inspired by
 # https://github.com/hdl-modules/hdl-modules/blob/main/modules/fifo/scoped_constraints/asynchronous_fifo.tcl
 ################################################################################

@@ -1,9 +1,12 @@
 --##############################################################################
 --# File : axis_arb_tb.vhd
 --# Auth : David Gussler
---# Lang : VHDL'19
 --# ============================================================================
---! AXIS arbiter testbench
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
+--# ============================================================================
+--# AXIS arbiter testbench
 --##############################################################################
 
 library ieee;

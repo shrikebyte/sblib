@@ -1,13 +1,16 @@
 --##############################################################################
 --# File : axil_init_mgr.vhd
 --# Auth : David Gussler
---# Lang : VHDL '08
 --# ============================================================================
---! AXI-Lite initialization manager state machine.
---! This runs a hard-coded sequence of read and write transactions after reset.
---! Intended to configure an FPGA at startup / reset without the need for
---! software init scripts or a soft-processor. This can also be used to run a
---! BIST at startup by checking register values to ensure they match expected.
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
+--# ============================================================================
+--# AXI-Lite initialization manager state machine.
+--# This runs a hard-coded sequence of read and write transactions after reset.
+--# Intended to configure an FPGA at startup / reset without the need for
+--# software init scripts or a soft-processor. This can also be used to run a
+--# BIST at startup by checking register values to ensure they match expected.
 --##############################################################################
 
 library ieee;

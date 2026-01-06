@@ -1,9 +1,12 @@
 --##############################################################################
 --# File : axil_xbar_tb.vhd
 --# Auth : David Gussler
---# Lang : VHDL '08
 --# ============================================================================
---! AXI Lite crossbar testbench
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
+--# ============================================================================
+--# AXI Lite crossbar testbench
 --##############################################################################
 
 library ieee;

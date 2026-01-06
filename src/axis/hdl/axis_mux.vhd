@@ -1,7 +1,10 @@
 --##############################################################################
 --# File : axis_mux.vhd
 --# Auth : David Gussler
---# Lang : VHDL'19
+--# ============================================================================
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
 --# ============================================================================
 --# Multiplexes a stream.
 --# The `sel` select input can be changed at any time. The mux "locks on" to

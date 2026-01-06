@@ -1,9 +1,12 @@
 --##############################################################################
 --# File : strm_pipes_tb.vhd
 --# Auth : David Gussler
---# Lang : VHDL '08
 --# ============================================================================
---! Stream pipes module testbench
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
+--# ============================================================================
+--# Stream pipes module testbench
 --##############################################################################
 
 library ieee;

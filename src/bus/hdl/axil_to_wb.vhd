@@ -1,25 +1,28 @@
 --##############################################################################
 --# File : axil_to_wb.vhd
 --# Auth : David Gussler
---# Lang : VHDL '08
 --# ============================================================================
---! AXI Lite to Wishbone B4 (Synchronous, non-pipelined) bridge. At best, this
---! bridge can issue one read or one write request every four clock cycles.
---! This best-case thruput assumes that the the Wishbone slave responds in one
---! clock cycle, that the AXI Lite master read / write response channels are
---! always ready, and that write transaction address and data arrive at the same
---! time. If these factors are not met, then the thruput will be even lower.
---! C0: AXIL request
---! C1: Wishbone request
---! C2: Wishbone response
---! C3: AXIL response
---! This module has not been designed for maximum thruput, but rather for
---! simplicity. Most of the time, simple register access does not require high
---! thruput so any extra resources required to make this module better would
---! be wasted.
---! Writes are prioritized over reads, therefore, if the axi lite interface
---! issues back-to-back writes and a read at the same time, the read will not
---! get executed until the write requests stop.
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
+--# ============================================================================
+--# AXI Lite to Wishbone B4 (Synchronous, non-pipelined) bridge. At best, this
+--# bridge can issue one read or one write request every four clock cycles.
+--# This best-case thruput assumes that the the Wishbone slave responds in one
+--# clock cycle, that the AXI Lite master read / write response channels are
+--# always ready, and that write transaction address and data arrive at the same
+--# time. If these factors are not met, then the thruput will be even lower.
+--# C0: AXIL request
+--# C1: Wishbone request
+--# C2: Wishbone response
+--# C3: AXIL response
+--# This module has not been designed for maximum thruput, but rather for
+--# simplicity. Most of the time, simple register access does not require high
+--# thruput so any extra resources required to make this module better would
+--# be wasted.
+--# Writes are prioritized over reads, therefore, if the axi lite interface
+--# issues back-to-back writes and a read at the same time, the read will not
+--# get executed until the write requests stop.
 --##############################################################################
 
 library ieee;

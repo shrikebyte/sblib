@@ -1,7 +1,10 @@
 ################################################################################
 # File : cdc_vector.tcl
 # Auth : David Gussler
-# Lang : Xilinx Design Constraints
+# ==============================================================================
+# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+# Copyright (C) Shrikebyte, LLC
+# Licensed under the Apache 2.0 license, see LICENSE for details.
 # ==============================================================================
 # Scoped constraint. Use: "read_xdc -ref cdc_vector cdc_vector.tcl"
 ################################################################################

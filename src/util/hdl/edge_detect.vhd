@@ -1,10 +1,13 @@
 --##############################################################################
 --# File : edge_detect.vhd
 --# Auth : David Gussler
---# Lang : VHDL '08
 --# ============================================================================
---! Edge detector. Pulses for one clock cycle on a positive edge, negative edge,
---! or both.
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
+--# ============================================================================
+--# Edge detector. Pulses for one clock cycle on a positive edge, negative edge,
+--# or both.
 --##############################################################################
 
 library ieee;

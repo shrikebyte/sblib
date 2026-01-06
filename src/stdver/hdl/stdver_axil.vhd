@@ -1,10 +1,13 @@
 --##############################################################################
 --# File : stdver_axil.vhd
 --# Auth : David Gussler
---# Lang : VHDL '08
 --# ============================================================================
---! Standard Version module. These Registers
---! should be instantiated at the base address of every FPGA design.
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
+--# ============================================================================
+--# Standard Version module. These Registers
+--# should be instantiated at the base address of every FPGA design.
 --##############################################################################
 
 library ieee;

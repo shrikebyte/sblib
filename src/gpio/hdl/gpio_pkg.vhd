@@ -1,10 +1,13 @@
 --##############################################################################
 --# File : gpio_pkg.vhd
 --# Auth : David Gussler
---# Lang : VHDL '08
 --# ============================================================================
---! Defines the IO types needed for the gpio_axil module. This package must be
---! used by the module that instantiates gpio_axil.
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
+--# ============================================================================
+--# Defines the IO types needed for the gpio_axil module. This package must be
+--# used by the module that instantiates gpio_axil.
 --##############################################################################
 
 library ieee;
@@ -20,4 +23,3 @@ package gpio_pkg is
   subtype gpio_range is gpio_chan_range;
 
 end package;
-

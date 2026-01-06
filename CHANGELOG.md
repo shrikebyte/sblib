@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - Add AXI Stream components and interface definition.
+- Add license and standard headers.
 
 ### Changed
 

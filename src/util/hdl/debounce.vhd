@@ -1,10 +1,13 @@
 --##############################################################################
 --# File : debounce.vhd
 --# Auth : David Gussler
---# Lang : VHDL '08
 --# ============================================================================
---! Ensures that an input is stable for G_COUNT clockcycles in a row before
---! transitioning the output.
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
+--# ============================================================================
+--# Ensures that an input is stable for G_COUNT clockcycles in a row before
+--# transitioning the output.
 --##############################################################################
 
 library ieee;

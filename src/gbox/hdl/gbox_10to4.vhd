@@ -1,19 +1,22 @@
 --##############################################################################
 --# File : gbox_10to4.vhd
 --# Auth : David Gussler
---# Lang : VHDL '08
 --# ============================================================================
---! This is a 10 to 4 synchronous gearbox
---! Data must always be ready at
---! the input. New data appears at din the cycle after ce. 4 and 10 both evenly
---! divide into 20, so that is the common buffer size we'll use. Every 5 cycles,
---! 2 new 10-bit words are shifted in, and every 1 cycle, 4 bits are shifted out
---! (implying that 20 bits are shifted out every 5 cycles). Now the rates are
---! aligned because we're shifting 20 bits in and 20 bits out every 5 cycles.
---! We generate 2 timing signals here, sel, and ce. ce pulses twice every 5
---! cycles to fill up buffer A. During those 5 cycles while A is being filled,
---! buffer B is being emptied. At the end of the 5 cycle period (when A is full
---! and B is empty), the buffers get swapped and the pattern continues.
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
+--# ============================================================================
+--# This is a 10 to 4 synchronous gearbox
+--# Data must always be ready at
+--# the input. New data appears at din the cycle after ce. 4 and 10 both evenly
+--# divide into 20, so that is the common buffer size we'll use. Every 5 cycles,
+--# 2 new 10-bit words are shifted in, and every 1 cycle, 4 bits are shifted out
+--# (implying that 20 bits are shifted out every 5 cycles). Now the rates are
+--# aligned because we're shifting 20 bits in and 20 bits out every 5 cycles.
+--# We generate 2 timing signals here, sel, and ce. ce pulses twice every 5
+--# cycles to fill up buffer A. During those 5 cycles while A is being filled,
+--# buffer B is being emptied. At the end of the 5 cycle period (when A is full
+--# and B is empty), the buffers get swapped and the pattern continues.
 --##############################################################################
 
 library ieee;

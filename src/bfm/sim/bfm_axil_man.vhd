@@ -1,14 +1,13 @@
 --##############################################################################
 --# File : bfm_axil_man.vhd
 --# Auth : David Gussler
---# Lang : VHDL '08
 --# ============================================================================
---! AXI lite manager BFM. This is just an axil record wrapper around the vunit
---! bfm
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
 --# ============================================================================
---# Copyright (c) 2024, David Gussler. All rights reserved.
---# You may use, distribute and modify this code under the
---# terms of the MIT license: https://choosealicense.com/licenses/mit/
+--# AXI lite manager BFM. This is just an axil record wrapper around the vunit
+--# bfm
 --##############################################################################
 
 library ieee;

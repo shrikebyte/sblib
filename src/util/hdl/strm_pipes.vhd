@@ -1,11 +1,14 @@
 --##############################################################################
 --# File : strm_pipes.vhd
 --# Auth : David Gussler
---# Lang : VHDL '08
 --# ============================================================================
---! Stream pipeline registers. Has options to pipeline both the
---! "forward" data / valid and the "backward" ready signals.
---! This module just chains together multiple instances of strm_pipe.
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
+--# ============================================================================
+--# Stream pipeline registers. Has options to pipeline both the
+--# "forward" data / valid and the "backward" ready signals.
+--# This module just chains together multiple instances of strm_pipe.
 --##############################################################################
 
 library ieee;

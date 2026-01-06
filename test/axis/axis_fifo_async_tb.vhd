@@ -1,9 +1,12 @@
 --##############################################################################
 --# File : axis_fifo_tb.vhd
 --# Auth : David Gussler
---# Lang : VHDL'19
 --# ============================================================================
---! Asynchronous AXIS FIFO testbench.
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
+--# ============================================================================
+--# Asynchronous AXIS FIFO testbench.
 --##############################################################################
 
 library ieee;

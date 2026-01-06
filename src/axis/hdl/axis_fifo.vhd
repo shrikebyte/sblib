@@ -1,7 +1,10 @@
 --##############################################################################
 --# File : axis_fifo.vhd
 --# Auth : David Gussler
---# Lang : VHDL '19
+--# ============================================================================
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
 --# ============================================================================
 --# Synchronous AXI Stream FIFO.
 --##############################################################################

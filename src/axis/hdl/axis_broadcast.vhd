@@ -1,7 +1,10 @@
 --##############################################################################
 --# File : axis_broadcast.vhd
 --# Auth : David Gussler
---# Lang : VHDL'19
+--# ============================================================================
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
 --# ============================================================================
 --# Broadcasts one input stream to several output streams.
 --##############################################################################

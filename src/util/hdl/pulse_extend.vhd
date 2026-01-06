@@ -1,9 +1,12 @@
 --##############################################################################
 --# File : pulse_extend.vhd
 --# Auth : David Gussler
---# Lang : VHDL '08
 --# ============================================================================
---! Simple pulse extender
+--# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
+--# Copyright (C) Shrikebyte, LLC
+--# Licensed under the Apache 2.0 license, see LICENSE for details.
+--# ============================================================================
+--# Simple pulse extender
 --##############################################################################
 
 library ieee;
