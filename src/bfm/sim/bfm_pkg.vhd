@@ -25,7 +25,7 @@ package bfm_pkg is
   -- This is a clone of the 'stall_config_t' from VUnit 'axi_stream_pkg'.
   -- We use this type instead so that we don't have to include the huge 'axi_stream_pkg' in
   -- small testbenches, thereby saving simulation startup time.
-  type     stall_configuration_t is record
+  type stall_configuration_t is record
     stall_probability : real range 0.0 to 1.0;
     min_stall_cycles  : natural;
     max_stall_cycles  : natural;
