@@ -60,15 +60,15 @@ architecture tb of axis_resize_tb is
 
   -- DUT Signals
   signal s_axis : axis_t (
-    tdata(S_DW - 1 downto 0),
-    tkeep(S_KW - 1 downto 0),
-    tuser(S_UW - 1 downto 0)
+    tdata(S_DW downto 1),
+    tkeep(S_KW downto 1),
+    tuser(S_UW downto 1)
   );
 
   signal m_axis : axis_t (
-    tdata(M_DW - 1 downto 0),
-    tkeep(M_KW - 1 downto 0),
-    tuser(M_UW - 1 downto 0)
+    tdata(M_DW downto 1),
+    tkeep(M_KW downto 1),
+    tuser(M_UW downto 1)
   );
 
   -- ---------------------------------------------------------------------------

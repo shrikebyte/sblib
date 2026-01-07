@@ -172,10 +172,10 @@ begin
       end if;
     end process;
 
-    m_axis.tdata <= data_reg(m_axis.tdata'range);
-    m_axis.tuser <= user_reg(m_axis.tuser'range);
-    m_axis.tkeep <= keep_reg(m_axis.tkeep'range);
     m_axis.tlast <= last_reg(0);
+    m_axis.tkeep <= keep_reg(M_KW - 1 downto 0);
+    m_axis.tdata <= data_reg(M_DW - 1 downto 0);
+    m_axis.tuser <= user_reg(M_UW - 1 downto 0);
 
   -- ---------------------------------------------------------------------------
   -- Upsize mode

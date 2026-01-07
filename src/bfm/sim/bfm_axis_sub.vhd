@@ -128,6 +128,10 @@ architecture sim of bfm_axis_sub is
     tkeep(s_axis.tkeep'range)
   );
 
+  signal int_axis_tkeep : std_ulogic_vector(KW - 1 downto 0);
+  signal int_axis_tdata : std_ulogic_vector(DW - 1 downto 0);
+  signal int_axis_tuser : std_ulogic_vector(UW - 1 downto 0);
+
 begin
 
   assert DW mod KW = 0
@@ -137,6 +141,10 @@ begin
   assert UW mod KW = 0
     report BASE_ERROR_MESSAGE &
            "User width must be an integer multiple of keep width.";
+
+  int_axis_tkeep <= s_axis.tkeep;
+  int_axis_tdata <= s_axis.tdata;
+  int_axis_tuser <= s_axis.tuser;
 
   -- ---------------------------------------------------------------------------
   prc_main : process is
@@ -192,7 +200,7 @@ begin
       if G_ENABLE_TKEEP then
         for k in 0 to KW - 1 loop
           check_equal(
-            s_axis.tkeep(k),
+            int_axis_tkeep(k),
             to_sl(k < num_bytes_in_this_beat),
             (
               BASE_ERROR_MESSAGE
@@ -207,7 +215,7 @@ begin
 
       for k in 0 to num_bytes_in_this_beat - 1 loop
         check_equal(
-          u_unsigned(s_axis.tuser((k + 1) * UBW - 1 downto k * UBW)),
+          u_unsigned(int_axis_tuser((k + 1) * UBW - 1 downto k * UBW)),
           get(user_packet, i + k),
           (
             BASE_ERROR_MESSAGE &
@@ -218,7 +226,7 @@ begin
           )
         );
         check_equal(
-          u_unsigned(s_axis.tdata((k + 1) * DBW - 1 downto k * DBW)),
+          u_unsigned(int_axis_tdata((k + 1) * DBW - 1 downto k * DBW)),
           get(data_packet, i + k),
           (
             BASE_ERROR_MESSAGE &

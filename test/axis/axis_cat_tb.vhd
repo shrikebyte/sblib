@@ -52,15 +52,15 @@ architecture tb of axis_cat_tb is
   signal enable : std_ulogic := '1';
 
   signal s_axis : axis_arr_t(0 to 1) (
-    tdata(DW - 1 downto 0),
-    tkeep(KW - 1 downto 0),
-    tuser(UW - 1 downto 0)
+    tdata(DW downto 1),
+    tkeep(KW downto 1),
+    tuser(UW downto 1)
   );
 
   signal m_axis : axis_t (
-    tdata(DW - 1 downto 0),
-    tkeep(KW - 1 downto 0),
-    tuser(UW - 1 downto 0)
+    tdata(DW downto 1),
+    tkeep(KW downto 1),
+    tuser(UW downto 1)
   );
 
   -- Testbench BFMs

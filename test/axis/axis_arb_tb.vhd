@@ -51,15 +51,15 @@ architecture tb of axis_arb_tb is
 
   -- DUT Signals
   signal s_axis : axis_arr_t(0 to NUM_INPUTS - 1)(
-    tdata(DW - 1 downto 0),
-    tkeep(KW - 1 downto 0),
-    tuser(UW - 1 downto 0)
+    tdata(DW downto 1),
+    tkeep(KW downto 1),
+    tuser(UW downto 1)
   );
 
   signal m_axis : axis_t (
-    tdata(DW - 1 downto 0),
-    tkeep(KW - 1 downto 0),
-    tuser(UW - 1 downto 0)
+    tdata(DW downto 1),
+    tkeep(KW downto 1),
+    tuser(UW downto 1)
   );
 
   -- Testbench BFMs
@@ -216,15 +216,19 @@ begin
   end generate;
 
   ------------------------------------------------------------------------------
-  prc_assign_handshake : process (all) is begin
+  prc_assign_handshake : process (all) is
+
+    subtype u_range is natural range m_axis.tuser'low + UBW - 1 downto m_axis.tuser'low;
+
+  begin
 
     bfm_m_tvalid  <= (others => '0');
     m_axis.tready <= '0';
 
     if m_axis.tvalid then
-      bfm_m_tvalid(to_integer(unsigned(m_axis.tuser(UBW - 1 downto 0)))) <= m_axis.tvalid;
+      bfm_m_tvalid(to_integer(unsigned(m_axis.tuser(U_RANGE)))) <= m_axis.tvalid;
 
-      m_axis.tready <= bfm_m_tready(to_integer(unsigned(m_axis.tuser(UBW - 1 downto 0))));
+      m_axis.tready <= bfm_m_tready(to_integer(unsigned(m_axis.tuser(u_range))));
 
     end if;
 

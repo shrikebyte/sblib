@@ -72,10 +72,10 @@ package body axis_pkg is
   begin
     s_axis.tready <= m_axis.tready;
     m_axis.tvalid <= s_axis.tvalid;
-    m_axis.tlast  <= s_axis.tlast ; 
-    m_axis.tkeep  <= s_axis.tkeep ; 
-    m_axis.tdata  <= s_axis.tdata ; 
-    m_axis.tuser  <= s_axis.tuser ; 
+    m_axis.tlast  <= s_axis.tlast;
+    m_axis.tkeep  <= s_axis.tkeep;
+    m_axis.tdata  <= s_axis.tdata;
+    m_axis.tuser  <= s_axis.tuser;
   end procedure;
 
   procedure axis_attach (
@@ -84,7 +84,12 @@ package body axis_pkg is
   ) is
   begin
     for i in s_axis'range loop
-      axis_attach(s_axis(i), m_axis(i));
+      s_axis(i).tready <= m_axis(i).tready;
+      m_axis(i).tvalid <= s_axis(i).tvalid;
+      m_axis(i).tlast  <= s_axis(i).tlast;
+      m_axis(i).tkeep  <= s_axis(i).tkeep;
+      m_axis(i).tdata  <= s_axis(i).tdata;
+      m_axis(i).tuser  <= s_axis(i).tuser;
     end loop;
   end procedure;
 
