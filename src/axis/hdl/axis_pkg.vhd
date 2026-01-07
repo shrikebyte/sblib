@@ -29,7 +29,7 @@ package axis_pkg is
   type axis_arr_t is array(natural range <>) of axis_t;
 
   -- Manager view
-	view m_axis_v of axis_t is
+  view m_axis_v of axis_t is
     tready : in;
     tvalid : out;
     tlast  : out;
@@ -50,6 +50,31 @@ package axis_pkg is
     tdata  : in;
     tuser  : in;
   end view;
+
+  package make is
+    generic (
+      G_KW  :   positive    := 4 ;
+      G_DW  :   positive    := 0 ;
+      G_UW  :   positive    := 0
+    );
+
+    subtype TKEEP_RANGE is natural range G_KW - 1 downto 0 ;
+    subtype TDATA_RANGE is natural range G_DW - 1 downto 0 ;
+    subtype TUSER_RANGE is natural range G_UW - 1 downto 0 ;
+
+    subtype axis_c_t is axis_pkg.axis_t(
+      tkeep(TKEEP_RANGE),
+      tdata(TDATA_RANGE),
+      tuser(TUSER_RANGE)
+    );
+
+    subtype axis_c_array_t is axis_arr_t(open)(
+      tkeep(TKEEP_RANGE),
+      tdata(TDATA_RANGE),
+      tuser(TUSER_RANGE)
+    );
+
+  end package ;
 
   procedure axis_attach (
     signal s_axis : view s_axis_v of axis_t;
