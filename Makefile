@@ -47,7 +47,6 @@ BUILD_DIR := $(MAKEFILE_DIR)build
 BUILD_NAME := $(PROJ_NAME)_v$(VER_MAJOR)_$(VER_MINOR)_$(VER_PATCH)
 RELEASE_DIR := $(BUILD_DIR)/$(BUILD_NAME)
 REGS_SRC := $(SRC_DIR)/**/regs/*.toml
-# REGS_SRC := $(shell find $(SRC_DIR) -type f -name "*.toml")
 STYLE_SRC := $(shell find $(SRC_DIR) $(TEST_DIR) -type f -name "*.vhd" -not -path "$(SRC_DIR)/hdlm/hdl/*")
 NEW_TAG := v$(VER_MAJOR).$(VER_MINOR).$(VER_PATCH)
 
@@ -69,21 +68,21 @@ package: regs
 
 # Run the VUnit simulation
 sim: regs
-	cd tools && python sim.py --xunit-xml $(BUILD_DIR)/sim_report.xml
+	cd scripts && python sim.py --xunit-xml $(BUILD_DIR)/sim_report.xml
 
 # Check the coding style of the src files
 style:
 	mkdir -p $(BUILD_DIR)
-	vsg -f $(STYLE_SRC) -c ./tools/vsg_rules.yaml -of vsg --all_phases --quality_report $(BUILD_DIR)/style_report.json
+	vsg -f $(STYLE_SRC) -c ./scripts/vsg_rules.yaml -of vsg --all_phases --quality_report $(BUILD_DIR)/style_report.json
 
 # Check AND FIX the coding style of the src files
 style-fix:
 	mkdir -p $(BUILD_DIR)
-	vsg -f $(STYLE_SRC) -c ./tools/vsg_rules.yaml -of vsg --fix
+	vsg -f $(STYLE_SRC) -c ./scripts/vsg_rules.yaml -of vsg --fix
 
 # Generate the register output products
 regs:
-	cd tools && python regs.py $(REGS_SRC)
+	cd scripts && python regs.py $(REGS_SRC)
 
 # Create a new git tag and Github release for this version of the code.
 release:
