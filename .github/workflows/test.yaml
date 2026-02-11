@@ -39,9 +39,14 @@ jobs:
       - name: Install Python packages
         run: |
           python3 -m pip install \
-            hdl_registers==8.1.0 \
+            wheel \
+            setuptools \
             vsg==3.35.0 \
-            vunit_hdl==5.0.0.dev7
+            && \
+          python3 -m pip install \
+            --no-build-isolation \
+            vunit_hdl==5.0.0.dev7 \
+            hdl_registers==8.1.0 \
 
       - name: Setup NVC
         uses: nickg/setup-nvc@v1
@@ -80,9 +85,14 @@ jobs:
       - name: Install Python packages
         run: |
           python3 -m pip install \
-            hdl_registers==8.1.0 \
+            wheel \
+            setuptools \
             vsg==3.35.0 \
-            vunit_hdl==5.0.0.dev7
+            && \
+          python3 -m pip install \
+            --no-build-isolation \
+            vunit_hdl==5.0.0.dev7 \
+            hdl_registers==8.1.0 \
 
       - name: Run style check
         run: |
