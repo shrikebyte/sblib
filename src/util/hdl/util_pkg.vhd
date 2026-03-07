@@ -197,6 +197,10 @@ package util_pkg is
     value : positive
   ) return boolean;
 
+  function round_up_pwr2 (
+    value : positive
+  ) return natural;
+
   function find_hi_idx (
     vec : std_logic_vector
   ) return natural;
@@ -415,6 +419,21 @@ package body util_pkg is
   ) return boolean is
   begin
     return is_onehot(std_logic_vector(to_unsigned(value, 32)));
+  end function;
+
+  -- ---------------------------------------------------------------------------
+  -- Round up to the next highest power of two value. For example:
+  --   4 -> 4
+  --   5 -> 8
+  --   6 -> 8
+  --   7 -> 8
+  --   8 -> 8
+  --   9 -> 16
+  function round_up_pwr2 (
+    value : positive
+  ) return natural is
+  begin
+    return 2 ** clog2(value);
   end function;
 
   -- ---------------------------------------------------------------------------

@@ -16,7 +16,7 @@ This repository is hosted on [GitHub](https://github.com/shrikebyte/sblib) and c
 
 - HDL Registers 8.1.0
 - VHDL Style Guide 3.35.0
-- VUnit 5.0.0.dev7
+- VUnit 5.0.0.dev8
 - NVC latest
 
 #### Install Python Tools
