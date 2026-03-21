@@ -32,8 +32,8 @@ entity axis_fifo is
     G_USE_TUSER : boolean := true
   );
   port (
-    clk  : in    std_logic;
-    srst : in    std_logic;
+    clk  : in    std_ulogic;
+    srst : in    std_ulogic;
     --
     s_axis : view s_axis_v;
     --

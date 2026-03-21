@@ -34,9 +34,9 @@ entity axis_fifo_async is
   );
   port (
     -- Async reset
-    arst : in    std_logic;
+    arst : in    std_ulogic;
     -- Input interface
-    s_clk            : in    std_logic;
+    s_clk            : in    std_ulogic;
     s_axis           : view s_axis_v;
     s_ctl_drop       : in    std_ulogic;
     s_sts_dropped    : out   std_ulogic;
