@@ -28,7 +28,7 @@ end entity;
 
 architecture rtl of cnt_reg is
 
-  constant MAX : u_unsigned(cnt'range) := (others=>'1');
+  constant MAX : u_unsigned(cnt'range) := (others=> '1');
 
 begin
 
