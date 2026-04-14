@@ -23,7 +23,7 @@ This repository is hosted on [GitHub](https://github.com/shrikebyte/sblib) and c
 
 Assuming a relatively recent version of python3 and pip3 are already available on the system, run the following command to install the python tools. Optionally, you may want to use a python virtual environment.
 
-`python -m pip install hdl_registers==8.1.0 vsg==3.35.0 vunit_hdl==5.0.0.dev7`
+`python -m pip install hdl_registers==8.1.0 vsg==3.35.0 vunit_hdl==5.0.0.dev8`
 
 #### Install NVC
 

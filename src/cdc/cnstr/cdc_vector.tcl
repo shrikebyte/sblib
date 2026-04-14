@@ -32,7 +32,7 @@ set min_period [expr {min(${src_clk_period}, ${dst_clk_period})}]
 puts "INFO: cdc_vector: Using min period: ${min_period}."
 
 set src_data [get_cells {src_data_reg_reg[*]}]
-set dst_data [get_cells {m_data_reg[*]}]
+set dst_data [get_cells {dst_data_reg[*]}]
 
 set_max_delay -datapath_only -from $src_data -to $dst_data $min_period
 set_bus_skew -from $src_data -to $dst_data $min_period

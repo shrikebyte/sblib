@@ -101,11 +101,11 @@ package body bfm_pkg is
     base_array : integer_array_t;
     end_array : integer_array_t
   ) return integer_array_t is
-    constant TOTAL_LENGTH : natural   := length(base_array) + length(end_array);
+    constant TOTAL_LENGTH : integer   := length(base_array) + length(end_array);
     variable result : integer_array_t := new_1d(
       length    => TOTAL_LENGTH,
-      bit_width => bit_width(base_array),
-      is_signed => is_signed(base_array)
+      bit_width => natural(bit_width(base_array)),
+      is_signed => boolean(is_signed(base_array))
     );
   begin
     assert bit_width(base_array) = bit_width(end_array)

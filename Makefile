@@ -58,6 +58,7 @@ tool-check:
 	$(call check_python_pkg_ver,hdl_registers,REQUIRE_REGS_VER)
 	$(call check_python_pkg_ver,vsg,REQUIRE_VSG_VER)
 	$(call check_python_pkg_ver,vunit_hdl,REQUIRE_VUNIT_VER)
+	nvc --version &> /dev/null || echo "ERROR: Requires NVC!"
 	@echo "INFO: Tool check passed."
 
 # Create a release package with all of the built output products
@@ -108,4 +109,4 @@ release:
 	git push origin $(NEW_TAG)
 
 clean:
-	rm -rf build
+	rm -rf build scripts/__pycache__ scripts/vunit_out
