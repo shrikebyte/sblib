@@ -13,10 +13,13 @@
 --# BIST at startup by checking register values to ensure they match expected.
 --##############################################################################
 
+-- TODO: Change this to explicitly use BRAM for transaction ROM
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.util_pkg.all;
+use work.bus_pkg.all;
 
 entity axil_init_mgr is
   generic (
@@ -24,22 +27,19 @@ entity axil_init_mgr is
     G_XACTIONS         : bus_xact_arr_t
   );
   port (
-    --! System
-    clk  : in    std_logic;
-    srst : in    std_logic;
-    --! AXI Lite interface
-    m_axil_req : out   axil_req_t;
-    m_axil_rsp : in    axil_rsp_t;
+    clk    : in    std_logic;
+    srst   : in    std_logic;
+    m_axil : view  m_axil_view;
     --
-    --! Valid data qualifier for the remaining m_sts_* signals
+    -- Valid data qualifier for the remaining m_sts_* signals
     m_sts_valid : out   std_logic;
-    --! Indicates that the transaction had a bus error
+    -- Indicates that the transaction had a bus error
     m_sts_bus_err : out   std_logic;
-    --! Indicates that the transaction's read data did not match the expected data
+    -- Indicates that the transaction's read data did not match the expected data
     m_sts_chk_err : out   std_logic;
-    --! Read data for the transaction (if it was a read)
+    -- Read data for the transaction (if it was a read)
     m_sts_chk_rdata : out   std_logic_vector(31 downto 0);
-    --! Transaction index. Starts at 0 and counts up
+    -- Transaction index. Starts at 0 and counts up
     m_sts_xact_idx : out   unsigned(15 downto 0)
   );
 end entity;
@@ -61,10 +61,6 @@ architecture rtl of axil_init_mgr is
 begin
 
   -- ---------------------------------------------------------------------------
-  m_axil_req.awprot <= b"000";
-  m_axil_req.arprot <= b"000";
-
-  -- ---------------------------------------------------------------------------
   prc_axil_init_mgr : process (clk) is begin
     if rising_edge(clk) then
       -- Pulse
@@ -84,42 +80,42 @@ begin
           if idx = NUM_XACTIONS then
             state <= ST_DONE;
           elsif G_XACTIONS(idx).cmd = BUS_WRITE then
-            m_axil_req.awvalid <= '1';
-            m_axil_req.awaddr  <= G_XACTIONS(idx).addr;
-            m_axil_req.wvalid  <= '1';
-            m_axil_req.wdata   <= G_XACTIONS(idx).data;
-            m_axil_req.wstrb   <= G_XACTIONS(idx).wstrb;
-            m_axil_req.bready  <= '0';
+            m_axil.awvalid <= '1';
+            m_axil.awaddr  <= G_XACTIONS(idx).addr;
+            m_axil.wvalid  <= '1';
+            m_axil.wdata   <= G_XACTIONS(idx).data;
+            m_axil.wstrb   <= G_XACTIONS(idx).wstrb;
+            m_axil.bready  <= '0';
             --
             state <= ST_WRITE_WAIT;
           elsif G_XACTIONS(idx).cmd = BUS_CHECK then
-            m_axil_req.arvalid <= '1';
-            m_axil_req.araddr  <= G_XACTIONS(idx).addr;
-            m_axil_req.rready  <= '0';
+            m_axil.arvalid <= '1';
+            m_axil.araddr  <= G_XACTIONS(idx).addr;
+            m_axil.rready  <= '0';
             --
             state <= ST_READ_WAIT;
           end if;
 
         -- ---------------------------------------------------------------------
         when ST_WRITE_WAIT =>
-          if m_axil_rsp.awready and m_axil_rsp.wready then
-            m_axil_req.awvalid <= '0';
-            m_axil_req.wvalid  <= '0';
-            m_axil_req.bready  <= '1';
+          if m_axil.awready and m_axil.wready then
+            m_axil.awvalid <= '0';
+            m_axil.wvalid  <= '0';
+            m_axil.bready  <= '1';
             --
             state <= ST_WRITE_RSP_WAIT;
           end if;
 
         -- ---------------------------------------------------------------------
         when ST_WRITE_RSP_WAIT =>
-          if m_axil_rsp.bvalid then
-            m_axil_req.bready <= '0';
+          if m_axil.bvalid then
+            m_axil.bready <= '0';
             --
             m_sts_valid    <= '1';
             m_sts_xact_idx <= to_unsigned(idx, m_sts_xact_idx'length);
             m_sts_chk_err  <= '0';
-            if m_axil_rsp.bresp = AXI_RSP_SLVERR or
-               m_axil_rsp.bresp = AXI_RSP_DECERR then
+            if m_axil.bresp = AXI_RSP_SLVERR or
+               m_axil.bresp = AXI_RSP_DECERR then
               m_sts_bus_err <= '1';
             else
               m_sts_bus_err <= '0';
@@ -131,26 +127,26 @@ begin
 
         -- ---------------------------------------------------------------------
         when ST_READ_WAIT =>
-          if m_axil_rsp.arready then
-            m_axil_req.arvalid <= '0';
-            m_axil_req.rready  <= '1';
+          if m_axil.arready then
+            m_axil.arvalid <= '0';
+            m_axil.rready  <= '1';
             --
             state <= ST_READ_RSP_WAIT;
           end if;
 
         -- ---------------------------------------------------------------------
         when ST_READ_RSP_WAIT =>
-          if m_axil_rsp.rvalid then
-            m_axil_req.rready <= '0';
+          if m_axil.rvalid then
+            m_axil.rready <= '0';
             --
             m_sts_valid     <= '1';
             m_sts_xact_idx  <= to_unsigned(idx, m_sts_xact_idx'length);
-            m_sts_chk_rdata <= m_axil_rsp.rdata;
-            if m_axil_rsp.rresp = AXI_RSP_SLVERR or
-               m_axil_rsp.rresp = AXI_RSP_DECERR then
+            m_sts_chk_rdata <= m_axil.rdata;
+            if m_axil.rresp = AXI_RSP_SLVERR or
+               m_axil.rresp = AXI_RSP_DECERR then
               m_sts_bus_err <= '1';
               m_sts_chk_err <= '0';
-            elsif (m_axil_rsp.rdata and G_XACTIONS(idx).mask) /=
+            elsif (m_axil.rdata and G_XACTIONS(idx).mask) /=
                   (G_XACTIONS(idx).data and G_XACTIONS(idx).mask) then
               m_sts_bus_err <= '0';
               m_sts_chk_err <= '1';
@@ -170,11 +166,11 @@ begin
       if srst then
         m_sts_valid <= '0';
         --
-        m_axil_req.awvalid <= '0';
-        m_axil_req.wvalid  <= '0';
-        m_axil_req.bready  <= '0';
-        m_axil_req.arvalid <= '0';
-        m_axil_req.rready  <= '0';
+        m_axil.awvalid <= '0';
+        m_axil.wvalid  <= '0';
+        m_axil.bready  <= '0';
+        m_axil.arvalid <= '0';
+        m_axil.rready  <= '0';
         --
         reset_cnt <= 0;
         idx       <= 0;

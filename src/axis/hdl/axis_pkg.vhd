@@ -29,7 +29,7 @@ package axis_pkg is
   type axis_arr_t is array(natural range <>) of axis_t;
 
   -- Manager view
-	view m_axis_v of axis_t is
+	view m_axis_view of axis_t is
     tready : in;
     tvalid : out;
     tlast  : out;
@@ -39,10 +39,10 @@ package axis_pkg is
   end view;
 
   -- Subordinate view
-  alias s_axis_v is m_axis_v'converse;
+  alias s_axis_view is m_axis_view'converse;
 
-  -- Monitor view
-  view mon_axis_v of axis_t is
+  -- Probe view
+  view p_axis_view of axis_t is
     tready : in;
     tvalid : in;
     tlast  : in;
@@ -52,13 +52,13 @@ package axis_pkg is
   end view;
 
   procedure axis_attach (
-    signal s_axis : view s_axis_v of axis_t;
-    signal m_axis : view m_axis_v of axis_t
+    signal s_axis : view s_axis_view of axis_t;
+    signal m_axis : view m_axis_view of axis_t
   );
 
   procedure axis_attach (
-    signal s_axis : view (s_axis_v) of axis_arr_t;
-    signal m_axis : view (m_axis_v) of axis_arr_t
+    signal s_axis : view (s_axis_view) of axis_arr_t;
+    signal m_axis : view (m_axis_view) of axis_arr_t
   );
 
 end package;
@@ -66,8 +66,8 @@ end package;
 package body axis_pkg is
 
   procedure axis_attach (
-    signal s_axis : view s_axis_v of axis_t;
-    signal m_axis : view m_axis_v of axis_t
+    signal s_axis : view s_axis_view of axis_t;
+    signal m_axis : view m_axis_view of axis_t
   ) is
   begin
     s_axis.tready <= m_axis.tready;
@@ -79,8 +79,8 @@ package body axis_pkg is
   end procedure;
 
   procedure axis_attach (
-    signal s_axis : view (s_axis_v) of axis_arr_t;
-    signal m_axis : view (m_axis_v) of axis_arr_t
+    signal s_axis : view (s_axis_view) of axis_arr_t;
+    signal m_axis : view (m_axis_view) of axis_arr_t
   ) is
   begin
     for i in s_axis'range loop

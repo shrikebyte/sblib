@@ -13,18 +13,14 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use work.util_pkg.all;
+use work.bus_pkg.all;
 
 entity axil_arbiter is
-  generic (
-    G_NUM_MASTERS : positive
-  );
   port (
-    clk        : in    std_logic;
-    srst       : in    std_logic;
-    s_axil_req : in    axil_req_arr_t(0 to G_NUM_MASTERS - 1);
-    s_axil_rsp : out   axil_rsp_arr_t(0 to G_NUM_MASTERS - 1);
-    m_axil_req : out   axil_req_t;
-    m_axil_rsp : in    axil_rsp_t
+    clk    : in    std_ulogic;
+    srst   : in    std_ulogic;
+    s_axil : view (s_axil_view) of bus_axil_arr_t;
+    m_axil : view  m_axil_view
   );
 end entity;
 
@@ -32,11 +28,11 @@ architecture rtl of axil_arbiter is
 
   type   wr_state_t is (ST_WR_IDLE, ST_WR_WRITING);
   signal wr_state  : wr_state_t;
-  signal wr_select : natural range 0 to G_NUM_MASTERS - 1;
+  signal wr_select : natural range s_axil'range;
 
   type   rd_state_t is (ST_RD_IDLE, ST_RD_READING);
   signal rd_state  : rd_state_t;
-  signal rd_select : natural range 0 to G_NUM_MASTERS - 1;
+  signal rd_select : natural range s_axil'range;
 
 begin
 
@@ -46,7 +42,7 @@ begin
 
       case wr_state is
         when ST_WR_IDLE =>
-          for i in 0 to G_NUM_MASTERS - 1 loop
+          for i in s_axil'range loop
             if s_axil_req(i).awvalid then
               wr_select <= i;
               wr_state  <= ST_WR_WRITING;
@@ -74,7 +70,7 @@ begin
 
       case rd_state is
         when ST_RD_IDLE =>
-          for i in 0 to G_NUM_MASTERS - 1 loop
+          for i in s_axil'range loop
             if s_axil_req(i).arvalid then
               rd_select <= i;
               rd_state  <= ST_RD_READING;
@@ -134,7 +130,7 @@ begin
 
   -- ---------------------------------------------------------------------------
   prc_assign_rsp : process (all) is begin
-    for master in 0 to G_NUM_MASTERS - 1 loop
+    for master in s_axil'range loop
 
       s_axil_rsp(master) <= m_axil_rsp;
 

@@ -98,7 +98,7 @@ entity bfm_axis_sub is
   port (
     clk : in    std_ulogic;
     --
-    s_axis : view s_axis_v;
+    s_axis : view s_axis_view;
     --
     -- Optionally, the consuming and checking of data can be disabled.
     -- Can be done between or in the middle of packets.
@@ -122,7 +122,7 @@ architecture sim of bfm_axis_sub is
   signal checker_is_ready : std_ulogic := '0';
   signal data_is_ready    : std_ulogic := '0';
 
-  signal mon_axis : axis_t(
+  signal p_axis : axis_t(
     tdata(s_axis.tdata'range),
     tuser(s_axis.tuser'range),
     tkeep(s_axis.tkeep'range)
@@ -278,14 +278,14 @@ begin
   port map (
     clk => clk,
     --
-    mon_axis => mon_axis
+    p_axis => p_axis
   );
 
-  mon_axis.tready <= s_axis.tready;
-  mon_axis.tvalid <= s_axis.tvalid;
-  mon_axis.tlast  <= s_axis.tlast;
-  mon_axis.tkeep  <= s_axis.tkeep;
-  mon_axis.tdata  <= s_axis.tdata;
-  mon_axis.tuser  <= s_axis.tuser;
+  p_axis.tready <= s_axis.tready;
+  p_axis.tvalid <= s_axis.tvalid;
+  p_axis.tlast  <= s_axis.tlast;
+  p_axis.tkeep  <= s_axis.tkeep;
+  p_axis.tdata  <= s_axis.tdata;
+  p_axis.tuser  <= s_axis.tuser;
 
 end architecture;

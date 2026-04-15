@@ -35,9 +35,9 @@ entity axis_fifo is
     clk  : in    std_ulogic;
     srst : in    std_ulogic;
     --
-    s_axis : view s_axis_v;
+    s_axis : view s_axis_view;
     --
-    m_axis : view m_axis_v;
+    m_axis : view m_axis_view;
     --
     -- Drop the current packet that is being written or next packet that will be
     -- written to the FIFO. This input
