@@ -38,7 +38,7 @@ entity axis_fifo_async is
     -- Input interface
     s_clk            : in    std_ulogic;
     s_axis           : view  s_axis_view;
-    s_ctl_drop       : in    std_ulogic;
+    s_ctl_drop       : in    std_ulogic := '0';
     s_sts_dropped    : out   std_ulogic;
     s_sts_depth_spec : out   u_unsigned(clog2(G_DEPTH) downto 0);
     s_sts_depth_comm : out   u_unsigned(clog2(G_DEPTH) downto 0);

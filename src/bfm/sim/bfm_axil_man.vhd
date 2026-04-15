@@ -14,6 +14,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.util_pkg.all;
+use work.bus_pkg.all;
 
 library vunit_lib;
   context vunit_lib.vunit_context;
@@ -24,9 +25,8 @@ entity bfm_axil_man is
     G_BUS_HANDLE : bus_master_t
   );
   port (
-    clk        : in    std_logic;
-    m_axil_req : out   axil_req_t;
-    m_axil_rsp : in    axil_rsp_t
+    clk    : in    std_logic;
+    m_axil : view  m_axil_view
   );
 end entity;
 
@@ -40,23 +40,23 @@ begin
   )
   port map (
     aclk    => clk,
-    arready => m_axil_rsp.arready,
-    arvalid => m_axil_req.arvalid,
-    araddr  => m_axil_req.araddr,
-    rready  => m_axil_req.rready,
-    rvalid  => m_axil_rsp.rvalid,
-    rdata   => m_axil_rsp.rdata,
-    rresp   => m_axil_rsp.rresp,
-    awready => m_axil_rsp.awready,
-    awvalid => m_axil_req.awvalid,
-    awaddr  => m_axil_req.awaddr,
-    wready  => m_axil_rsp.wready,
-    wvalid  => m_axil_req.wvalid,
-    wdata   => m_axil_req.wdata,
-    wstrb   => m_axil_req.wstrb,
-    bvalid  => m_axil_rsp.bvalid,
-    bready  => m_axil_req.bready,
-    bresp   => m_axil_rsp.bresp
+    arready => m_axil.arready,
+    arvalid => m_axil.arvalid,
+    araddr  => m_axil.araddr,
+    rready  => m_axil.rready,
+    rvalid  => m_axil.rvalid,
+    rdata   => m_axil.rdata,
+    rresp   => m_axil.rresp,
+    awready => m_axil.awready,
+    awvalid => m_axil.awvalid,
+    awaddr  => m_axil.awaddr,
+    wready  => m_axil.wready,
+    wvalid  => m_axil.wvalid,
+    wdata   => m_axil.wdata,
+    wstrb   => m_axil.wstrb,
+    bvalid  => m_axil.bvalid,
+    bready  => m_axil.bready,
+    bresp   => m_axil.bresp
   );
 
 end architecture;

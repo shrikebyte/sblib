@@ -41,7 +41,8 @@ begin
 
   u_axil_to_reg : entity work.axil_to_reg
   generic map (
-    G_LATENCY => G_RD_LATENCY
+    G_WR_LATENCY => 1,
+    G_RD_LATENCY => G_RD_LATENCY
   )
   port map (
     clk    => clk,

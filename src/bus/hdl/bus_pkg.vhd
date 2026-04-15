@@ -27,10 +27,10 @@ package bus_pkg is
   subtype AXIL_PROT_RANGE is natural range 2 downto 0;
   subtype AXIL_RESP_RANGE is natural range 1 downto 0;
 
-  constant AXI_RSP_OKAY   : std_ulogic_vector(AXIL_RESP_RANGE) := b"00";
-  constant AXI_RSP_EXOKAY : std_ulogic_vector(AXIL_RESP_RANGE) := b"01";
-  constant AXI_RSP_SLVERR : std_ulogic_vector(AXIL_RESP_RANGE) := b"10";
-  constant AXI_RSP_DECERR : std_ulogic_vector(AXIL_RESP_RANGE) := b"11";
+  constant AXI_RESP_OKAY   : std_ulogic_vector(AXIL_RESP_RANGE) := b"00";
+  constant AXI_RESP_EXOKAY : std_ulogic_vector(AXIL_RESP_RANGE) := b"01";
+  constant AXI_RESP_SLVERR : std_ulogic_vector(AXIL_RESP_RANGE) := b"10";
+  constant AXI_RESP_DECERR : std_ulogic_vector(AXIL_RESP_RANGE) := b"11";
 
   type bus_axil_t is record
     awready : std_ulogic;
@@ -244,8 +244,8 @@ package bus_pkg is
   end view;
 
   procedure reg_attach (
-    signal s_wb : view s_apb_view of bus_apb_t;
-    signal m_wb : view m_apb_view of bus_apb_t
+    signal s_reg : view s_reg_view of bus_reg_t;
+    signal m_reg : view m_reg_view of bus_reg_t
   );
 
   -- ---------------------------------------------------------------------------
@@ -319,6 +319,22 @@ package body bus_pkg is
     s_apb.pready  <= m_apb.pready ;
     s_apb.pslverr <= m_apb.pslverr;
     s_apb.prdata  <= m_apb.prdata ;
+  end procedure;
+
+  procedure reg_attach (
+    signal s_reg : view s_reg_view of bus_reg_t;
+    signal m_reg : view m_reg_view of bus_reg_t
+  ) is
+  begin
+    m_reg.wen   <= s_reg.wen  ;
+    m_reg.waddr <= s_reg.waddr;
+    m_reg.wstrb <= s_reg.wstrb;
+    m_reg.wdata <= s_reg.wdata;
+    s_reg.werr  <= m_reg.werr ;
+    m_reg.ren   <= s_reg.ren  ;
+    m_reg.raddr <= s_reg.raddr;
+    s_reg.rdata <= m_reg.rdata;
+    s_reg.rerr  <= m_reg.rerr ;
   end procedure;
 
 end package body;

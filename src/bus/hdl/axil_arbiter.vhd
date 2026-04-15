@@ -43,14 +43,14 @@ begin
       case wr_state is
         when ST_WR_IDLE =>
           for i in s_axil'range loop
-            if s_axil_req(i).awvalid then
+            if s_axil(i).awvalid then
               wr_select <= i;
               wr_state  <= ST_WR_WRITING;
             end if;
           end loop;
 
         when ST_WR_WRITING =>
-          if m_axil_rsp.bvalid and m_axil_req.bready then
+          if m_axil.bvalid and m_axil.bready then
             wr_state <= ST_WR_IDLE;
           end if;
         when others =>
@@ -71,14 +71,14 @@ begin
       case rd_state is
         when ST_RD_IDLE =>
           for i in s_axil'range loop
-            if s_axil_req(i).arvalid then
+            if s_axil(i).arvalid then
               rd_select <= i;
               rd_state  <= ST_RD_READING;
             end if;
           end loop;
 
         when ST_RD_READING =>
-          if m_axil_rsp.rvalid and m_axil_req.rready then
+          if m_axil.rvalid and m_axil.rready then
             rd_state <= ST_RD_IDLE;
           end if;
         when others =>
@@ -95,36 +95,32 @@ begin
   -- ---------------------------------------------------------------------------
   prc_assign_wr_req : process (all) is begin
     if wr_state = ST_WR_WRITING then
-      m_axil_req.awvalid <= s_axil_req(wr_select).awvalid;
-      m_axil_req.awprot  <= s_axil_req(wr_select).awprot;
-      m_axil_req.awaddr  <= s_axil_req(wr_select).awaddr;
-      m_axil_req.wvalid  <= s_axil_req(wr_select).wvalid;
-      m_axil_req.wdata   <= s_axil_req(wr_select).wdata;
-      m_axil_req.wstrb   <= s_axil_req(wr_select).wstrb;
-      m_axil_req.bready  <= s_axil_req(wr_select).bready;
+      m_axil.awvalid <= s_axil(wr_select).awvalid;
+      m_axil.awaddr  <= s_axil(wr_select).awaddr;
+      m_axil.wvalid  <= s_axil(wr_select).wvalid;
+      m_axil.wdata   <= s_axil(wr_select).wdata;
+      m_axil.wstrb   <= s_axil(wr_select).wstrb;
+      m_axil.bready  <= s_axil(wr_select).bready;
     else
-      m_axil_req.awvalid <= '0';
-      m_axil_req.awprot  <= (others=> '-');
-      m_axil_req.awaddr  <= (others=> '-');
-      m_axil_req.wvalid  <= '0';
-      m_axil_req.wdata   <= (others=> '-');
-      m_axil_req.wstrb   <= (others=> '-');
-      m_axil_req.bready  <= '0';
+      m_axil.awvalid <= '0';
+      m_axil.awaddr  <= (others=> '-');
+      m_axil.wvalid  <= '0';
+      m_axil.wdata   <= (others=> '-');
+      m_axil.wstrb   <= (others=> '-');
+      m_axil.bready  <= '0';
     end if;
   end process;
 
   -- ---------------------------------------------------------------------------
   prc_assign_rd_req : process (all) is begin
     if rd_state = ST_RD_READING then
-      m_axil_req.arvalid <= s_axil_req(rd_select).arvalid;
-      m_axil_req.arprot  <= s_axil_req(rd_select).arprot;
-      m_axil_req.araddr  <= s_axil_req(rd_select).araddr;
-      m_axil_req.rready  <= s_axil_req(rd_select).rready;
+      m_axil.arvalid <= s_axil(rd_select).arvalid;
+      m_axil.araddr  <= s_axil(rd_select).araddr;
+      m_axil.rready  <= s_axil(rd_select).rready;
     else
-      m_axil_req.arvalid <= '0';
-      m_axil_req.arprot  <= (others=> '-');
-      m_axil_req.araddr  <= (others=> '-');
-      m_axil_req.rready  <= '0';
+      m_axil.arvalid <= '0';
+      m_axil.araddr  <= (others=> '-');
+      m_axil.rready  <= '0';
     end if;
   end process;
 
@@ -132,17 +128,17 @@ begin
   prc_assign_rsp : process (all) is begin
     for master in s_axil'range loop
 
-      s_axil_rsp(master) <= m_axil_rsp;
+      s_axil(master) <= m_axil;
 
       if wr_select /= master or wr_state /= ST_WR_WRITING then
-        s_axil_rsp(master).awready <= '0';
-        s_axil_rsp(master).wready  <= '0';
-        s_axil_rsp(master).bvalid  <= '0';
+        s_axil(master).awready <= '0';
+        s_axil(master).wready  <= '0';
+        s_axil(master).bvalid  <= '0';
       end if;
 
       if rd_select /= master or rd_state /= ST_RD_READING then
-        s_axil_rsp(master).arready <= '0';
-        s_axil_rsp(master).rvalid  <= '0';
+        s_axil(master).arready <= '0';
+        s_axil(master).rvalid  <= '0';
       end if;
 
     end loop;
