@@ -53,13 +53,13 @@ architecture tb of block_avg_tb is
 
   -- DUT Signals
   signal s_axis : axis_t (
-    tdata(DW-1 downto 0),
+    tdata(DW - 1 downto 0),
     tkeep(0 downto 0),
     tuser(0 downto 0)
   );
 
   signal m_axis : axis_t (
-    tdata(DW-1 downto 0),
+    tdata(DW - 1 downto 0),
     tkeep(0 downto 0),
     tuser(0 downto 0)
   );
@@ -79,8 +79,8 @@ architecture tb of block_avg_tb is
   constant USER_QUEUE     : queue_t := new_queue;
   constant REF_USER_QUEUE : queue_t := new_queue;
 
-  signal num_packets_checked : natural    := 0;
-  signal num_packets_sent    : natural    := 0;
+  signal num_packets_checked : natural := 0;
+  signal num_packets_sent    : natural := 0;
 
 begin
 
@@ -94,13 +94,13 @@ begin
     variable expected_num_packets_sent    : natural := 0;
 
     procedure transact (
-      avgsel : natural range 0 to G_MAX_AVGSEL;
+      avgsel : natural range 0 to G_MAX_AVGSEL
     ) is
 
       variable data      : integer_array_t := null_integer_array;
       variable result    : integer_array_t := new_3d(1, 1, 1, DW, G_SIGNED);
-      variable accum     : integer := 0;
-      variable num_samps : integer := 2 ** avgsel;
+      variable accum     : integer         := 0;
+      variable num_samps : integer         := 2 ** avgsel;
       variable user      : integer_array_t := new_3d(num_samps, 1, 1, 1, false);
       variable ref_user  : integer_array_t := new_3d(1, 1, 1, 1, false);
 
@@ -135,13 +135,12 @@ begin
 
     end procedure;
 
-
     procedure overflow is
 
-      variable num_samps : integer := 2 ** G_MAX_AVGSEL;
+      variable num_samps : integer         := 2 ** G_MAX_AVGSEL;
       variable data      : integer_array_t := new_3d(num_samps, 1, 1, DW, G_SIGNED);
       variable result    : integer_array_t := new_3d(1, 1, 1, DW, G_SIGNED);
-      variable accum     : integer := 0;
+      variable accum     : integer         := 0;
       variable user      : integer_array_t := new_3d(num_samps, 1, 1, 1, false);
       variable ref_user  : integer_array_t := new_3d(1, 1, 1, 1, false);
 
@@ -195,7 +194,6 @@ begin
       end loop;
 
     elsif run("test_overflow") then
-
       overflow;
       overflow;
 
@@ -218,11 +216,11 @@ begin
 
   -- ---------------------------------------------------------------------------
   u_block_avg : entity work.block_avg
-  generic map(
+  generic map (
     G_SIGNED     => G_SIGNED,
     G_MAX_AVGSEL => G_MAX_AVGSEL
   )
-  port map(
+  port map (
     clk        => clk,
     srst       => srst,
     s_axis     => s_axis,
@@ -253,7 +251,6 @@ begin
     s_axis              => m_axis,
     num_packets_checked => num_packets_checked
   );
-
 
   -- ---------------------------------------------------------------------------
   prc_avgsel : process is begin

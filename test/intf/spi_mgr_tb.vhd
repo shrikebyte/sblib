@@ -34,10 +34,10 @@ end entity;
 
 architecture tb of spi_mgr_tb is
 
-  constant G_CS_BITS    : positive := 2;
-  constant G_CS_LEAD    : positive := 2;
-  constant G_CS_LAG     : positive := 2;
-  constant G_CS_IDLE    : positive := 8;
+  constant G_CS_BITS : positive := 2;
+  constant G_CS_LEAD : positive := 2;
+  constant G_CS_LAG  : positive := 2;
+  constant G_CS_IDLE : positive := 8;
 
   -- TB Constants
   constant RESET_TIME : time    := 50 ns;
@@ -53,15 +53,15 @@ architecture tb of spi_mgr_tb is
 
   -- DUT Signals
   signal s_axis : axis_t (
-    tdata(DW-1 downto 0),
+    tdata(DW - 1 downto 0),
     tkeep(0 downto 0),
-    tuser(UW-1 downto 0)
+    tuser(UW - 1 downto 0)
   );
 
   signal m_axis : axis_t (
-    tdata(DW-1 downto 0),
+    tdata(DW - 1 downto 0),
     tkeep(0 downto 0),
-    tuser(UW-1 downto 0)
+    tuser(UW - 1 downto 0)
   );
 
   signal spi_sck  : std_ulogic;
@@ -97,9 +97,9 @@ begin
     variable expected_num_packets_sent    : natural := 0;
 
     procedure spi_txrx (
-      cpol        : natural range 0 to 1;
-      cpha        : natural range 0 to 1;
-      cs          : natural;
+      cpol : natural range 0 to 1;
+      cpha : natural range 0 to 1;
+      cs   : natural
     ) is
 
       variable data      : integer_array_t := null_integer_array;
@@ -107,7 +107,7 @@ begin
       variable user      : integer_array_t := new_3d(1, 1, 1, UW, false);
       variable user_copy : integer_array_t := new_3d(1, 1, 1, UW, false);
 
-      variable tuser : u_unsigned(UW-1 downto 0);
+      variable tuser : u_unsigned(UW - 1 downto 0);
 
     begin
 
@@ -120,14 +120,14 @@ begin
         is_signed     => false
       );
 
-      tuser(0) := to_sl(cpol);
-      tuser(1) := to_sl(cpha);
+      tuser(0)                          := to_sl(cpol);
+      tuser(1)                          := to_sl(cpha);
       tuser(G_CS_BITS + 2 - 1 downto 2) := to_unsigned(cs, G_CS_BITS);
       set(user, 0, to_integer(tuser));
 
-      data_copy := copy(data);
+      data_copy                    := copy(data);
       push_ref(REF_DATA_QUEUE, data_copy);
-      user_copy := copy(user);
+      user_copy                    := copy(user);
       push_ref(REF_USER_QUEUE, user_copy);
       expected_num_packets_checked := expected_num_packets_checked + 1;
 
@@ -141,16 +141,6 @@ begin
       wait until num_packets_checked = expected_num_packets_checked and
                  num_packets_sent = expected_num_packets_sent and
         rising_edge(clk);
-    end procedure;
-
-    procedure wait_clks (
-      clks : natural
-    ) is begin
-      if clks > 0 then
-        for i in 0 to clks - 1 loop
-          wait until rising_edge(clk);
-        end loop;
-      end if;
     end procedure;
 
   begin
@@ -167,7 +157,7 @@ begin
       bfm_sub_enable <= '1';
 
       for test_idx in 0 to 100 loop
-        spi_txrx(rnd.Uniform(0, 1), rnd.Uniform(0, 1), rnd.Uniform(0, (2 ** G_CS_BITS)-1));
+        spi_txrx(rnd.Uniform(0, 1), rnd.Uniform(0, 1), rnd.Uniform(0, (2 ** G_CS_BITS) - 1));
       end loop;
 
     end if;
@@ -189,14 +179,14 @@ begin
 
   -- ---------------------------------------------------------------------------
   u_spi_mgr : entity work.spi_mgr
-  generic map(
-    G_SCK_DIV    => G_SCK_DIV,
-    G_CS_BITS    => G_CS_BITS,
-    G_CS_LEAD    => G_CS_LEAD,
-    G_CS_LAG     => G_CS_LAG ,
-    G_CS_IDLE    => G_CS_IDLE
+  generic map (
+    G_SCK_DIV => G_SCK_DIV,
+    G_CS_BITS => G_CS_BITS,
+    G_CS_LEAD => G_CS_LEAD,
+    G_CS_LAG  => G_CS_LAG,
+    G_CS_IDLE => G_CS_IDLE
   )
-  port map(
+  port map (
     clk      => clk,
     srst     => srst,
     s_axis   => s_axis,

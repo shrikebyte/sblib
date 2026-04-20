@@ -44,25 +44,25 @@ entity spi_mgr is
     -- Defines the SPI SCK clock as a ratio of the FPGA clock. For example,
     -- if the FPGA clock is 100 MHz, then G_SCK_DIV=4 results in a SPI SCK
     -- of 25 MHz.
-    G_SCK_DIV   : positive             := 4;
+    G_SCK_DIV : positive := 4;
     -- Number of bits used to describe the number of chip-select signals
-    G_CS_BITS    : positive        := 4;
+    G_CS_BITS : positive := 4;
     -- Number of 1/2 SCK periods from CSN falling edge to first SCK active edge
-    G_CS_LEAD   : positive             := 1;
+    G_CS_LEAD : positive := 1;
     -- Number of 1/2 SCK periods from last SCK inactive edge to CSN rising edge
-    G_CS_LAG    : positive             := 1;
+    G_CS_LAG : positive := 1;
     -- Number of 1/2 SCK periods for minimum CSN pulse width between transactions
-    G_CS_IDLE   : positive  := 32
+    G_CS_IDLE : positive := 32
   );
   port (
-    clk      : in   std_ulogic;
-    srst     : in   std_ulogic;
+    clk      : in    std_ulogic;
+    srst     : in    std_ulogic;
     s_axis   : view s_axis_v;
     m_axis   : view m_axis_v;
-    spi_sck  : out  std_ulogic;
-    spi_csn  : out  std_ulogic_vector((2 ** G_CS_BITS) - 1 downto 0);
-    spi_mosi : out  std_ulogic;
-    spi_miso : in   std_ulogic
+    spi_sck  : out   std_ulogic;
+    spi_csn  : out   std_ulogic_vector((2 ** G_CS_BITS) - 1 downto 0);
+    spi_mosi : out   std_ulogic;
+    spi_miso : in    std_ulogic
   );
 end entity;
 
@@ -70,12 +70,15 @@ architecture rtl of spi_mgr is
 
   constant DW : positive := s_axis.tdata'length;
 
-  constant TUSER_REQUIRED_WIDTH : positive := 2 + G_CS_BITS;
-  constant FSM_CNT_INT_ARR : int_arr_t(0 to 3) := (
-    G_CS_LEAD, G_CS_LAG, G_CS_IDLE, (2 ** DW) - 1
+  constant TUSER_REQUIRED_WIDTH : positive          := 2 + G_CS_BITS;
+  constant FSM_CNT_INT_ARR      : int_arr_t(0 to 3) := (
+    G_CS_LEAD,
+    G_CS_LAG,
+    G_CS_IDLE,
+    (2 ** DW) - 1
   );
 
-  type state_t is (
+  type   state_t is (
     ST_IDLE, ST_PREP, ST_START, ST_CS_LEAD, ST_SCK_ON, ST_SCK_OFF, ST_CS_LAG,
     ST_CS_IDLE, ST_FINISH
   );
@@ -88,7 +91,7 @@ architecture rtl of spi_mgr is
   signal sr          : std_ulogic_vector(DW - 1 downto 0);
   signal xact_cpol   : std_ulogic;
   signal xact_cpha   : std_ulogic;
-  signal xact_cs_idx : u_unsigned(G_CS_BITS-1 downto 0);
+  signal xact_cs_idx : u_unsigned(G_CS_BITS - 1 downto 0);
   signal tuser_reg   : std_ulogic_vector(s_axis.tuser'range);
 
 begin
@@ -99,24 +102,24 @@ begin
 
   assert s_axis.tuser'length >= TUSER_REQUIRED_WIDTH
     report "ERROR: spi_mgr: s_axis.tuser is too small. " &
-        "Required width: " & integer'image(TUSER_REQUIRED_WIDTH) &
-        " Provided width: " & integer'image(s_axis.tuser'length)
+           "Required width: " & integer'image(TUSER_REQUIRED_WIDTH) &
+           " Provided width: " & integer'image(s_axis.tuser'length)
     severity failure;
 
   assert s_axis.tdata'length = m_axis.tdata'length
     report "WARNING: spi_mgr: s_axis.tdata width does not match m_axis.tdata width " &
-        "s_axis.tdata width: " & integer'image(m_axis.tdata'length) &
-        " m_axis.tdata width: " & integer'image(s_axis.tdata'length)
+           "s_axis.tdata width: " & integer'image(m_axis.tdata'length) &
+           " m_axis.tdata width: " & integer'image(s_axis.tdata'length)
     severity warning;
 
   m_axis.tlast <= '1';
   m_axis.tkeep <= (others => '1');
   --
-  xact_cpol    <= tuser_reg(0);
-  xact_cpha    <= tuser_reg(1);
-  xact_cs_idx  <= u_unsigned(tuser_reg(G_CS_BITS + 2 - 1 downto 2));
+  xact_cpol   <= tuser_reg(0);
+  xact_cpha   <= tuser_reg(1);
+  xact_cs_idx <= u_unsigned(tuser_reg(G_CS_BITS + 2 - 1 downto 2));
   --
-  spi_mosi     <= sr(DW - 1);
+  spi_mosi <= sr(DW - 1);
 
   prc_fsm : process (clk) is begin
     if rising_edge(clk) then
@@ -125,11 +128,11 @@ begin
           if s_axis.tvalid and s_axis.tready then
             s_axis.tready <= '0';
             --
-            sr          <= std_logic_vector(resize(unsigned(s_axis.tdata), sr'length));
-            tuser_reg   <= s_axis.tuser;
+            sr        <= std_logic_vector(resize(unsigned(s_axis.tdata), sr'length));
+            tuser_reg <= s_axis.tuser;
             --
-            fsm_cnt       <= 0;
-            state         <= ST_PREP;
+            fsm_cnt <= 0;
+            state   <= ST_PREP;
           else
             s_axis.tready <= '1';
           end if;
@@ -137,13 +140,13 @@ begin
         when ST_PREP =>
           if fsm_en then
             spi_sck <= xact_cpol; -- Inactive
-            state <= ST_START;
+            state   <= ST_START;
           end if;
 
         when ST_START =>
           if fsm_en then
             spi_csn(to_integer(xact_cs_idx)) <= '0';
-            state <= ST_CS_LEAD;
+            state                            <= ST_CS_LEAD;
           end if;
 
         when ST_CS_LEAD =>
@@ -169,7 +172,7 @@ begin
               sr(sr'high downto 0) <= sr(sr'high - 1 downto 0) & miso_reg;
             end if;
 
-            if fsm_cnt = (DW-1) then
+            if fsm_cnt = (DW - 1) then
               fsm_cnt <= 0;
               state   <= ST_CS_LAG;
             else
@@ -242,7 +245,7 @@ begin
     end if;
   end process;
 
-  prc_fsm_en : process (clk) begin
+  prc_fsm_en : process (clk) is begin
     if rising_edge(clk) then
       if sck_cnt = ((G_SCK_DIV / 2) - 1) then
         sck_cnt <= 0;

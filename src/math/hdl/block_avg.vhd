@@ -35,14 +35,14 @@ entity block_avg is
     G_SIGNED : boolean := false;
     -- The default value of 15 for G_MAX_AVGSEL allows for up to 32k samples
     -- to be averaged.
-    G_MAX_AVGSEL  : positive := 15
+    G_MAX_AVGSEL : positive := 15
   );
   port (
     clk  : in    std_ulogic;
     srst : in    std_ulogic;
     --
-    s_axis   : view s_axis_v;
-    m_axis   : view m_axis_v;
+    s_axis : view s_axis_v;
+    m_axis : view m_axis_v;
     --
     -- Defines the number of samples to average together. Can be updated at
     -- run-time, but new values will not become effective until the current
@@ -53,13 +53,13 @@ entity block_avg is
     --   avgsel=2 -> 4 samples are averaged
     --   avgsel=3 -> 8 samples are averaged
     --   avgsel=6 -> 64 samples are averaged
-    ctl_avgsel : in natural range 0 to G_MAX_AVGSEL
+    ctl_avgsel : in    natural range 0 to G_MAX_AVGSEL
   );
 end entity;
 
 architecture rtl of block_avg is
 
-  type state_t is (ST_IDLE, ST_ACTIVE);
+  type   state_t is (ST_IDLE, ST_ACTIVE);
   signal state : state_t;
 
   -- When adding a large number of values together, all having the same bit
@@ -67,10 +67,12 @@ architecture rtl of block_avg is
   -- original number of bits plus the log, base two, of the number of elements
   -- added together.
   signal accum : signed(s_axis.tdata'length + G_MAX_AVGSEL - 1 downto 0);
-  signal cnt : unsigned(G_MAX_AVGSEL downto 0);
-  signal sel : natural range 0 to G_MAX_AVGSEL;
+  signal cnt   : unsigned(G_MAX_AVGSEL downto 0);
+  signal sel   : natural range 0 to G_MAX_AVGSEL;
 
-  impure function to_accum(val : std_ulogic_vector) return signed is begin
+  impure function to_accum (
+    val : std_ulogic_vector
+  ) return signed is begin
     if G_SIGNED then
       return resize(signed(val), accum'length);
     else
@@ -82,8 +84,8 @@ begin
 
   assert s_axis.tdata'length = m_axis.tdata'length
     report "ERROR: block_avg: s_axis.tdata width does not match m_axis.tdata. " &
-        "s_axis.tdata width: " & integer'image(s_axis.tdata'length) &
-        " m_axis.tdata width: " & integer'image(m_axis.tdata'length)
+           "s_axis.tdata width: " & integer'image(s_axis.tdata'length) &
+           " m_axis.tdata width: " & integer'image(m_axis.tdata'length)
     severity failure;
 
   m_axis.tlast <= '1';
@@ -93,9 +95,8 @@ begin
   s_axis.tready <= m_axis.tready or not m_axis.tvalid;
   m_axis.tdata  <= std_ulogic_vector(resize(shift_right(unsigned(accum), sel), m_axis.tdata'length));
 
-  prc_avg : process (clk) begin
+  prc_avg : process (clk) is begin
     if rising_edge(clk) then
-
       if m_axis.tready then
         m_axis.tvalid <= '0';
       end if;
@@ -123,6 +124,7 @@ begin
               cnt <= cnt + 1;
             end if;
         end case;
+
       end if;
 
       if srst then
