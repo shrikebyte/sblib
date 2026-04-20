@@ -34,7 +34,6 @@ end entity;
 
 architecture tb of spi_mgr_tb is
 
-  constant G_WIDTH_BITS : positive := 4;
   constant G_CS_BITS    : positive := 2;
   constant G_CS_LEAD    : positive := 2;
   constant G_CS_LAG     : positive := 2;
@@ -43,8 +42,8 @@ architecture tb of spi_mgr_tb is
   -- TB Constants
   constant RESET_TIME : time    := 50 ns;
   constant CLK_PERIOD : time    := 5 ns;
-  constant DW         : integer := 2 ** G_WIDTH_BITS;
-  constant UW         : integer := 2 + G_WIDTH_BITS + G_CS_BITS;
+  constant DW         : integer := 16;
+  constant UW         : integer := 2 + G_CS_BITS;
 
   -- TB Signals
   signal clk   : std_ulogic := '1';
@@ -86,17 +85,6 @@ architecture tb of spi_mgr_tb is
   signal num_packets_sent    : natural    := 0;
   signal bfm_sub_enable      : std_ulogic := '0';
 
-  function make_bit_mask(total_width : natural; num_ones : natural) return std_ulogic_vector is
-    variable result : std_ulogic_vector(total_width - 1 downto 0) := (others => '0');
-  begin
-    if num_ones >= total_width then
-      result := (others => '1');
-    elsif num_ones > 0 then
-      result(num_ones - 1 downto 0) := (others => '1');
-    end if;
-    return result;
-  end function;
-
 begin
 
   -- ---------------------------------------------------------------------------
@@ -111,7 +99,6 @@ begin
     procedure spi_txrx (
       cpol        : natural range 0 to 1;
       cpha        : natural range 0 to 1;
-      width       : natural;
       cs          : natural;
     ) is
 
@@ -122,17 +109,6 @@ begin
 
       variable tuser : u_unsigned(UW-1 downto 0);
 
-      function make_bit_mask(total_width : natural; num_ones : natural) return std_ulogic_vector is
-        variable result : std_ulogic_vector(total_width - 1 downto 0) := (others => '0');
-      begin
-        if num_ones >= total_width then
-          result := (others => '1');
-        elsif num_ones > 0 then
-          result(num_ones - 1 downto 0) := (others => '1');
-        end if;
-        return result;
-      end function;
-
     begin
 
       -- Random data
@@ -140,14 +116,13 @@ begin
         rnd           => rnd,
         integer_array => data,
         width         => 1,
-        bits_per_word => width+1,
+        bits_per_word => DW,
         is_signed     => false
       );
 
       tuser(0) := to_sl(cpol);
       tuser(1) := to_sl(cpha);
-      tuser(G_WIDTH_BITS+2-1 downto 2) := to_unsigned(width, G_WIDTH_BITS);
-      tuser(G_CS_BITS+G_WIDTH_BITS+2-1 downto G_WIDTH_BITS+2) := to_unsigned(cs, G_CS_BITS);
+      tuser(G_CS_BITS + 2 - 1 downto 2) := to_unsigned(cs, G_CS_BITS);
       set(user, 0, to_integer(tuser));
 
       data_copy := copy(data);
@@ -192,7 +167,7 @@ begin
       bfm_sub_enable <= '1';
 
       for test_idx in 0 to 100 loop
-        spi_txrx(rnd.Uniform(0, 1), rnd.Uniform(0, 1), rnd.Uniform(0, (2 ** G_WIDTH_BITS)-1), rnd.Uniform(0, (2 ** G_CS_BITS)-1));
+        spi_txrx(rnd.Uniform(0, 1), rnd.Uniform(0, 1), rnd.Uniform(0, (2 ** G_CS_BITS)-1));
       end loop;
 
     end if;
@@ -216,10 +191,9 @@ begin
   u_spi_mgr : entity work.spi_mgr
   generic map(
     G_SCK_DIV    => G_SCK_DIV,
-    G_WIDTH_BITS => G_WIDTH_BITS,
-    G_CS_BITS    => G_CS_BITS   ,
-    G_CS_LEAD    => G_CS_LEAD   ,
-    G_CS_LAG     => G_CS_LAG    ,
+    G_CS_BITS    => G_CS_BITS,
+    G_CS_LEAD    => G_CS_LEAD,
+    G_CS_LAG     => G_CS_LAG ,
     G_CS_IDLE    => G_CS_IDLE
   )
   port map(

@@ -33,13 +33,9 @@ entity block_avg is
   generic (
     -- True = signed format; False = unsigned format
     G_SIGNED : boolean := false;
-    -- The default value of 4 for G_AVGSEL_WIDTH allows for up to 32k samples
-    -- to be averaged. Use caution when increasing this generic any further
-    -- than this as the numbers will exponentially explode.
-    -- For example, setting the width to 8 would cause the accumulator to use
-    -- an extra 256 bits and allow for up to 5.7e76 samples to be averaged,
-    -- which you will almost certainly NEVER need.
-    G_AVGSEL_WIDTH  : positive := 4
+    -- The default value of 15 for G_MAX_AVGSEL allows for up to 32k samples
+    -- to be averaged.
+    G_MAX_AVGSEL  : positive := 15
   );
   port (
     clk  : in    std_ulogic;
@@ -57,7 +53,7 @@ entity block_avg is
     --   avgsel=2 -> 4 samples are averaged
     --   avgsel=3 -> 8 samples are averaged
     --   avgsel=6 -> 64 samples are averaged
-    ctl_avgsel : in u_unsigned(G_AVGSEL_WIDTH - 1 downto 0)
+    ctl_avgsel : in natural range 0 to G_MAX_AVGSEL
   );
 end entity;
 
@@ -70,9 +66,9 @@ architecture rtl of block_avg is
   -- width, the number of bits required to hold the result is given by the
   -- original number of bits plus the log, base two, of the number of elements
   -- added together.
-  signal accum : signed(s_axis.tdata'length + ((2 ** G_AVGSEL_WIDTH) - 1) - 1 downto 0);
-  signal cnt : unsigned((2 ** G_AVGSEL_WIDTH) downto 0);
-  signal sel : natural range 0 to (2 ** G_AVGSEL_WIDTH) - 1;
+  signal accum : signed(s_axis.tdata'length + G_MAX_AVGSEL - 1 downto 0);
+  signal cnt : unsigned(G_MAX_AVGSEL downto 0);
+  signal sel : natural range 0 to G_MAX_AVGSEL;
 
   impure function to_accum(val : std_ulogic_vector) return signed is begin
     if G_SIGNED then
@@ -90,8 +86,12 @@ begin
         " m_axis.tdata width: " & integer'image(m_axis.tdata'length)
     severity failure;
 
+  m_axis.tlast <= '1';
+  m_axis.tkeep <= (others => '1');
+  m_axis.tuser <= (others => '0');
+  --
   s_axis.tready <= m_axis.tready or not m_axis.tvalid;
-  m_axis.tdata  <= std_ulogic_vector(resize(shift_right(accum, sel), m_axis.tdata'length));
+  m_axis.tdata  <= std_ulogic_vector(resize(shift_right(unsigned(accum), sel), m_axis.tdata'length));
 
   prc_avg : process (clk) begin
     if rising_edge(clk) then
@@ -105,7 +105,7 @@ begin
           when ST_IDLE =>
             accum <= to_accum(s_axis.tdata);
             cnt   <= to_unsigned(2, cnt'length);
-            sel   <= to_integer(ctl_avgsel);
+            sel   <= ctl_avgsel;
 
             if ctl_avgsel = 0 then
               m_axis.tvalid <= '1';

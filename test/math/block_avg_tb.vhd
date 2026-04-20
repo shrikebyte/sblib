@@ -9,6 +9,10 @@
 --# Block Averager testbench
 --##############################################################################
 
+-- TODO: Update axis bfms to support:
+--  1. Optional tuser
+--  2. Signed data
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -34,7 +38,7 @@ end entity;
 
 architecture tb of block_avg_tb is
 
-  constant G_AVGSEL_WIDTH : positive := 4;
+  constant G_MAX_AVGSEL : positive := 7;
 
   -- TB Constants
   constant RESET_TIME : time    := 50 ns;
@@ -60,7 +64,7 @@ architecture tb of block_avg_tb is
     tuser(0 downto 0)
   );
 
-  signal ctl_avgsel : u_unsigned(G_AVGSEL_WIDTH - 1 downto 0);
+  signal ctl_avgsel : natural range 0 to G_MAX_AVGSEL;
 
   -- Testbench BFMs
   constant STALL_CFG : stall_configuration_t := (
@@ -69,6 +73,7 @@ architecture tb of block_avg_tb is
     max_stall_cycles  => 3
   );
 
+  constant SEL_QUEUE      : queue_t := new_queue;
   constant DATA_QUEUE     : queue_t := new_queue;
   constant REF_DATA_QUEUE : queue_t := new_queue;
   constant USER_QUEUE     : queue_t := new_queue;
@@ -76,18 +81,6 @@ architecture tb of block_avg_tb is
 
   signal num_packets_checked : natural    := 0;
   signal num_packets_sent    : natural    := 0;
-  signal bfm_sub_enable      : std_ulogic := '0';
-
-  function make_bit_mask(total_width : natural; num_ones : natural) return std_ulogic_vector is
-    variable result : std_ulogic_vector(total_width - 1 downto 0) := (others => '0');
-  begin
-    if num_ones >= total_width then
-      result := (others => '1');
-    elsif num_ones > 0 then
-      result(num_ones - 1 downto 0) := (others => '1');
-    end if;
-    return result;
-  end function;
 
 begin
 
@@ -101,26 +94,15 @@ begin
     variable expected_num_packets_sent    : natural := 0;
 
     procedure transact (
-      avgsel : u_unsigned(G_AVGSEL_WIDTH - 1 downto 0);
+      avgsel : natural range 0 to G_MAX_AVGSEL;
     ) is
 
       variable data      : integer_array_t := null_integer_array;
-      variable data_copy : integer_array_t := new_3d(1, 1, 1, 1, false);
-      variable user      : integer_array_t := new_3d(1, 1, 1, 1, false);
-      variable user_copy : integer_array_t := new_3d(1, 1, 1, 1, false);
-
-      variable accum : integer := 0;
-
-      function calc_avg(avg : int_arr_t) return integer is
-        variable accum : integer := 0;
-      begin
-        for i in avg'range loop
-          accum := accum + avg(i);
-        end loop;
-        return accum / avg'length;
-      end function;
-
-      variable num_samps : integer := 2 ** to_integer(avgsel);
+      variable result    : integer_array_t := new_3d(1, 1, 1, DW, G_SIGNED);
+      variable accum     : integer := 0;
+      variable num_samps : integer := 2 ** avgsel;
+      variable user      : integer_array_t := new_3d(num_samps, 1, 1, 1, false);
+      variable ref_user  : integer_array_t := new_3d(1, 1, 1, 1, false);
 
     begin
 
@@ -130,24 +112,63 @@ begin
         integer_array => data,
         width         => num_samps,
         bits_per_word => DW,
-        is_signed     => false
+        is_signed     => G_SIGNED
       );
 
-      tuser(0) := to_sl(cpol);
-      tuser(1) := to_sl(cpha);
-      tuser(G_WIDTH_BITS+2-1 downto 2) := to_unsigned(width, G_WIDTH_BITS);
-      tuser(G_CS_BITS+G_WIDTH_BITS+2-1 downto G_WIDTH_BITS+2) := to_unsigned(cs, G_CS_BITS);
-      set(user, 0, to_integer(tuser));
+      -- Calc average
+      for i in 0 to num_samps - 1 loop
+        accum := accum + get(data, i);
+        set(user, i, 0);
+      end loop;
+      set(result, 0, accum / num_samps);
+      set(ref_user, 0, 0);
 
-      data_copy := copy(data);
-      push_ref(REF_DATA_QUEUE, data_copy);
-      user_copy := copy(user);
-      push_ref(REF_USER_QUEUE, user_copy);
+      push_ref(REF_DATA_QUEUE, result);
+      push_ref(REF_USER_QUEUE, ref_user);
       expected_num_packets_checked := expected_num_packets_checked + 1;
 
       push_ref(DATA_QUEUE, data);
       push_ref(USER_QUEUE, user);
       expected_num_packets_sent := expected_num_packets_sent + 1;
+
+      push(SEL_QUEUE, avgsel);
+
+    end procedure;
+
+
+    procedure overflow is
+
+      variable num_samps : integer := 2 ** G_MAX_AVGSEL;
+      variable data      : integer_array_t := new_3d(num_samps, 1, 1, DW, G_SIGNED);
+      variable result    : integer_array_t := new_3d(1, 1, 1, DW, G_SIGNED);
+      variable accum     : integer := 0;
+      variable user      : integer_array_t := new_3d(num_samps, 1, 1, 1, false);
+      variable ref_user  : integer_array_t := new_3d(1, 1, 1, 1, false);
+
+    begin
+
+      -- Calc average
+      for i in 0 to num_samps - 1 loop
+        if G_SIGNED then
+          set(data, i, -1 * (2 ** DW));
+        else
+          set(data, i, (2 ** DW) - 1);
+        end if;
+        set(user, i, 0);
+        accum := accum + get(data, i);
+      end loop;
+      set(result, 0, accum / num_samps);
+      set(ref_user, 0, 0);
+
+      push_ref(REF_DATA_QUEUE, result);
+      push_ref(REF_USER_QUEUE, ref_user);
+      expected_num_packets_checked := expected_num_packets_checked + 1;
+
+      push_ref(DATA_QUEUE, data);
+      push_ref(USER_QUEUE, user);
+      expected_num_packets_sent := expected_num_packets_sent + 1;
+
+      push(SEL_QUEUE, G_MAX_AVGSEL);
 
     end procedure;
 
@@ -155,16 +176,6 @@ begin
       wait until num_packets_checked = expected_num_packets_checked and
                  num_packets_sent = expected_num_packets_sent and
         rising_edge(clk);
-    end procedure;
-
-    procedure wait_clks (
-      clks : natural
-    ) is begin
-      if clks > 0 then
-        for i in 0 to clks - 1 loop
-          wait until rising_edge(clk);
-        end loop;
-      end if;
     end procedure;
 
   begin
@@ -178,11 +189,15 @@ begin
     wait until rising_edge(clk);
 
     if run("test_random_data") then
-      bfm_sub_enable <= '1';
 
-      for test_idx in 0 to 100 loop
-        spi_txrx(rnd.Uniform(0, 1), rnd.Uniform(0, 1), rnd.Uniform(0, (2 ** G_WIDTH_BITS)-1), rnd.Uniform(0, (2 ** G_CS_BITS)-1));
+      for test_idx in 0 to 99 loop
+        transact(rnd.Uniform(0, G_MAX_AVGSEL));
       end loop;
+
+    elsif run("test_overflow") then
+
+      overflow;
+      overflow;
 
     end if;
 
@@ -204,8 +219,8 @@ begin
   -- ---------------------------------------------------------------------------
   u_block_avg : entity work.block_avg
   generic map(
-    G_SIGNED       => G_SIGNED,
-    G_AVGSEL_WIDTH => G_AVGSEL_WIDTH
+    G_SIGNED     => G_SIGNED,
+    G_MAX_AVGSEL => G_MAX_AVGSEL
   )
   port map(
     clk        => clk,
@@ -238,5 +253,19 @@ begin
     s_axis              => m_axis,
     num_packets_checked => num_packets_checked
   );
+
+
+  -- ---------------------------------------------------------------------------
+  prc_avgsel : process is begin
+    while is_empty(SEL_QUEUE) loop
+      wait until rising_edge(clk);
+    end loop;
+
+    ctl_avgsel <= pop(SEL_QUEUE);
+
+    wait until (s_axis.tvalid and s_axis.tready and s_axis.tlast) = '1'
+      and rising_edge(clk);
+
+  end process;
 
 end architecture;

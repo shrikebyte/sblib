@@ -15,18 +15,23 @@
 --# s_axis.tready | High when module is IDLE and ready for data.
 --# s_axis.tvalid | Starts a new SPI transaction.
 --# s_axis.tdata  | MOSI data. Format: [Data (2^G_WIDTH_BITS)]
---# s_axis.tlast  | Ignore.
+--# s_axis.tlast  | TODO: End of transaction. CS is held low for the duration of a
+--#               | transaction and toggled back high after tlast. This
+--#               | mechanism allows for multi-word transactions.
 --# s_axis.tkeep  | Ignore.
 --# s_axis.tuser  | Transaction config settings. Format is dependent on generics. Format (MSB to LSB):
---#               | [ CS Index (G_CS_BITS) | Transaction Width (G_WIDTH_BITS) | CPHA (1) | CPOL (1) ]
+--#               | [ CS Index (G_CS_BITS) | CPHA (1) | CPOL (1) ]
 --# m_axis.tready | Backpressure.
 --# m_axis.tvalid | New MISO data is available.
 --# m_axis.tdata  | MISO data. Format: [Data (2^G_WIDTH_BITS)]
---# m_axis.tlast  | Ignore.
+--# m_axis.tlast  | TODO: End of transaction.
 --# m_axis.tkeep  | Ignore.
 --# m_axis.tuser  | Transaction config settings passed through from the input.
 --#               | Same format as input. Can be optionally be ignored.
 --##############################################################################
+
+-- TODO: Update to support multi-beat transfers.
+-- As of now, only single-beat transfers are accepted and tlast is ignored.
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -40,8 +45,6 @@ entity spi_mgr is
     -- if the FPGA clock is 100 MHz, then G_SCK_DIV=4 results in a SPI SCK
     -- of 25 MHz.
     G_SCK_DIV   : positive             := 4;
-    -- Number of bits in the unsigned vector that defines a transaction size
-    G_WIDTH_BITS : positive        := 4;
     -- Number of bits used to describe the number of chip-select signals
     G_CS_BITS    : positive        := 4;
     -- Number of 1/2 SCK periods from CSN falling edge to first SCK active edge
@@ -65,10 +68,11 @@ end entity;
 
 architecture rtl of spi_mgr is
 
-  constant TDATA_SUGGESTED_WIDTH : positive := 2 ** G_WIDTH_BITS;
-  constant TUSER_REQUIRED_WIDTH : positive := 2 + G_WIDTH_BITS + G_CS_BITS;
+  constant DW : positive := s_axis.tdata'length;
+
+  constant TUSER_REQUIRED_WIDTH : positive := 2 + G_CS_BITS;
   constant FSM_CNT_INT_ARR : int_arr_t(0 to 3) := (
-    G_CS_LEAD, G_CS_LAG, G_CS_IDLE, 2 ** G_WIDTH_BITS
+    G_CS_LEAD, G_CS_LAG, G_CS_IDLE, (2 ** DW) - 1
   );
 
   type state_t is (
@@ -81,23 +85,11 @@ architecture rtl of spi_mgr is
   signal fsm_cnt     : natural range 0 to find_max(FSM_CNT_INT_ARR) - 1;
   signal fsm_en      : std_ulogic;
   signal miso_reg    : std_ulogic;
-  signal sr          : std_ulogic_vector(TDATA_SUGGESTED_WIDTH - 1 downto 0);
+  signal sr          : std_ulogic_vector(DW - 1 downto 0);
   signal xact_cpol   : std_ulogic;
   signal xact_cpha   : std_ulogic;
-  signal xact_width  : u_unsigned(G_WIDTH_BITS - 1 downto 0);
   signal xact_cs_idx : u_unsigned(G_CS_BITS-1 downto 0);
   signal tuser_reg   : std_ulogic_vector(s_axis.tuser'range);
-
-  function make_bit_mask(total_width : natural; num_ones : natural) return std_ulogic_vector is
-    variable result : std_ulogic_vector(total_width - 1 downto 0) := (others => '0');
-  begin
-    if num_ones >= total_width then
-      result := (others => '1');
-    elsif num_ones > 0 then
-      result(num_ones - 1 downto 0) := (others => '1');
-    end if;
-    return result;
-  end function;
 
 begin
 
@@ -111,21 +103,20 @@ begin
         " Provided width: " & integer'image(s_axis.tuser'length)
     severity failure;
 
-  assert s_axis.tdata'length = TDATA_SUGGESTED_WIDTH
-    report "WARNING: spi_mgr: s_axis.tdata will be truncated or zero-extended. " &
-        "Suggested width: " & integer'image(TDATA_SUGGESTED_WIDTH) &
-        " Provided width: " & integer'image(s_axis.tdata'length)
+  assert s_axis.tdata'length = m_axis.tdata'length
+    report "WARNING: spi_mgr: s_axis.tdata width does not match m_axis.tdata width " &
+        "s_axis.tdata width: " & integer'image(m_axis.tdata'length) &
+        " m_axis.tdata width: " & integer'image(s_axis.tdata'length)
     severity warning;
 
-  m_axis.tkeep <= (others => '1');
   m_axis.tlast <= '1';
+  m_axis.tkeep <= (others => '1');
   --
   xact_cpol    <= tuser_reg(0);
   xact_cpha    <= tuser_reg(1);
-  xact_width   <= u_unsigned(tuser_reg(G_WIDTH_BITS+2-1 downto 2));
-  xact_cs_idx  <= u_unsigned(tuser_reg(G_CS_BITS+G_WIDTH_BITS+2-1 downto G_WIDTH_BITS+2));
+  xact_cs_idx  <= u_unsigned(tuser_reg(G_CS_BITS + 2 - 1 downto 2));
   --
-  spi_mosi     <= sr(to_integer(xact_width));
+  spi_mosi     <= sr(DW - 1);
 
   prc_fsm : process (clk) is begin
     if rising_edge(clk) then
@@ -178,7 +169,7 @@ begin
               sr(sr'high downto 0) <= sr(sr'high - 1 downto 0) & miso_reg;
             end if;
 
-            if fsm_cnt = xact_width then
+            if fsm_cnt = (DW-1) then
               fsm_cnt <= 0;
               state   <= ST_CS_LAG;
             else
@@ -221,7 +212,7 @@ begin
             if fsm_cnt = (G_CS_IDLE - 1) then
               fsm_cnt       <= 0;
               m_axis.tvalid <= '1';
-              m_axis.tdata  <= sr and make_bit_mask(m_axis.tdata'length, to_integer(xact_width) + 1);
+              m_axis.tdata  <= sr;
               m_axis.tuser  <= tuser_reg;
               state         <= ST_FINISH;
             else
