@@ -1,5 +1,5 @@
 --##############################################################################
---# File : ebtb_encode.vhd
+--# File : ebtb_enc.vhd
 --# Auth : Chuck Benz, Frans Schreuder, with modifications by David Gussler
 --# ============================================================================
 --# Copyright 2002    Chuck Benz, Hollis, NH
@@ -44,7 +44,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-entity ebtb_encode is
+entity ebtb_enc is
   port (
     --! Clock to register dout
     clk : in    std_logic;
@@ -61,7 +61,7 @@ entity ebtb_encode is
   );
 end entity;
 
-architecture rtl of ebtb_encode is
+architecture rtl of ebtb_enc is
 
   signal aeqb    : std_logic; -- (ai & bi) | (!ai & !bi) ;
   signal ceqd    : std_logic; -- (ci & di) | (!ci & !di) ;

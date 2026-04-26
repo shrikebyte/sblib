@@ -1,5 +1,5 @@
 --##############################################################################
---# File : ebtb_decode.vhd
+--# File : ebtb_dec.vhd
 --# Auth : Chuck Benz, Frans Schreuder, with modifications by David Gussler
 --# ============================================================================
 --# Copyright 2002    Chuck Benz, Hollis, NH
@@ -44,7 +44,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-entity ebtb_decode is
+entity ebtb_dec is
   port (
     --! Clock to register output and disparity
     clk : in    std_logic;
@@ -65,7 +65,7 @@ entity ebtb_decode is
   );
 end entity;
 
-architecture rtl of ebtb_decode is
+architecture rtl of ebtb_dec is
 
   signal dispin      : std_logic;
   signal dispout     : std_logic;

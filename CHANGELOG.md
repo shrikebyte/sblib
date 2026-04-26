@@ -14,6 +14,8 @@ All notable changes to this project will be documented in this file.
 - Change from resolved to unresolved types for better compile-time error checking.
 - Automatically resolve vector lengths, rather than defining them with generics, where applicable.
 - Change axi lite components to use VHDL'19 record view interfaces rather than dual i/o records.
+- Update build tool dependency versions.
+- Change primary simulator from GHDL to NVC.
 
 ### Removed
 

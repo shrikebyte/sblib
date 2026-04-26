@@ -247,7 +247,7 @@ begin
 
   -- ---------------------------------------------------------------------------
   -- Encoder
-  u_ebtb_encode : entity work.ebtb_encode
+  u_ebtb_enc : entity work.ebtb_enc
   port map (
     clk  => clk,
     srst => srst,
@@ -259,7 +259,7 @@ begin
 
   -- ---------------------------------------------------------------------------
   -- Decoder
-  u_ebtb_decode : entity work.ebtb_decode
+  u_ebtb_dec : entity work.ebtb_dec
   port map (
     clk      => clk,
     srst     => srst,
