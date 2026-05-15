@@ -31,7 +31,7 @@
 --##############################################################################
 
 -- TODO: Update to support multi-beat transfers.
--- As of now, only single-beat transfers are accepted and tlast is ignored.
+-- As of now, only single-beat transfers are accepted and tlast passed through.
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -46,7 +46,7 @@ entity spi_mgr is
     -- of 25 MHz.
     G_SCK_DIV : positive := 4;
     -- Number of bits used to describe the number of chip-select signals
-    G_CS_BITS : positive := 4;
+    G_CS_BITS : natural := 0;
     -- Number of 1/2 SCK periods from CSN falling edge to first SCK active edge
     G_CS_LEAD : positive := 1;
     -- Number of 1/2 SCK periods from last SCK inactive edge to CSN rising edge
@@ -57,8 +57,8 @@ entity spi_mgr is
   port (
     clk      : in    std_ulogic;
     srst     : in    std_ulogic;
-    s_axis   : view s_axis_v;
-    m_axis   : view m_axis_v;
+    s_axis   : view  s_axis_v;
+    m_axis   : view  m_axis_v;
     spi_sck  : out   std_ulogic;
     spi_csn  : out   std_ulogic_vector((2 ** G_CS_BITS) - 1 downto 0);
     spi_mosi : out   std_ulogic;
@@ -68,7 +68,9 @@ end entity;
 
 architecture rtl of spi_mgr is
 
-  constant DW : positive := s_axis.tdata'length;
+  constant DW   : positive := s_axis.tdata'length;
+  constant UW   : positive := s_axis.tuser'length;
+  constant ULSB : integer  := s_axis.tuser'low;
 
   constant TUSER_REQUIRED_WIDTH : positive          := 2 + G_CS_BITS;
   constant FSM_CNT_INT_ARR      : int_arr_t(0 to 3) := (
@@ -79,20 +81,21 @@ architecture rtl of spi_mgr is
   );
 
   type   state_t is (
-    ST_IDLE, ST_PREP, ST_START, ST_CS_LEAD, ST_SCK_ON, ST_SCK_OFF, ST_CS_LAG,
-    ST_CS_IDLE, ST_FINISH
+    ST_IDLE, ST_INACTIVE, ST_CS_LEAD, ST_SCK_ON, ST_SCK_OFF, ST_CS_LAG,
+    ST_CS_IDLE
   );
   signal state : state_t;
 
-  signal sck_cnt     : natural range 0 to G_SCK_DIV - 1;
-  signal fsm_cnt     : natural range 0 to find_max(FSM_CNT_INT_ARR) - 1;
-  signal fsm_en      : std_ulogic;
-  signal miso_reg    : std_ulogic;
-  signal sr          : std_ulogic_vector(DW - 1 downto 0);
-  signal xact_cpol   : std_ulogic;
-  signal xact_cpha   : std_ulogic;
-  signal xact_cs_idx : u_unsigned(G_CS_BITS - 1 downto 0);
-  signal tuser_reg   : std_ulogic_vector(s_axis.tuser'range);
+  signal sck_cnt   : natural range 0 to G_SCK_DIV - 1;
+  signal fsm_cnt   : natural range 0 to find_max(FSM_CNT_INT_ARR) - 1;
+  signal fsm_en    : std_ulogic;
+  signal miso_reg  : std_ulogic;
+  signal sr        : std_ulogic_vector(DW - 1 downto 0);    -- Shift register
+  signal cpol      : std_ulogic;                            -- Clock polarity
+  signal cpha      : std_ulogic;                            -- Clock phase
+  signal csdec     : natural range 0 to 2 ** G_CS_BITS - 1; -- CS Decode
+  signal tuser_reg : std_ulogic_vector(UW - 1 downto 0);
+  signal tlast_reg : std_ulogic;
 
 begin
 
@@ -107,66 +110,67 @@ begin
     severity failure;
 
   assert s_axis.tdata'length = m_axis.tdata'length
-    report "WARNING: spi_mgr: s_axis.tdata width does not match m_axis.tdata width " &
+    report "ERROR: spi_mgr: s_axis.tdata width does not match m_axis.tdata width " &
            "s_axis.tdata width: " & integer'image(m_axis.tdata'length) &
            " m_axis.tdata width: " & integer'image(s_axis.tdata'length)
     severity warning;
 
-  m_axis.tlast <= '1';
+  spi_mosi     <= sr(DW - 1);
+  cpol         <= tuser_reg(0);
+  cpha         <= tuser_reg(1);
   m_axis.tkeep <= (others => '1');
-  --
-  xact_cpol   <= tuser_reg(0);
-  xact_cpha   <= tuser_reg(1);
-  xact_cs_idx <= u_unsigned(tuser_reg(G_CS_BITS + 2 - 1 downto 2));
-  --
-  spi_mosi <= sr(DW - 1);
+
+  gen_csdec : if G_CS_BITS = 0 generate
+    csdec <= 0;
+  else generate
+    csdec <= to_integer(unsigned(tuser_reg(G_CS_BITS + ULSB + 2 - 1 downto ULSB + 2)));
+  end generate;
 
   prc_fsm : process (clk) is begin
     if rising_edge(clk) then
-      case state is
-        when ST_IDLE =>
-          if s_axis.tvalid and s_axis.tready then
-            s_axis.tready <= '0';
-            --
-            sr        <= std_logic_vector(resize(unsigned(s_axis.tdata), sr'length));
-            tuser_reg <= s_axis.tuser;
-            --
-            fsm_cnt <= 0;
-            state   <= ST_PREP;
-          else
-            s_axis.tready <= '1';
-          end if;
+      s_axis.tready <= '0';
 
-        when ST_PREP =>
-          if fsm_en then
-            spi_sck <= xact_cpol; -- Inactive
-            state   <= ST_START;
-          end if;
+      if m_axis.tready then
+        m_axis.tvalid <= '0';
+      end if;
 
-        when ST_START =>
-          if fsm_en then
-            spi_csn(to_integer(xact_cs_idx)) <= '0';
-            state                            <= ST_CS_LEAD;
-          end if;
+      if fsm_en then
+        case state is
+          when ST_IDLE =>
+            if s_axis.tvalid and not m_axis.tvalid then
+              s_axis.tready <= '1';
+              --
+              sr        <= s_axis.tdata;
+              spi_sck   <= s_axis.tuser(0); -- Inactive
+              tlast_reg <= s_axis.tlast;
+              tuser_reg <= s_axis.tuser;
+              --
+              fsm_cnt <= 0;
+              state   <= ST_INACTIVE;
+            end if;
 
-        when ST_CS_LEAD =>
-          if fsm_en then
+          when ST_INACTIVE =>
+            -- This state ensures that SCK is held inactive for
+            -- at least half of an sck cycle before CS. This is only needed
+            -- because this module allows for run-time setting of cpol.
+            spi_csn(csdec) <= '0';
+            state          <= ST_CS_LEAD;
+
+          when ST_CS_LEAD =>
             if fsm_cnt = (G_CS_LEAD - 1) then
-              if not xact_cpha then
+              if not cpha then
                 miso_reg <= spi_miso;
               end if;
 
               fsm_cnt <= 0;
-              spi_sck <= not xact_cpol; -- Active
+              spi_sck <= not cpol; -- Active
               state   <= ST_SCK_ON;
             else
               fsm_cnt <= fsm_cnt + 1;
             end if;
-          end if;
 
-        when ST_SCK_ON =>
-          if fsm_en then
-            if xact_cpha then
+          when ST_SCK_ON =>
+            if cpha then
               miso_reg <= spi_miso;
             else
               sr(sr'high downto 0) <= sr(sr'high - 1 downto 0) & miso_reg;
@@ -180,25 +184,21 @@ begin
               state   <= ST_SCK_OFF;
             end if;
 
-            spi_sck <= xact_cpol; -- Inactive
-          end if;
+            spi_sck <= cpol; -- Inactive
 
-        when ST_SCK_OFF =>
-          if fsm_en then
-            if xact_cpha then
+          when ST_SCK_OFF =>
+            if cpha then
               sr(sr'high downto 0) <= sr(sr'high - 1 downto 0) & miso_reg;
             else
               miso_reg <= spi_miso;
             end if;
 
-            spi_sck <= not xact_cpol; -- Active
+            spi_sck <= not cpol; -- Active
             state   <= ST_SCK_ON;
-          end if;
 
-        when ST_CS_LAG =>
-          if fsm_en then
+          when ST_CS_LAG =>
             if fsm_cnt = (G_CS_LAG - 1) then
-              if xact_cpha then
+              if cpha then
                 sr(sr'high downto 0) <= sr(sr'high - 1 downto 0) & miso_reg;
               end if;
 
@@ -208,31 +208,24 @@ begin
             else
               fsm_cnt <= fsm_cnt + 1;
             end if;
-          end if;
 
-        when ST_CS_IDLE =>
-          if fsm_en then
+          when ST_CS_IDLE =>
             if fsm_cnt = (G_CS_IDLE - 1) then
-              fsm_cnt       <= 0;
               m_axis.tvalid <= '1';
               m_axis.tdata  <= sr;
               m_axis.tuser  <= tuser_reg;
-              state         <= ST_FINISH;
+              m_axis.tlast  <= tlast_reg;
+              fsm_cnt       <= 0;
+              state         <= ST_IDLE;
             else
               fsm_cnt <= fsm_cnt + 1;
             end if;
-          end if;
 
-        when ST_FINISH =>
-          if m_axis.tready then
-            m_axis.tvalid <= '0';
-            s_axis.tready <= '1';
-            state         <= ST_IDLE;
-          end if;
+          when others =>
+            null;
+        end case;
 
-        when others =>
-          null;
-      end case;
+      end if;
 
       if srst then
         m_axis.tvalid <= '0';
