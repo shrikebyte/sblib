@@ -28,7 +28,7 @@ entity spi_mgr_tb is
   generic (
     RUNNER_CFG      : string;
     G_ENABLE_JITTER : boolean  := true;
-    G_SCK_DIV       : positive := 2
+    G_SCK_DIV       : positive := 4
   );
 end entity;
 
@@ -41,7 +41,7 @@ architecture tb of spi_mgr_tb is
 
   -- TB Constants
   constant RESET_TIME : time    := 50 ns;
-  constant CLK_PERIOD : time    := 5 ns;
+  constant CLK_PERIOD : time    := 10 ns;
   constant DW         : integer := 16;
   constant UW         : integer := 2 + G_CS_BITS;
 
@@ -71,9 +71,9 @@ architecture tb of spi_mgr_tb is
 
   -- Testbench BFMs
   constant STALL_CFG : stall_configuration_t := (
-    stall_probability => 0.2 * to_real(G_ENABLE_JITTER),
-    min_stall_cycles  => 1,
-    max_stall_cycles  => 3
+    stall_probability => 0.9 * to_real(G_ENABLE_JITTER),
+    min_stall_cycles  => G_SCK_DIV * DW,
+    max_stall_cycles  => G_SCK_DIV * 2 * DW
   );
 
   constant DATA_QUEUE     : queue_t := new_queue;
@@ -88,7 +88,7 @@ architecture tb of spi_mgr_tb is
 begin
 
   -- ---------------------------------------------------------------------------
-  test_runner_watchdog(runner, 100 us);
+  test_runner_watchdog(runner, 100 ms);
 
   prc_main : process is
 
@@ -102,10 +102,12 @@ begin
       cs   : natural
     ) is
 
+      constant PACKET_LENGTH_BEATS : natural := rnd.Uniform(1, 3);
+
       variable data      : integer_array_t := null_integer_array;
       variable data_copy : integer_array_t := null_integer_array;
-      variable user      : integer_array_t := new_3d(1, 1, 1, UW, false);
-      variable user_copy : integer_array_t := new_3d(1, 1, 1, UW, false);
+      variable user      : integer_array_t := new_3d(PACKET_LENGTH_BEATS, 1, 1, UW, false);
+      variable user_copy : integer_array_t := new_3d(PACKET_LENGTH_BEATS, 1, 1, UW, false);
 
       variable tuser : u_unsigned(UW - 1 downto 0);
 
@@ -115,7 +117,7 @@ begin
       random_integer_array (
         rnd           => rnd,
         integer_array => data,
-        width         => 1,
+        width         => PACKET_LENGTH_BEATS,
         bits_per_word => DW,
         is_signed     => false
       );
@@ -123,7 +125,10 @@ begin
       tuser(0)                          := to_sl(cpol);
       tuser(1)                          := to_sl(cpha);
       tuser(G_CS_BITS + 2 - 1 downto 2) := to_unsigned(cs, G_CS_BITS);
-      set(user, 0, to_integer(tuser));
+
+      for i in 0 to PACKET_LENGTH_BEATS - 1 loop
+        set(user, i, to_integer(tuser));
+      end loop;
 
       data_copy                    := copy(data);
       push_ref(REF_DATA_QUEUE, data_copy);

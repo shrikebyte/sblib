@@ -8,30 +8,34 @@
 --# ============================================================================
 --# SPI manager
 --#
---# AXI4-Stream Table
---# ----------------------------------------------------------------------------
---# Signal        | Description
---# --------------|-------------------------------------------------------------
---# s_axis.tready | High when module is IDLE and ready for data.
---# s_axis.tvalid | Starts a new SPI transaction.
---# s_axis.tdata  | MOSI data. Format: [Data (2^G_WIDTH_BITS)]
---# s_axis.tlast  | TODO: End of transaction. CS is held low for the duration of a
---#               | transaction and toggled back high after tlast. This
---#               | mechanism allows for multi-word transactions.
---# s_axis.tkeep  | Ignore.
---# s_axis.tuser  | Transaction config settings. Format is dependent on generics. Format (MSB to LSB):
---#               | [ CS Index (G_CS_BITS) | CPHA (1) | CPOL (1) ]
---# m_axis.tready | Backpressure.
---# m_axis.tvalid | New MISO data is available.
---# m_axis.tdata  | MISO data. Format: [Data (2^G_WIDTH_BITS)]
---# m_axis.tlast  | TODO: End of transaction.
---# m_axis.tkeep  | Ignore.
---# m_axis.tuser  | Transaction config settings passed through from the input.
---#               | Same format as input. Can be optionally be ignored.
+--# -------+--------------------------------------------------------------------
+--# Signal | Description
+--# -------+--------------------------------------------------------------------
+--# s_axis
+--# -------+--------------------------------------------------------------------
+--# tdata  | SPI MOSI data.
+--# tkeep  | Unused by this module. Passed through to the output.
+--# tlast  | End of transaction. CS is held low for the duration of a
+--#        | transaction and toggled back high after tlast.
+--# tuser  | Transaction config settings. Format (MSB to LSB):
+--#        | [ CS Index (G_CS_BITS) | CPHA (1) | CPOL (1) ]
+--#        | tuser from the first beat of a packet is used for the entire
+--#        | packet's transaction. Therefore, tuser for subsequent beats
+--#        | in a packet are not .
+--# -------+--------------------------------------------------------------------
+--# m_axis
+--# -------+--------------------------------------------------------------------
+--# tdata  | SPI MISO data.
+--# tkeep  | Passed through from input.
+--# tlast  | End of transaction. Passed through from input.
+--# tuser  | Transaction config settings. Passed through from the input.
+--# -------+--------------------------------------------------------------------
+--#
+--# For multi-beat transactions to use a continuous spi_sck, s_axis.tvalid
+--# and m_axis.tready must be high for the duration of the packet. Otherwise,
+--# spi_sck may have to stretch while waiting for the FPGA to produce the next
+--# spi_mosi and or accept the last spi_miso.
 --##############################################################################
-
--- TODO: Update to support multi-beat transfers.
--- As of now, only single-beat transfers are accepted and tlast passed through.
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -41,17 +45,17 @@ use work.axis_pkg.all;
 
 entity spi_mgr is
   generic (
-    -- Defines the SPI SCK clock as a ratio of the FPGA clock. For example,
-    -- if the FPGA clock is 100 MHz, then G_SCK_DIV=4 results in a SPI SCK
+    -- Defines the spi_sck clock as a ratio of the FPGA clock. For example,
+    -- if the FPGA clock is 100 MHz, then G_SCK_DIV=4 results in a spi_sck
     -- of 25 MHz.
     G_SCK_DIV : positive := 4;
-    -- Number of bits used to describe the number of chip-select signals
+    -- Number of bits used to describe the number of spi_csn signals
     G_CS_BITS : natural := 0;
-    -- Number of 1/2 SCK periods from CSN falling edge to first SCK active edge
+    -- Number of 1/2 spi_sck periods from spi_csn falling edge to first spi_sck active edge
     G_CS_LEAD : positive := 1;
-    -- Number of 1/2 SCK periods from last SCK inactive edge to CSN rising edge
+    -- Number of 1/2 spi_sck periods from last spi_sck inactive edge to spi_csn rising edge
     G_CS_LAG : positive := 1;
-    -- Number of 1/2 SCK periods for minimum CSN pulse width between transactions
+    -- Number of 1/2 spi_sck periods for minimum spi_csn pulse width between transactions
     G_CS_IDLE : positive := 32
   );
   port (
@@ -70,6 +74,7 @@ architecture rtl of spi_mgr is
 
   constant DW   : positive := s_axis.tdata'length;
   constant UW   : positive := s_axis.tuser'length;
+  constant KW   : positive := s_axis.tkeep'length;
   constant ULSB : integer  := s_axis.tuser'low;
 
   constant TUSER_REQUIRED_WIDTH : positive          := 2 + G_CS_BITS;
@@ -81,7 +86,7 @@ architecture rtl of spi_mgr is
   );
 
   type   state_t is (
-    ST_IDLE, ST_INACTIVE, ST_CS_LEAD, ST_SCK_ON, ST_SCK_OFF, ST_CS_LAG,
+    ST_IDLE, ST_CS_LEAD, ST_SCK_ON, ST_SCK_OFF, ST_CS_LAG,
     ST_CS_IDLE
   );
   signal state : state_t;
@@ -91,10 +96,12 @@ architecture rtl of spi_mgr is
   signal fsm_en    : std_ulogic;
   signal miso_reg  : std_ulogic;
   signal sr        : std_ulogic_vector(DW - 1 downto 0);    -- Shift register
-  signal cpol      : std_ulogic;                            -- Clock polarity
+  signal sr_nxt    : std_ulogic_vector(DW - 1 downto 0);
+  signal sck_idle  : std_ulogic;                            -- Clock polarity
   signal cpha      : std_ulogic;                            -- Clock phase
   signal csdec     : natural range 0 to 2 ** G_CS_BITS - 1; -- CS Decode
   signal tuser_reg : std_ulogic_vector(UW - 1 downto 0);
+  signal tkeep_reg : std_ulogic_vector(KW - 1 downto 0);
   signal tlast_reg : std_ulogic;
 
 begin
@@ -115,10 +122,10 @@ begin
            " m_axis.tdata width: " & integer'image(s_axis.tdata'length)
     severity warning;
 
-  spi_mosi     <= sr(DW - 1);
-  cpol         <= tuser_reg(0);
-  cpha         <= tuser_reg(1);
-  m_axis.tkeep <= (others => '1');
+  spi_mosi <= sr(DW - 1);
+  sck_idle <= tuser_reg(0); -- CPOL
+  cpha     <= tuser_reg(1);
+  sr_nxt   <= sr(sr'high - 1 downto 0) & miso_reg;
 
   gen_csdec : if G_CS_BITS = 0 generate
     csdec <= 0;
@@ -138,87 +145,142 @@ begin
         case state is
           when ST_IDLE =>
             if s_axis.tvalid and not m_axis.tvalid then
-              s_axis.tready <= '1';
               --
-              sr        <= s_axis.tdata;
-              spi_sck   <= s_axis.tuser(0); -- Inactive
-              tlast_reg <= s_axis.tlast;
-              tuser_reg <= s_axis.tuser;
+              s_axis.tready <= '1';
+              sr            <= s_axis.tdata;
+              tkeep_reg     <= s_axis.tkeep;
+              tlast_reg     <= s_axis.tlast;
+              tuser_reg     <= s_axis.tuser;
+              spi_sck       <= s_axis.tuser(0); -- Inactive
               --
               fsm_cnt <= 0;
-              state   <= ST_INACTIVE;
+              state   <= ST_CS_IDLE;
             end if;
 
-          when ST_INACTIVE =>
-            -- This state ensures that SCK is held inactive for
-            -- at least half of an sck cycle before CS. This is only needed
-            -- because this module allows for run-time setting of cpol.
-            spi_csn(csdec) <= '0';
-            state          <= ST_CS_LEAD;
+          when ST_CS_IDLE =>
+            -- Ensures that the subordinate's csn min pulse width time is met
+            if fsm_cnt = (G_CS_IDLE - 1) then
+              spi_csn(csdec) <= '0';
+              fsm_cnt        <= 0;
+              state          <= ST_CS_LEAD;
+            else
+              fsm_cnt <= fsm_cnt + 1;
+            end if;
 
           when ST_CS_LEAD =>
+            -- Ensures that the subordinate's csn to sck setup time is met
             if fsm_cnt = (G_CS_LEAD - 1) then
               if not cpha then
                 miso_reg <= spi_miso;
               end if;
 
               fsm_cnt <= 0;
-              spi_sck <= not cpol; -- Active
+              spi_sck <= not sck_idle;
               state   <= ST_SCK_ON;
             else
               fsm_cnt <= fsm_cnt + 1;
             end if;
 
           when ST_SCK_ON =>
-            if cpha then
-              miso_reg <= spi_miso;
-            else
-              sr(sr'high downto 0) <= sr(sr'high - 1 downto 0) & miso_reg;
-            end if;
-
             if fsm_cnt = (DW - 1) then
-              fsm_cnt <= 0;
-              state   <= ST_CS_LAG;
+              if cpha then
+                miso_reg <= spi_miso;
+                spi_sck  <= sck_idle;
+                fsm_cnt  <= 0;
+                state    <= ST_CS_LAG;
+              elsif not m_axis.tvalid then
+                -- spi_sck might be need to be stretched here
+                if tlast_reg then
+                  m_axis.tvalid <= '1';
+                  m_axis.tdata  <= sr_nxt;
+                  m_axis.tkeep  <= tkeep_reg;
+                  m_axis.tlast  <= tlast_reg;
+                  m_axis.tuser  <= tuser_reg;
+                  --
+                  spi_sck <= sck_idle;
+                  fsm_cnt <= 0;
+                  state   <= ST_CS_LAG;
+                elsif s_axis.tvalid then
+                  m_axis.tvalid <= '1';
+                  m_axis.tdata  <= sr_nxt;
+                  m_axis.tkeep  <= tkeep_reg;
+                  m_axis.tlast  <= tlast_reg;
+                  m_axis.tuser  <= tuser_reg;
+                  --
+                  s_axis.tready <= '1';
+                  sr            <= s_axis.tdata;
+                  tkeep_reg     <= s_axis.tkeep;
+                  tlast_reg     <= s_axis.tlast;
+                  --
+                  spi_sck <= sck_idle;
+                  fsm_cnt <= 0;
+                  state   <= ST_SCK_OFF;
+                end if;
+              end if;
             else
+              if cpha then
+                miso_reg <= spi_miso;
+              else
+                sr <= sr_nxt;
+              end if;
+
+              spi_sck <= sck_idle;
               fsm_cnt <= fsm_cnt + 1;
               state   <= ST_SCK_OFF;
             end if;
 
-            spi_sck <= cpol; -- Inactive
-
           when ST_SCK_OFF =>
             if cpha then
-              sr(sr'high downto 0) <= sr(sr'high - 1 downto 0) & miso_reg;
+              sr <= sr_nxt;
             else
               miso_reg <= spi_miso;
             end if;
 
-            spi_sck <= not cpol; -- Active
+            spi_sck <= not sck_idle;
             state   <= ST_SCK_ON;
 
           when ST_CS_LAG =>
-            if fsm_cnt = (G_CS_LAG - 1) then
-              if cpha then
-                sr(sr'high downto 0) <= sr(sr'high - 1 downto 0) & miso_reg;
+            if cpha and not tlast_reg then
+              -- spi_sck might be need to be stretched here
+              if s_axis.tvalid and not m_axis.tvalid then
+                m_axis.tvalid <= '1';
+                m_axis.tdata  <= sr_nxt;
+                m_axis.tkeep  <= tkeep_reg;
+                m_axis.tlast  <= tlast_reg;
+                m_axis.tuser  <= tuser_reg;
+                --
+                s_axis.tready <= '1';
+                sr            <= s_axis.tdata;
+                tkeep_reg     <= s_axis.tkeep;
+                tlast_reg     <= s_axis.tlast;
+                --
+                spi_sck <= not sck_idle;
+                fsm_cnt <= 0;
+                state   <= ST_SCK_ON;
               end if;
-
-              fsm_cnt <= 0;
-              spi_csn <= (others => '1');
-              state   <= ST_CS_IDLE;
             else
-              fsm_cnt <= fsm_cnt + 1;
-            end if;
-
-          when ST_CS_IDLE =>
-            if fsm_cnt = (G_CS_IDLE - 1) then
-              m_axis.tvalid <= '1';
-              m_axis.tdata  <= sr;
-              m_axis.tuser  <= tuser_reg;
-              m_axis.tlast  <= tlast_reg;
-              fsm_cnt       <= 0;
-              state         <= ST_IDLE;
-            else
-              fsm_cnt <= fsm_cnt + 1;
+              -- Ensures that the subordinate's sck to csn hold time is met
+              if fsm_cnt = (G_CS_LAG - 1) then
+                if cpha then
+                  if not m_axis.tvalid then
+                    m_axis.tvalid <= '1';
+                    m_axis.tdata  <= sr_nxt;
+                    m_axis.tkeep  <= tkeep_reg;
+                    m_axis.tlast  <= tlast_reg;
+                    m_axis.tuser  <= tuser_reg;
+                    --
+                    fsm_cnt <= 0;
+                    spi_csn <= (others => '1');
+                    state   <= ST_IDLE;
+                  end if;
+                else
+                  fsm_cnt <= 0;
+                  spi_csn <= (others => '1');
+                  state   <= ST_IDLE;
+                end if;
+              else
+                fsm_cnt <= fsm_cnt + 1;
+              end if;
             end if;
 
           when others =>
