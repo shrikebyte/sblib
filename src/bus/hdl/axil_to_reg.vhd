@@ -8,7 +8,13 @@
 --# ============================================================================
 --# AXI lite to register bus bridge.
 --# This bridge supports full throughput to a simplified bus with fixed read
---# latency.
+--# and write latency.
+--#
+--# TODO: Investigate replacing response fifos with axis ready pipes.
+--# The fifos have a 2 cycle latency, whereas the pipes do not. Fifos will
+--# have better timing for large values of G_*_LATENCY, and the pipes will have
+--# lower response latency, which could improve thruput for managers that
+--# only support one outstanding transaction.
 --##############################################################################
 
 library ieee;

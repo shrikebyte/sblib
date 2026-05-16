@@ -94,13 +94,13 @@ begin
           if m_wb.err then
             m_wb.stb      <= '0';
             s_axil.bvalid <= '1';
-            s_axil.bresp  <= AXI_RSP_SLVERR;
+            s_axil.bresp  <= AXI_RESP_SLVERR;
             state         <= ST_WRITE_RESP_CMPLT;
           elsif m_wb.ack then
             m_wb.stb      <= '0';
             s_axil.bvalid <= '1';
-            s_axil.bresp  <= AXI_RSP_OKAY;
-            state             <= ST_WRITE_RESP_CMPLT;
+            s_axil.bresp  <= AXI_RESP_OKAY;
+            state         <= ST_WRITE_RESP_CMPLT;
           end if;
 
         -- ---------------------------------------------------------------------
@@ -120,14 +120,14 @@ begin
             m_wb.stb      <= '0';
             s_axil.rdata  <= m_wb.rdat;
             s_axil.rvalid <= '1';
-            s_axil.rresp  <= AXI_RSP_SLVERR;
-            state             <= ST_READ_RESP_CMPLT;
+            s_axil.rresp  <= AXI_RESP_SLVERR;
+            state         <= ST_READ_RESP_CMPLT;
           elsif m_wb.ack then
             m_wb.stb      <= '0';
             s_axil.rdata  <= m_wb.rdat;
             s_axil.rvalid <= '1';
-            s_axil.rresp  <= AXI_RSP_OKAY;
-            state             <= ST_READ_RESP_CMPLT;
+            s_axil.rresp  <= AXI_RESP_OKAY;
+            state         <= ST_READ_RESP_CMPLT;
           end if;
 
         -- ---------------------------------------------------------------------

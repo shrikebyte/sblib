@@ -254,9 +254,9 @@ package bus_pkg is
 
   type bus_xact_t is record
     cmd   : bus_cmd_t;
-    wstrb : std_ulogic_vector(AXIL_STRB_RANGE);
     addr  : std_ulogic_vector(AXIL_ADDR_RANGE);
     data  : std_ulogic_vector(AXIL_DATA_RANGE);
+    wstrb : std_ulogic_vector(AXIL_STRB_RANGE);
     mask  : std_ulogic_vector(AXIL_DATA_RANGE);
   end record;
 

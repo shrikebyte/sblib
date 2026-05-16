@@ -20,7 +20,6 @@ use work.bus_pkg.all;
 
 entity axil_decoder is
   generic (
-    G_NUM_SLAVES : positive;
     G_BASEADDRS  : slv_arr_t(open)(AXIL_ADDR_WIDTH - 1 downto 0)
   );
   port (
@@ -113,7 +112,7 @@ architecture rtl of axil_decoder is
 
   -- ---------------------------------------------------------------------------
   constant DECODE_RANGE           : addr_decode_range_t := find_addr_decode_range(G_BASEADDRS);
-  constant DECODE_ERR             : natural             := G_NUM_SLAVES;
+  constant DECODE_ERR             : natural             := m_axil'length;
   constant SLAVE_DECODE_ERR_IDX   : natural             := DECODE_ERR;
   constant SLAVE_NOT_SELECTED_IDX : natural             := DECODE_ERR + 1;
 
@@ -247,7 +246,7 @@ begin
       s_axil.awready <= wr_dec_err_awready;
       s_axil.wready  <= wr_dec_err_wready;
       s_axil.bvalid  <= wr_dec_err_bvalid;
-      s_axil.bresp   <= AXI_RSP_DECERR;
+      s_axil.bresp   <= AXI_RESP_DECERR;
     else
       s_axil.awready <= m_axil(wr_select).awready;
       s_axil.wready  <= m_axil(wr_select).wready;
@@ -267,7 +266,7 @@ begin
       s_axil.arready <= rd_dec_err_arready;
       s_axil.rvalid  <= rd_dec_err_rvalid;
       s_axil.rdata   <= (others => '-');
-      s_axil.rresp   <= AXI_RSP_DECERR;
+      s_axil.rresp   <= AXI_RESP_DECERR;
     else
       s_axil.arready <= m_axil(rd_select).arready;
       s_axil.rvalid  <= m_axil(rd_select).rvalid;

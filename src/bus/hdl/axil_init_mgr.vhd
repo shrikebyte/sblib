@@ -13,63 +13,65 @@
 --# BIST at startup by checking register values to ensure they match expected.
 --##############################################################################
 
--- TODO: Change this to explicitly use BRAM for transaction ROM
-
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.util_pkg.all;
 use work.bus_pkg.all;
+use work.axis_pkg.all;
 
 entity axil_init_mgr is
   generic (
-    G_RESET_DELAY_CLKS : positive := 10;
-    G_XACTIONS         : bus_xact_arr_t
+    -- Number of cycles to wait after reset before running the transactions
+    G_RESET_DELAY : positive := 100;
+    -- Transaction ROM
+    G_XACTIONS : bus_xact_arr_t
   );
   port (
     clk    : in    std_logic;
     srst   : in    std_logic;
     m_axil : view  m_axil_view;
-    --
-    -- Valid data qualifier for the remaining m_sts_* signals
-    m_sts_valid : out   std_logic;
-    -- Indicates that the transaction had a bus error
-    m_sts_bus_err : out   std_logic;
-    -- Indicates that the transaction's read data did not match the expected data
-    m_sts_chk_err : out   std_logic;
-    -- Read data for the transaction (if it was a read)
-    m_sts_chk_rdata : out   std_logic_vector(31 downto 0);
-    -- Transaction index. Starts at 0 and counts up
-    m_sts_xact_idx : out   unsigned(15 downto 0)
+    m_axis : view  m_axis_view
   );
 end entity;
 
 architecture rtl of axil_init_mgr is
 
   constant NUM_XACTIONS : integer := G_XACTIONS'length;
+  constant STS_WRITE    : integer := m_axis.tuser'low + 0;
+  constant STS_SLVERR   : integer := m_axis.tuser'low + 1;
+  constant STS_DECERR   : integer := m_axis.tuser'low + 2;
+  constant STS_CHKERR   : integer := m_axis.tuser'low + 3;
 
   type state_t is (
-    ST_RESET, ST_START, ST_DONE, ST_WRITE_WAIT, ST_WRITE_RSP_WAIT,
+    ST_RESET, ST_STS_WAIT, ST_START, ST_DONE, ST_WRITE_WAIT, ST_WRITE_RSP_WAIT,
     ST_READ_WAIT, ST_READ_RSP_WAIT
   );
 
-  signal state : state_t;
-
-  signal reset_cnt : integer range 0 to G_RESET_DELAY_CLKS - 1;
-  signal idx       : integer range 0 to NUM_XACTIONS;
+  signal state     : state_t;
+  signal xact      : bus_xact_t;
+  signal reset_cnt : integer range 0 to G_RESET_DELAY - 1;
+  signal idx       : integer range 0 to NUM_XACTIONS - 1;
 
 begin
+
+  m_axil.awaddr  <= xact.addr;
+  m_axil.wdata   <= xact.data;
+  m_axil.wstrb   <= xact.wstrb;
+  m_axil.araddr  <= xact.addr;
 
   -- ---------------------------------------------------------------------------
   prc_axil_init_mgr : process (clk) is begin
     if rising_edge(clk) then
-      -- Pulse
-      m_sts_valid <= '0';
+
+      -- Register the output of the transaction rom so the synthesizer has the
+      -- option of mapping it to BRAM
+      xact <= G_XACTIONS(idx);
 
       case state is
         -- ---------------------------------------------------------------------
         when ST_RESET =>
-          if reset_cnt = G_RESET_DELAY_CLKS - 1 then
+          if reset_cnt = (G_RESET_DELAY - 1) then
             state <= ST_START;
           else
             reset_cnt <= reset_cnt + 1;
@@ -77,33 +79,30 @@ begin
 
         -- ---------------------------------------------------------------------
         when ST_START =>
-          if idx = NUM_XACTIONS then
-            state <= ST_DONE;
-          elsif G_XACTIONS(idx).cmd = BUS_WRITE then
+          if xact.cmd = BUS_WRITE then
             m_axil.awvalid <= '1';
-            m_axil.awaddr  <= G_XACTIONS(idx).addr;
             m_axil.wvalid  <= '1';
-            m_axil.wdata   <= G_XACTIONS(idx).data;
-            m_axil.wstrb   <= G_XACTIONS(idx).wstrb;
             m_axil.bready  <= '0';
-            --
-            state <= ST_WRITE_WAIT;
-          elsif G_XACTIONS(idx).cmd = BUS_CHECK then
+            state          <= ST_WRITE_WAIT;
+          elsif xact.cmd = BUS_CHECK then
             m_axil.arvalid <= '1';
-            m_axil.araddr  <= G_XACTIONS(idx).addr;
             m_axil.rready  <= '0';
-            --
-            state <= ST_READ_WAIT;
+            state          <= ST_READ_WAIT;
           end if;
 
         -- ---------------------------------------------------------------------
         when ST_WRITE_WAIT =>
-          if m_axil.awready and m_axil.wready then
+          if m_axil.awready then
             m_axil.awvalid <= '0';
+          end if;
+
+          if m_axil.wready then
             m_axil.wvalid  <= '0';
+          end if;
+
+          if not m_axil.awvalid and not m_axil.wvalid then
             m_axil.bready  <= '1';
-            --
-            state <= ST_WRITE_RSP_WAIT;
+            state          <= ST_WRITE_RSP_WAIT;
           end if;
 
         -- ---------------------------------------------------------------------
@@ -111,18 +110,21 @@ begin
           if m_axil.bvalid then
             m_axil.bready <= '0';
             --
-            m_sts_valid    <= '1';
-            m_sts_xact_idx <= to_unsigned(idx, m_sts_xact_idx'length);
-            m_sts_chk_err  <= '0';
-            if m_axil.bresp = AXI_RSP_SLVERR or
-               m_axil.bresp = AXI_RSP_DECERR then
-              m_sts_bus_err <= '1';
-            else
-              m_sts_bus_err <= '0';
-            end if;
+            m_axis.tvalid            <= '1';
+            m_axis.tdata             <= xact.data;
+            m_axis.tkeep             <= xact.wstrb;
+            m_axis.tuser(STS_WRITE ) <= '1';
+            m_axis.tuser(STS_SLVERR) <= to_sl(m_axil.bresp = AXI_RESP_SLVERR);
+            m_axis.tuser(STS_DECERR) <= to_sl(m_axil.bresp = AXI_RESP_DECERR);
+            m_axis.tuser(STS_CHKERR) <= '0'; -- No data checking for writes
             --
-            idx   <= idx + 1;
-            state <= ST_START;
+            if idx = (NUM_XACTIONS - 1) then
+              m_axis.tlast <= '1';
+            else
+              m_axis.tlast <= '0';
+              idx <= idx + 1;
+            end if;
+            state <= ST_STS_WAIT;
           end if;
 
         -- ---------------------------------------------------------------------
@@ -139,32 +141,44 @@ begin
           if m_axil.rvalid then
             m_axil.rready <= '0';
             --
-            m_sts_valid     <= '1';
-            m_sts_xact_idx  <= to_unsigned(idx, m_sts_xact_idx'length);
-            m_sts_chk_rdata <= m_axil.rdata;
-            if m_axil.rresp = AXI_RSP_SLVERR or
-               m_axil.rresp = AXI_RSP_DECERR then
-              m_sts_bus_err <= '1';
-              m_sts_chk_err <= '0';
-            elsif (m_axil.rdata and G_XACTIONS(idx).mask) /=
-                  (G_XACTIONS(idx).data and G_XACTIONS(idx).mask) then
-              m_sts_bus_err <= '0';
-              m_sts_chk_err <= '1';
-            else
-              m_sts_bus_err <= '0';
-              m_sts_chk_err <= '0';
-            end if;
+            m_axis.tvalid            <= '1';
+            m_axis.tdata             <= m_axil.rdata;
+            m_axis.tkeep             <= (others => '1');
+            m_axis.tuser(STS_WRITE ) <= '0';
+            m_axis.tuser(STS_SLVERR) <= to_sl(m_axil.rresp = AXI_RESP_SLVERR);
+            m_axis.tuser(STS_DECERR) <= to_sl(m_axil.rresp = AXI_RESP_DECERR);
+            m_axis.tuser(STS_CHKERR) <= or ((m_axil.rdata xor xact.data) and xact.mask);
             --
-            idx   <= idx + 1;
-            state <= ST_START;
+            if idx = (NUM_XACTIONS - 1) then
+              m_axis.tlast <= '1';
+            else
+              m_axis.tlast <= '0';
+              idx <= idx + 1;
+            end if;
+            state <= ST_STS_WAIT;
           end if;
+
+        -- ---------------------------------------------------------------------
+        when ST_STS_WAIT =>
+          if m_axis.tready then
+            m_axis.tvalid <= '0';
+            if m_axis.tlast then
+              state <= ST_DONE;
+            else
+              state <= ST_START;
+            end if;
+          end if;
+
+        -- ---------------------------------------------------------------------
+        when ST_DONE =>
+          null;
 
         when others =>
           null;
       end case;
 
       if srst then
-        m_sts_valid <= '0';
+        m_axis.tvalid <= '0';
         --
         m_axil.awvalid <= '0';
         m_axil.wvalid  <= '0';

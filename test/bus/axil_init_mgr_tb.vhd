@@ -6,7 +6,7 @@
 --# Copyright (C) Shrikebyte, LLC
 --# Licensed under the Apache 2.0 license, see LICENSE for details.
 --# ============================================================================
---# AXI Lite Master testbench
+--# AXI Lite Init Manager testbench
 --##############################################################################
 
 library ieee;
