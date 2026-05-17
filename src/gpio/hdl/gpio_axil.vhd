@@ -24,7 +24,7 @@ entity gpio_axil is
     -- Default output value
     G_RST_VAL_O : std_ulogic_vector(AXIL_DATA_RANGE) := (others => '0');
     -- Default tri-state value
-    G_RST_VAL_T : std_ulogic_vector(AXIL_DATA_RANGE) := (others => '0')
+    G_RST_VAL_T : std_ulogic_vector(AXIL_DATA_RANGE) := (others => '1')
   );
   port (
     clk  : in    std_logic;
