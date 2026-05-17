@@ -13,6 +13,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.util_pkg.all;
+use work.bus_pkg.all;
 
 library vunit_lib;
   context vunit_lib.vunit_context;
@@ -28,13 +29,13 @@ end entity;
 architecture tb of axil_xbar_tb is
 
   -- Testbench constants
-  constant CLK_PERIOD  : time     := 10 ns;
-  constant CLK_TO_Q    : time     := 1 ns;
-  constant NUM_MASTERS : positive := 4;
-  constant NUM_SLAVES  : positive := 4;
+  constant CLK_PERIOD : time     := 10 ns;
+  constant CLK_TO_Q   : time     := 1 ns;
+  constant NUM_MGR    : positive := 4;
+  constant NUM_SUB    : positive := 4;
 
   constant BASEADDRS :
-    slv_arr_t(0 to NUM_SLAVES - 1)(AXIL_ADDR_WIDTH - 1 downto 0) := (
+    slv_arr_t(0 to NUM_SUB - 1)(AXIL_ADDR_RANGE) := (
       0 => x"0000_0000",
       1 => x"0001_0000",
       2 => x"000F_0000",
@@ -42,17 +43,15 @@ architecture tb of axil_xbar_tb is
     );
 
   -- DUT ports
-  signal clk          : std_logic := '1';
-  signal srst         : std_logic := '1';
-  signal axil_req_cpu : axil_req_arr_t(0 to NUM_MASTERS - 1);
-  signal axil_rsp_cpu : axil_rsp_arr_t(0 to NUM_MASTERS - 1);
-  signal axil_req_ram : axil_req_arr_t(0 to NUM_SLAVES - 1);
-  signal axil_rsp_ram : axil_rsp_arr_t(0 to NUM_SLAVES - 1);
+  signal clk      : std_logic := '1';
+  signal srst     : std_logic := '1';
+  signal axil_cpu : bus_axil_arr_t(0 to NUM_MGR - 1);
+  signal axil_ram : bus_axil_arr_t(0 to NUM_SUB - 1);
 
   type bus_master_arr_t is array(natural range <>) of bus_master_t;
 
   -- Testbench BFMs
-  constant AXIM : bus_master_arr_t(0 to NUM_MASTERS - 1) := (
+  constant AXIM : bus_master_arr_t(0 to NUM_MGR - 1) := (
     0 => new_bus(AXIL_DATA_WIDTH, AXIL_ADDR_WIDTH),
     1 => new_bus(AXIL_DATA_WIDTH, AXIL_ADDR_WIDTH),
     2 => new_bus(AXIL_DATA_WIDTH, AXIL_ADDR_WIDTH),
@@ -102,8 +101,8 @@ begin
         prd_wait_clk;
 
         -- Generate transactions
-        for master in 0 to NUM_MASTERS - 1 loop
-          for slave in 0 to NUM_SLAVES - 1 loop
+        for master in 0 to NUM_MGR - 1 loop
+          for slave in 0 to NUM_SUB - 1 loop
             for transaction in 1 to 10 loop
               addr  := BASEADDRS(slave) or (
                 std_logic_vector(
@@ -112,14 +111,14 @@ begin
               );
               data  := addr;
               wstrb := x"F";
-              write_axi_lite(net, AXIM(master), addr, data, AXI_RSP_OKAY, wstrb);
+              write_axi_lite(net, AXIM(master), addr, data, AXI_RESP_OKAY, wstrb);
             end loop;
           end loop;
         end loop;
 
         -- Check transactions
-        for master in 0 to NUM_MASTERS - 1 loop
-          for slave in 0 to NUM_SLAVES - 1 loop
+        for master in 0 to NUM_MGR - 1 loop
+          for slave in 0 to NUM_SUB - 1 loop
             for transaction in 1 to 10 loop
               addr := BASEADDRS(slave) or (
                 std_logic_vector(
@@ -127,7 +126,7 @@ begin
                 ) & b"00"
               );
               data := addr;
-              check_axi_lite(net, AXIM(master), addr, AXI_RSP_OKAY, data, "Check during read loop failed.");
+              check_axi_lite(net, AXIM(master), addr, AXI_RESP_OKAY, data, "Check during read loop failed.");
             end loop;
           end loop;
         end loop;
@@ -146,7 +145,6 @@ begin
 
   end process;
 
-  -- Watchdog
   test_runner_watchdog(runner, 100 us);
 
   -- ---------------------------------------------------------------------------
@@ -155,36 +153,31 @@ begin
   -- ---------------------------------------------------------------------------
   u_axil_xbar : entity work.axil_xbar
   generic map (
-    G_NUM_MASTERS => NUM_MASTERS,
-    G_NUM_SLAVES  => NUM_SLAVES,
-    G_BASEADDRS   => BASEADDRS
+    G_BASEADDRS => BASEADDRS
   )
   port map (
-    clk        => clk,
-    srst       => srst,
-    s_axil_req => axil_req_cpu,
-    s_axil_rsp => axil_rsp_cpu,
-    m_axil_req => axil_req_ram,
-    m_axil_rsp => axil_rsp_ram
+    clk    => clk,
+    srst   => srst,
+    s_axil => axil_cpu,
+    m_axil => axil_ram
   );
 
   -- ---------------------------------------------------------------------------
-  gen_masters : for i in 0 to NUM_MASTERS - 1 generate
+  gen_mgrs : for i in 0 to NUM_MGR - 1 generate
 
     u_axil_bfm : entity work.bfm_axil_man
     generic map (
       G_BUS_HANDLE => AXIM(i)
     )
     port map (
-      clk        => clk,
-      m_axil_req => axil_req_cpu(i),
-      m_axil_rsp => axil_rsp_cpu(i)
+      clk    => clk,
+      m_axil => axil_cpu(i)
     );
 
   end generate;
 
   -- ---------------------------------------------------------------------------
-  gen_slaves : for i in 0 to NUM_SLAVES - 1 generate
+  gen_subs : for i in 0 to NUM_SUB - 1 generate
 
     u_axil_ram : entity work.axil_ram
     generic map (
@@ -192,10 +185,9 @@ begin
       G_RD_LATENCY => 2
     )
     port map (
-      clk        => clk,
-      srst       => srst,
-      s_axil_req => axil_req_ram(i),
-      s_axil_rsp => axil_rsp_ram(i)
+      clk    => clk,
+      srst   => srst,
+      s_axil => axil_ram(i)
     );
 
   end generate;

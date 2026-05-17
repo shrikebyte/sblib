@@ -30,9 +30,9 @@ entity axis_mux is
     clk  : in    std_ulogic;
     srst : in    std_ulogic;
     --
-    s_axis : view (s_axis_v) of axis_arr_t;
+    s_axis : view (s_axis_view) of axis_arr_t;
     --
-    m_axis : view m_axis_v;
+    m_axis : view m_axis_view;
     --! Input Select
     sel : in    integer range s_axis'range
   );

@@ -25,9 +25,9 @@ entity axis_pipe is
     clk  : in    std_ulogic;
     srst : in    std_ulogic;
     --
-    s_axis : view s_axis_v;
+    s_axis : view s_axis_view;
     --
-    m_axis : view m_axis_v
+    m_axis : view m_axis_view
   );
 end entity;
 

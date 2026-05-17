@@ -18,6 +18,7 @@ library vunit_lib;
   context vunit_lib.vc_context;
 use vunit_lib.axi_lite_master_pkg.all;
 use work.util_pkg.all;
+use work.bus_pkg.all;
 use work.gpio_regs_pkg.all;
 use work.gpio_pkg.all;
 
@@ -40,14 +41,13 @@ architecture tb of gpio_axil_tb is
   constant G_CH_DFLT_T : slv_arr_t(gpio_chan_range)(axil_data_range) := (x"000000BB", x"0000EEFF", x"00445566");
 
   -- Ports
-  signal clk        : std_logic := '1';
-  signal srst       : std_logic := '1';
-  signal irq        : std_logic;
-  signal s_axil_req : axil_req_t;
-  signal s_axil_rsp : axil_rsp_t;
-  signal gpio_i     : slv_arr_t(gpio_chan_range)(axil_data_range);
-  signal gpio_o     : slv_arr_t(gpio_chan_range)(axil_data_range);
-  signal gpio_t     : slv_arr_t(gpio_chan_range)(axil_data_range);
+  signal clk    : std_logic := '1';
+  signal srst   : std_logic := '1';
+  signal irq    : std_logic;
+  signal axil   : bus_axil_t;
+  signal gpio_i : slv_arr_t(gpio_chan_range)(axil_data_range);
+  signal gpio_o : slv_arr_t(gpio_chan_range)(axil_data_range);
+  signal gpio_t : slv_arr_t(gpio_chan_range)(axil_data_range);
 
   constant AXIM : bus_master_t := new_bus(
       data_length => AXIL_DATA_WIDTH, address_length => AXIL_ADDR_WIDTH
@@ -393,14 +393,13 @@ begin
     G_CH_DFLT_T => G_CH_DFLT_T
   )
   port map (
-    clk        => clk,
-    srst       => srst,
-    irq        => irq,
-    s_axil_req => s_axil_req,
-    s_axil_rsp => s_axil_rsp,
-    gpio_i     => gpio_i,
-    gpio_o     => gpio_o,
-    gpio_t     => gpio_t
+    clk    => clk,
+    srst   => srst,
+    irq    => irq,
+    s_axil => axil,
+    gpio_i => gpio_i,
+    gpio_o => gpio_o,
+    gpio_t => gpio_t
   );
 
   -- ---------------------------------------------------------------------------
@@ -409,9 +408,8 @@ begin
     G_BUS_HANDLE => AXIM
   )
   port map (
-    clk        => clk,
-    m_axil_req => s_axil_req,
-    m_axil_rsp => s_axil_rsp
+    clk    => clk,
+    m_axil => axil
   );
 
 end architecture;

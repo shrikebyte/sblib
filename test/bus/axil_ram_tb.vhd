@@ -13,6 +13,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.util_pkg.all;
+use work.bus_pkg.all;
 
 library vunit_lib;
   context vunit_lib.vunit_context;
@@ -35,10 +36,9 @@ architecture tb of axil_ram_tb is
   constant CLK_TO_Q   : time := 1 ns;
 
   -- DUT ports
-  signal clk      : std_logic := '1';
-  signal srst     : std_logic := '1';
-  signal axil_req : axil_req_t;
-  signal axil_rsp : axil_rsp_t;
+  signal clk     : std_logic := '1';
+  signal srst    : std_logic := '1';
+  signal i0_axil : bus_axil_t;
 
   -- Testbench BFMs. TODO: Swap this out for a full thruput master that can
   -- also check weird edge cases.
@@ -92,47 +92,47 @@ begin
         addr  := x"00000008";
         data  := x"11223344";
         wstrb := x"F";
-        write_axi_lite(net, AXIM, addr, data, AXI_RSP_OKAY, wstrb);
-        check_axi_lite(net, AXIM, addr, AXI_RSP_OKAY, data, "Check 0 failed.");
+        write_axi_lite(net, AXIM, addr, data, AXI_RESP_OKAY, wstrb);
+        check_axi_lite(net, AXIM, addr, AXI_RESP_OKAY, data, "Check 0 failed.");
 
         addr  := x"00000008";
         data  := x"22334455";
         wstrb := x"1";
-        write_axi_lite(net, AXIM, addr, data, AXI_RSP_OKAY, wstrb);
+        write_axi_lite(net, AXIM, addr, data, AXI_RESP_OKAY, wstrb);
 
         addr  := x"00000010";
         data  := x"33445566";
         wstrb := x"5";
-        write_axi_lite(net, AXIM, addr, data, AXI_RSP_OKAY, wstrb);
+        write_axi_lite(net, AXIM, addr, data, AXI_RESP_OKAY, wstrb);
 
         addr  := x"00000014";
         data  := x"44556677";
         wstrb := x"F";
-        write_axi_lite(net, AXIM, addr, data, AXI_RSP_OKAY, wstrb);
+        write_axi_lite(net, AXIM, addr, data, AXI_RESP_OKAY, wstrb);
 
         addr := x"00000008";
         data := x"11223355";
-        check_axi_lite(net, AXIM, addr, AXI_RSP_OKAY, data, "Check 1 failed.");
+        check_axi_lite(net, AXIM, addr, AXI_RESP_OKAY, data, "Check 1 failed.");
 
         addr := x"00000010";
         data := x"00440066";
-        check_axi_lite(net, AXIM, addr, AXI_RSP_OKAY, data, "Check 2 failed.");
+        check_axi_lite(net, AXIM, addr, AXI_RESP_OKAY, data, "Check 2 failed.");
 
         addr := x"00000014";
         data := x"44556677";
-        check_axi_lite(net, AXIM, addr, AXI_RSP_OKAY, data, "Check 3 failed.");
+        check_axi_lite(net, AXIM, addr, AXI_RESP_OKAY, data, "Check 3 failed.");
 
         for i in 0 to 9 loop
           addr  := std_logic_vector(to_unsigned(i + 25, AXIL_ADDR_WIDTH - 2)) & b"00";
           data  := addr;
           wstrb := x"F";
-          write_axi_lite(net, AXIM, addr, data, AXI_RSP_OKAY, wstrb);
+          write_axi_lite(net, AXIM, addr, data, AXI_RESP_OKAY, wstrb);
         end loop;
 
         for i in 0 to 9 loop
           addr := std_logic_vector(to_unsigned(i + 25, AXIL_ADDR_WIDTH - 2)) & b"00";
           data := addr;
-          check_axi_lite(net, AXIM, addr, AXI_RSP_OKAY, data, "Check during read loop failed.");
+          check_axi_lite(net, AXIM, addr, AXI_RESP_OKAY, data, "Check during read loop failed.");
         end loop;
 
       -- elsif run("test_1") then
@@ -162,10 +162,9 @@ begin
     G_RD_LATENCY => G_RD_LATENCY
   )
   port map (
-    clk        => clk,
-    srst       => srst,
-    s_axil_req => axil_req,
-    s_axil_rsp => axil_rsp
+    clk    => clk,
+    srst   => srst,
+    s_axil => i0_axil
   );
 
   -- ---------------------------------------------------------------------------
@@ -174,9 +173,8 @@ begin
     G_BUS_HANDLE => AXIM
   )
   port map (
-    clk        => clk,
-    m_axil_req => axil_req,
-    m_axil_rsp => axil_rsp
+    clk    => clk,
+    m_axil => i0_axil
   );
 
 end architecture;

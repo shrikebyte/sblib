@@ -35,9 +35,9 @@ entity axis_fifo is
     clk  : in    std_ulogic;
     srst : in    std_ulogic;
     --
-    s_axis : view s_axis_v;
+    s_axis : view s_axis_view;
     --
-    m_axis : view m_axis_v;
+    m_axis : view m_axis_view;
     --
     -- Drop the current packet that is being written or next packet that will be
     -- written to the FIFO. This input
@@ -48,7 +48,7 @@ entity axis_fifo is
     --   Cycle 3: valid=1, ready=1, last=1 ctl_drop=0
     --   Packet is dropped.
     -- Only applicable in packet mode.
-    ctl_drop : in    std_ulogic;
+    ctl_drop : in    std_ulogic := '0';
     -- Pulse indicating that the last packet was dropped.
     -- Only applicable in packet mode.
     sts_dropped : out   std_ulogic;

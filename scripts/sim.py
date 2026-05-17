@@ -50,7 +50,7 @@ if "--vhdl_ls" in sys.argv:
     argv.remove("--vhdl_ls")
 
 # The simulator must be chosen before sources are added
-if 'VUNIT_SIMULATOR' not in os.environ:    
+if 'VUNIT_SIMULATOR' not in os.environ:
     if SIMULATOR == Simulator.GHDL:
         os.environ['VUNIT_SIMULATOR'] = 'ghdl'
     elif SIMULATOR == Simulator.NVC:

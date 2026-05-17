@@ -13,6 +13,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use work.util_pkg.all;
+use work.bus_pkg.all;
 
 entity axil_ram is
   generic (
@@ -26,35 +27,30 @@ entity axil_ram is
     G_RD_LATENCY : positive                                                              := 1
   );
   port (
-    clk        : in    std_logic;
-    srst       : in    std_logic;
-    s_axil_req : in    axil_req_t;
-    s_axil_rsp : out   axil_rsp_t
+    clk    : in    std_ulogic;
+    srst   : in    std_ulogic;
+    s_axil : view  s_axil_view
   );
 end entity;
 
 architecture rtl of axil_ram is
 
-  signal ram_req : reg_req_t;
-  signal ram_rsp : reg_rsp_t;
+  signal i0_reg : bus_reg_t;
 
 begin
 
-  -- ---------------------------------------------------------------------------
   u_axil_to_reg : entity work.axil_to_reg
   generic map (
+    G_WR_LATENCY => 1,
     G_RD_LATENCY => G_RD_LATENCY
   )
   port map (
-    clk        => clk,
-    srst       => srst,
-    s_axil_req => s_axil_req,
-    s_axil_rsp => s_axil_rsp,
-    m_reg_req  => ram_req,
-    m_reg_rsp  => ram_rsp
+    clk    => clk,
+    srst   => srst,
+    s_axil => s_axil,
+    m_reg  => i0_reg
   );
 
-  -- ---------------------------------------------------------------------------
   u_ram : entity work.ram
   generic map (
     G_BYTES_PER_ROW => 4,
@@ -66,20 +62,20 @@ begin
   )
   port map (
     a_clk  => clk,
-    a_en   => ram_req.wen,
-    a_wen  => ram_req.wstrb,
-    a_addr => ram_req.waddr(G_ADDR_WIDTH - 1 + 2 downto 2),
-    a_wdat => ram_req.wdata,
+    a_en   => i0_reg.wen,
+    a_wen  => i0_reg.wstrb,
+    a_addr => i0_reg.waddr(G_ADDR_WIDTH - 1 + 2 downto 2),
+    a_wdat => i0_reg.wdata,
     a_rdat => open,
     b_clk  => clk,
     b_en   => '1',
-    b_wen  => b"0000",
-    b_addr => ram_req.raddr(G_ADDR_WIDTH - 1 + 2 downto 2),
+    b_wen  => (others=> '0'),
+    b_addr => i0_reg.raddr(G_ADDR_WIDTH - 1 + 2 downto 2),
     b_wdat => (others=> '0'),
-    b_rdat => ram_rsp.rdata
+    b_rdat => i0_reg.rdata
   );
 
-  ram_rsp.werr <= '0';
-  ram_rsp.rerr <= '0';
+  i0_reg.werr <= '0';
+  i0_reg.rerr <= '0';
 
 end architecture;

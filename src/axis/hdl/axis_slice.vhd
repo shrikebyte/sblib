@@ -39,10 +39,10 @@ entity axis_slice is
     clk  : in    std_ulogic;
     srst : in    std_ulogic;
     --
-    s_axis : view s_axis_v;
+    s_axis : view s_axis_view;
     --
-    m0_axis : view m_axis_v;
-    m1_axis : view m_axis_v;
+    m0_axis : view m_axis_view;
+    m1_axis : view m_axis_view;
     --! Number of bytes from the start of the input to send to the first output
     --! port. The remaining input bytes, until tlast, will be sent to the
     --! second output port. Note tat this does not necessarily have to be

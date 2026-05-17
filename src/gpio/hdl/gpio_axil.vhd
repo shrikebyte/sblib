@@ -13,6 +13,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.util_pkg.all;
+use work.bus_pkg.all;
 use work.gpio_regs_pkg.all;
 use work.gpio_register_record_pkg.all;
 use work.gpio_pkg.all;
@@ -33,8 +34,7 @@ entity gpio_axil is
     srst : in    std_logic;
     irq  : out   std_logic;
     --
-    s_axil_req : in    axil_req_t;
-    s_axil_rsp : out   axil_rsp_t;
+    s_axil : view s_axil_view;
     --
     gpio_i : in    slv_arr_t(gpio_range)(AXIL_DATA_RANGE) := (others => (others => '0'));
     gpio_o : out   slv_arr_t(gpio_range)(AXIL_DATA_RANGE);
@@ -68,8 +68,7 @@ begin
   port map (
     clk             => clk,
     reset           => srst,
-    s_axil_req      => s_axil_req,
-    s_axil_rsp      => s_axil_rsp,
+    s_axil          => s_axil,
     regs_up         => i,
     regs_down       => o,
     reg_was_read    => r,

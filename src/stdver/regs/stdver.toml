@@ -7,165 +7,111 @@
 # Licensed under the Apache 2.0 license, see LICENSE for details.
 # ==============================================================================
 # Registers for the stdver, Standard Version, module. These registers
-# should be instantiated at the base address of every FPGA design.
+# should be instantiated at the base address of an FPGA design.
 ################################################################################
 
 
 ################################################################################
 [scratchpad]
+description = "Scratchpad Register"
 mode = "r_w"
-description = "Scratchpad Register."
 
-[scratchpad.scratchpad]
-type = "bit_vector"
-width = 32
-default_value = 0x12345678
-description = """
+scratchpad.type = "bit_vector"
+scratchpad.width = 32
+scratchpad.default_value = 0x12345678
+scratchpad.description = """
 Scratchpad that may be used for testing FPGA register access.
 """
 
 
 ################################################################################
 [id]
+description = "ID Register"
 mode = "r"
-description = "ID Register."
 
-[id.id]
-type = "bit_vector"
-width = 32
-description = "Unique identification number for this fpga."
+id.type = "bit_vector"
+id.width = 32
+id.description = """
+Unique identification number for this fpga.
+"""
 
 
 ################################################################################
 [version]
+description = "Version Register"
 mode = "r"
-description = """
-Version Register. `Semantic versioning <https://semver.org>`_ is used.
 
-Format - 8-bit unsigned integers 0xZZAABBCC, where:
+patch.type = "integer"
+patch.max_value = 255
+patch.description = "Patch - Backward compatible bug fix."
 
-* ZZ = build metadata
-* AA = major version (0x00 to 0xFF)
-* BB = minor version (0x00 to 0xFF)
-* CC = patch version (0x00 to 0xFF)
+minor.type = "integer"
+minor.max_value = 255
+minor.description = "Minor - Backward compatible new feature."
 
-If ZZ is anything other than 0x00, then
-this indicates that the build is not a clean, official release build, but
-rather an engineering development build. This information is stored in the
-upper bits of the version register so that it is easy and obvious to tell when
-an official release build has not been loaded.
+major.type = "integer"
+major.max_value = 255
+major.description = "Major - Incompatible change."
+
+engr.type = "bit_vector"
+engr.width = 4
+engr.description = """
+* 0x0 = Official release build.
+* 0xE = Engineering test build.
 """
 
-[version.patch]
-type = "integer"
-max_value = 255
-description = "Patch version - Backward compatible bug fix."
-
-[version.minor]
-type = "integer"
-max_value = 255
-description = "Minor version - Backward compatible new feature."
-
-[version.major]
-type = "integer"
-max_value = 255
-description = "Major version - Incompatible change."
-
-[version.unused]
-type = "bit_vector"
-width = 5
-
-[version.dev]
-type = "bit"
-description = """
-* 1 = Development build. This build is for development and debugging, not for release to the field.
-* 0 = Official release build.
-"""
-
-[version.local]
-type = "bit"
-description = """
-* 1 = FPGA was built on a local developer's PC.
-* 0 = FPGA was built on a CI server.
-"""
-
-[version.dirty]
-type = "bit"
-description = """
-* 1 = FPGA was built from modified source files that were not checked in to version control.
-* 0 = FPGA was built from a clean repository.
+dirty.type = "bit_vector"
+dirty.width = 4
+dirty.description = """
+* 0x0 = FPGA was built from a clean repository.
+* 0xD = FPGA was built from modified source files that were not checked in to git.
 """
 
 
 ################################################################################
 [date]
+description = "Build Date Register in BCD format 0xYYYYMMDD"
 mode = "r"
-description = """
-Build Date Register. Date the FPGA was built, using the local timezone of
-the computer the ran the build.
 
-Format - BCD (Binary coded decimal) 0xYYYYMMDD, where:
+day.type = "bit_vector"
+day.width = 8
+day.description = "Build Day (0 to 31)."
 
-* YYYY = Build year (0 to 9999)
-* MM   = Build month (0 to 12)
-* DD   = Build day (0 to 31)
-"""
+month.type = "bit_vector"
+month.width = 8
+month.description = "Build Month (0 to 12)."
 
-[date.day]
-type = "bit_vector"
-width = 8
-description = "Build Day."
-
-[date.month]
-type = "bit_vector"
-width = 8
-description = "Build Month."
-
-[date.year]
-type = "bit_vector"
-width = 16
-description = "Build Year."
+year.type = "bit_vector"
+year.width = 16
+year.description = "Build Year (0 to 9999)."
 
 
 ################################################################################
 [time]
+description = "Build Time Register in BCD format 0xHHMMSS"
 mode = "r"
-description = """
-Build Time Register. Time the FPGA was built, using the local timezone of
-the computer the ran the build.
 
-Format - BCD (Binary coded decimal) 0x00HHMMSS, where:
+second.type = "bit_vector"
+second.width = 8
+second.description = "Build Second (0 to 59)."
 
-* 00 = Unused
-* MM = Build hour (0 to 23)
-* DD = Build minute (0 to 59)
-* SS = Build second (0 to 59)
-"""
+minute.type = "bit_vector"
+minute.width = 8
+minute.description = "Build Minute (0 to 59)."
 
-[time.second]
-type = "bit_vector"
-width = 8
-description = "Build Second."
-
-[time.minute]
-type = "bit_vector"
-width = 8
-description = "Build Minute."
-
-[time.hour]
-type = "bit_vector"
-width = 8
-description = "Build Hour."
+hour.type = "bit_vector"
+hour.width = 8
+hour.description = "Build Hour (0 to 23)."
 
 
 ################################################################################
 [githash]
+description = "Git Hash Register"
 mode = "r"
-description = "Git Hash Register."
 
-[githash.githash]
-type = "bit_vector"
-width = 32
-description = """
-The 8 most significant characters of the last git hash for this repository.
+githash.type = "bit_vector"
+githash.width = 32
+githash.description = """
+The 8 most significant characters of the source code's git hash used for
+this build.
 """

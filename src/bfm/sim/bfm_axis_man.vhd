@@ -33,7 +33,7 @@
 -- ``data`` and ``strobe``.
 --
 --
--- User signalling
+-- User signaling
 -- _______________
 --
 -- This BFM optionally supports sending auxiliary data on the ``user`` port also.
@@ -87,7 +87,7 @@ entity bfm_axis_man is
   port (
     clk : in    std_ulogic;
     --
-    m_axis : view m_axis_v;
+    m_axis : view m_axis_view;
     --
     num_packets_sent : out   natural := 0
   );

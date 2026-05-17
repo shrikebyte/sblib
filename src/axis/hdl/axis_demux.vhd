@@ -30,9 +30,9 @@ entity axis_demux is
     clk  : in    std_ulogic;
     srst : in    std_ulogic;
     --
-    s_axis : view s_axis_v;
+    s_axis : view s_axis_view;
     --
-    m_axis : view (m_axis_v) of axis_arr_t;
+    m_axis : view (m_axis_view) of axis_arr_t;
     --! Output select
     sel : in    integer range m_axis'range
   );

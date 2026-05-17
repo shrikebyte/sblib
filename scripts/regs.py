@@ -48,8 +48,6 @@ def replace_first_occurrence(file_path, old_text, new_text):
     #print(f"Replaced first occurrence of:\n{old_text}\nwith:\n{new_text} in file:\n{path}")
 
 
-
-
 OLD_TEXT_AXI_LITE_1 = """-- This VHDL file is a required dependency:
 -- https://github.com/hdl-modules/hdl-modules/blob/main/modules/axi_lite/src/axi_lite_pkg.vhd
 -- See https://hdl-registers.com/rst/generator/generator_vhdl.html for dependency details.
@@ -63,10 +61,9 @@ library register_file;"""
 
 NEW_TEXT_AXI_LITE_1 = """use work.axi_lite_pkg.all;
 use work.util_pkg.all;
+use work.bus_pkg.all;
 use work.hdlm_conv_pkg.all;
 """
-
-
 
 
 OLD_TEXT_AXI_LITE_2 = """    --# {}
@@ -77,11 +74,8 @@ OLD_TEXT_AXI_LITE_2 = """    --# {}
 
 NEW_TEXT_AXI_LITE_2 = """    --# {}
     --# Register control bus.
-    s_axil_req  : in    axil_req_t;
-    s_axil_rsp  : out   axil_rsp_t;
+    s_axil : view  s_axil_view;
 """
-
-
 
 
 OLD_TEXT_AXI_LITE_3 = """
@@ -99,22 +93,17 @@ NEW_TEXT_AXI_LITE_3 = """
 
 begin
 
-  axi_lite_m2s <= to_hdlm(s_axil_req);
-  s_axil_rsp   <= to_hdlm(axi_lite_s2m);
+  axil_attach(s_axil, axi_lite_m2s, axi_lite_s2m);
 
   ------------------------------------------------------------------------------
   -- Instantiate the generic register file implementation
-  axi_lite_register_file_inst : entity work.axi_lite_register_file"""
-
-
+  u_axi_lite_register_file : entity work.axi_lite_register_file"""
 
 
 OLD_TEXT_RECORD_PKG = """library register_file;
 use register_file.register_file_pkg.register_t;"""
 
 NEW_TEXT_RECORD_PKG = "use work.register_file_pkg.register_t;"
-
-
 
 
 OLD_TEXT_REGS_PKG = """library register_file;
@@ -138,17 +127,21 @@ def main(toml_files: list[Path]):
 
         register_list = from_toml(name=name, toml_file=toml_file)
 
-        # VHDL
+        # VHDL source
         VhdlRegisterPackageGenerator(register_list=register_list, output_folder=hdl_output_dir).create_if_needed()
         VhdlRecordPackageGenerator(register_list=register_list, output_folder=hdl_output_dir).create_if_needed()
         VhdlAxiLiteWrapperGenerator(register_list=register_list, output_folder=hdl_output_dir).create_if_needed()
         # We make some small edits to the generated VHDL so that it does not
-        # depend on pre-defined VHDL namespaces
+        # depend on pre-defined VHDL namespaces and so that it directly works
+        # with sblib's axil interface type
         replace_first_occurrence(Path(hdl_output_dir / f"{name}_register_file_axi_lite.vhd"), OLD_TEXT_AXI_LITE_1, NEW_TEXT_AXI_LITE_1)
         replace_first_occurrence(Path(hdl_output_dir / f"{name}_register_file_axi_lite.vhd"), OLD_TEXT_AXI_LITE_2, NEW_TEXT_AXI_LITE_2)
         replace_first_occurrence(Path(hdl_output_dir / f"{name}_register_file_axi_lite.vhd"), OLD_TEXT_AXI_LITE_3, NEW_TEXT_AXI_LITE_3)
         replace_first_occurrence(Path(hdl_output_dir / f"{name}_register_record_pkg.vhd"), OLD_TEXT_RECORD_PKG, NEW_TEXT_RECORD_PKG)
         replace_first_occurrence(Path(hdl_output_dir / f"{name}_regs_pkg.vhd"), OLD_TEXT_REGS_PKG, NEW_TEXT_REGS_PKG)
+
+        # VHDL testbench
+        # NA
 
         # C Header
         CHeaderGenerator(register_list=register_list, output_folder=output_dir).create_if_needed()
