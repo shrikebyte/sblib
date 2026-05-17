@@ -21,16 +21,16 @@ package bus_pkg is
   constant AXIL_DATA_WIDTH : positive := 32;
   constant AXIL_ADDR_WIDTH : positive := 32;
 
-  subtype AXIL_DATA_RANGE is natural range AXIL_DATA_WIDTH - 1 downto 0;
-  subtype AXIL_ADDR_RANGE is natural range AXIL_ADDR_WIDTH - 1 downto 0;
-  subtype AXIL_STRB_RANGE is natural range AXIL_DATA_WIDTH / 8 - 1 downto 0;
-  subtype AXIL_PROT_RANGE is natural range 2 downto 0;
-  subtype AXIL_RESP_RANGE is natural range 1 downto 0;
+  subtype axil_data_range is natural range AXIL_DATA_WIDTH - 1 downto 0;
+  subtype axil_addr_range is natural range AXIL_ADDR_WIDTH - 1 downto 0;
+  subtype axil_strb_range is natural range AXIL_DATA_WIDTH / 8 - 1 downto 0;
+  subtype axil_prot_range is natural range 2 downto 0;
+  subtype axil_rsp_range is natural range 1 downto 0;
 
-  constant AXI_RESP_OKAY   : std_ulogic_vector(AXIL_RESP_RANGE) := b"00";
-  constant AXI_RESP_EXOKAY : std_ulogic_vector(AXIL_RESP_RANGE) := b"01";
-  constant AXI_RESP_SLVERR : std_ulogic_vector(AXIL_RESP_RANGE) := b"10";
-  constant AXI_RESP_DECERR : std_ulogic_vector(AXIL_RESP_RANGE) := b"11";
+  constant AXI_RSP_OKAY   : std_ulogic_vector(AXIL_RSP_RANGE) := b"00";
+  constant AXI_RSP_EXOKAY : std_ulogic_vector(AXIL_RSP_RANGE) := b"01";
+  constant AXI_RSP_SLVERR : std_ulogic_vector(AXIL_RSP_RANGE) := b"10";
+  constant AXI_RSP_DECERR : std_ulogic_vector(AXIL_RSP_RANGE) := b"11";
 
   type bus_axil_t is record
     awready : std_ulogic;
@@ -42,58 +42,58 @@ package bus_pkg is
     wdata   : std_ulogic_vector(AXIL_DATA_RANGE);
     bready  : std_ulogic;
     bvalid  : std_ulogic;
-    bresp   : std_ulogic_vector(AXIL_RESP_RANGE);
+    bresp   : std_ulogic_vector(AXIL_RSP_RANGE);
     arready : std_ulogic;
     arvalid : std_ulogic;
     araddr  : std_ulogic_vector(AXIL_ADDR_RANGE);
     rready  : std_ulogic;
     rvalid  : std_ulogic;
-    rresp   : std_ulogic_vector(AXIL_RESP_RANGE);
+    rresp   : std_ulogic_vector(AXIL_RSP_RANGE);
     rdata   : std_ulogic_vector(AXIL_DATA_RANGE);
   end record;
 
   type bus_axil_arr_t is array(natural range <>) of bus_axil_t;
 
 	view m_axil_view of bus_axil_t is
-    awready : in;
     awvalid : out;
+    awready : in;
     awaddr  : out;
-    wready  : in;
     wvalid  : out;
-    wstrb   : out;
+    wready  : in;
     wdata   : out;
-    bready  : out;
+    wstrb   : out;
     bvalid  : in;
+    bready  : out;
     bresp   : in;
-    arready : in;
     arvalid : out;
+    arready : in;
     araddr  : out;
-    rready  : out;
     rvalid  : in;
-    rresp   : in;
+    rready  : out;
     rdata   : in;
+    rresp   : in;
   end view;
 
   alias s_axil_view is m_axil_view'converse;
 
   view p_axil_view of bus_axil_t is
-    awready : in;
     awvalid : in;
+    awready : in;
     awaddr  : in;
-    wready  : in;
     wvalid  : in;
-    wstrb   : in;
+    wready  : in;
     wdata   : in;
-    bready  : in;
+    wstrb   : in;
     bvalid  : in;
+    bready  : in;
     bresp   : in;
-    arready : in;
     arvalid : in;
+    arready : in;
     araddr  : in;
-    rready  : in;
     rvalid  : in;
-    rresp   : in;
+    rready  : in;
     rdata   : in;
+    rresp   : in;
   end view;
 
   procedure axil_attach (
@@ -273,21 +273,21 @@ package body bus_pkg is
   begin
     s_axil.awready <= m_axil.awready;
     m_axil.awvalid <= s_axil.awvalid;
-    m_axil.awaddr  <= s_axil.awaddr ;
-    s_axil.wready  <= m_axil.wready ;
-    m_axil.wvalid  <= s_axil.wvalid ;
-    m_axil.wstrb   <= s_axil.wstrb  ;
-    m_axil.wdata   <= s_axil.wdata  ;
-    m_axil.bready  <= s_axil.bready ;
-    s_axil.bvalid  <= m_axil.bvalid ;
-    s_axil.bresp   <= m_axil.bresp  ;
+    m_axil.awaddr  <= s_axil.awaddr;
+    s_axil.wready  <= m_axil.wready;
+    m_axil.wvalid  <= s_axil.wvalid;
+    m_axil.wstrb   <= s_axil.wstrb;
+    m_axil.wdata   <= s_axil.wdata;
+    m_axil.bready  <= s_axil.bready;
+    s_axil.bvalid  <= m_axil.bvalid;
+    s_axil.bresp   <= m_axil.bresp;
     s_axil.arready <= m_axil.arready;
     m_axil.arvalid <= s_axil.arvalid;
-    m_axil.araddr  <= s_axil.araddr ;
-    m_axil.rready  <= s_axil.rready ;
-    s_axil.rvalid  <= m_axil.rvalid ;
-    s_axil.rresp   <= m_axil.rresp  ;
-    s_axil.rdata   <= m_axil.rdata  ;
+    m_axil.araddr  <= s_axil.araddr;
+    m_axil.rready  <= s_axil.rready;
+    s_axil.rvalid  <= m_axil.rvalid;
+    s_axil.rresp   <= m_axil.rresp;
+    s_axil.rdata   <= m_axil.rdata;
   end procedure;
 
   procedure wb_attach (
@@ -295,13 +295,13 @@ package body bus_pkg is
     signal m_wb : view m_wb_view of bus_wb_t
   ) is
   begin
-  	m_wb.stb  <= s_wb.stb ;
-    m_wb.wen  <= s_wb.wen ;
+    m_wb.stb  <= s_wb.stb;
+    m_wb.wen  <= s_wb.wen;
     m_wb.addr <= s_wb.addr;
     m_wb.wdat <= s_wb.wdat;
     m_wb.wsel <= s_wb.wsel;
-    s_wb.ack  <= m_wb.ack ;
-    s_wb.err  <= m_wb.err ;
+    s_wb.ack  <= m_wb.ack;
+    s_wb.err  <= m_wb.err;
     s_wb.rdat <= m_wb.rdat;
   end procedure;
 
@@ -310,15 +310,15 @@ package body bus_pkg is
     signal m_apb : view m_apb_view of bus_apb_t
   ) is
   begin
-    m_apb.psel    <= s_apb.psel   ;
+    m_apb.psel    <= s_apb.psel;
     m_apb.penable <= s_apb.penable;
-    m_apb.pwrite  <= s_apb.pwrite ;
-    m_apb.paddr   <= s_apb.paddr  ;
-    m_apb.pwdata  <= s_apb.pwdata ;
-    m_apb.pstrb   <= s_apb.pstrb  ;
-    s_apb.pready  <= m_apb.pready ;
+    m_apb.pwrite  <= s_apb.pwrite;
+    m_apb.paddr   <= s_apb.paddr;
+    m_apb.pwdata  <= s_apb.pwdata;
+    m_apb.pstrb   <= s_apb.pstrb;
+    s_apb.pready  <= m_apb.pready;
     s_apb.pslverr <= m_apb.pslverr;
-    s_apb.prdata  <= m_apb.prdata ;
+    s_apb.prdata  <= m_apb.prdata;
   end procedure;
 
   procedure reg_attach (
@@ -326,15 +326,15 @@ package body bus_pkg is
     signal m_reg : view m_reg_view of bus_reg_t
   ) is
   begin
-    m_reg.wen   <= s_reg.wen  ;
+    m_reg.wen   <= s_reg.wen;
     m_reg.waddr <= s_reg.waddr;
     m_reg.wstrb <= s_reg.wstrb;
     m_reg.wdata <= s_reg.wdata;
-    s_reg.werr  <= m_reg.werr ;
-    m_reg.ren   <= s_reg.ren  ;
+    s_reg.werr  <= m_reg.werr;
+    m_reg.ren   <= s_reg.ren;
     m_reg.raddr <= s_reg.raddr;
     s_reg.rdata <= m_reg.rdata;
-    s_reg.rerr  <= m_reg.rerr ;
+    s_reg.rerr  <= m_reg.rerr;
   end procedure;
 
 end package body;

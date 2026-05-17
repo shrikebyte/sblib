@@ -12,7 +12,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use work.util_pkg.axil_data_width;
+use work.bus_pkg.axil_data_width;
 use work.gpio_pkg.gpio_mode_t;
 
 entity gpio_chan is

@@ -18,6 +18,7 @@ library vunit_lib;
   context vunit_lib.vc_context;
 use vunit_lib.axi_lite_master_pkg.all;
 use work.util_pkg.all;
+use work.bus_pkg.all;
 use work.stdver_regs_pkg.all;
 
 entity stdver_axil_tb is
@@ -32,23 +33,21 @@ architecture tb of stdver_axil_tb is
   constant CLK_PERIOD : time := 10 ns;
   constant CLK_TO_Q   : time := 1 ns;
   -- Generics
-  constant G_DEVICE_ID   : std_logic_vector(31 downto 0) := x"0000_0001";
-  constant G_VER_MAJOR   : natural                       := 1;
-  constant G_VER_MINOR   : natural                       := 2;
-  constant G_VER_PATCH   : natural                       := 3;
-  constant G_LOCAL_BUILD : boolean                       := true;
-  constant G_DEV_BUILD   : boolean                       := true;
-  constant G_GIT_DIRTY   : boolean                       := true;
-  constant G_GIT_HASH    : std_logic_vector(31 downto 0) := x"A000_000A";
-  constant G_BUILD_DATE  : std_logic_vector(31 downto 0) := x"B000_000B";
-  constant G_BUILD_TIME  : std_logic_vector(23 downto 0) := x"C0_000C";
+  constant G_DEVICE_ID  : std_logic_vector(31 downto 0) := x"0000_0001";
+  constant G_VER_MAJOR  : natural                       := 1;
+  constant G_VER_MINOR  : natural                       := 2;
+  constant G_VER_PATCH  : natural                       := 3;
+  constant G_ENGR_BUILD : boolean                       := true;
+  constant G_GIT_DIRTY  : boolean                       := true;
+  constant G_GIT_HASH   : std_logic_vector(31 downto 0) := x"A000_000A";
+  constant G_BUILD_DATE : std_logic_vector(31 downto 0) := x"B000_000B";
+  constant G_BUILD_TIME : std_logic_vector(23 downto 0) := x"C0_000C";
 
   -- Ports
   signal clk  : std_logic := '1';
   signal srst : std_logic := '1';
 
-  signal axil_req : axil_req_t;
-  signal axil_rsp : axil_rsp_t;
+  signal axil : bus_axil_t;
 
   constant AXIM : bus_master_t := new_bus(data_length => AXIL_DATA_WIDTH, address_length => AXIL_ADDR_WIDTH);
 
@@ -100,34 +99,34 @@ begin
         info("Running test_0");
 
         info("Check scratchpad");
-        check_axi_lite(net, AXIM, fn_addr(stdver_scratchpad), AXI_RSP_OKAY, x"12345678");
-        write_axi_lite(net, AXIM, fn_addr(stdver_scratchpad), X"1122_3344", AXI_RSP_OKAY, x"F");
+        check_axi_lite(net, AXIM, fn_addr(stdver_scratchpad), AXI_RESP_OKAY, x"12345678");
+        write_axi_lite(net, AXIM, fn_addr(stdver_scratchpad), X"1122_3344", AXI_RESP_OKAY, x"F");
         check_axi_lite(net, AXIM, fn_addr(stdver_scratchpad), AXI_RSP_OKAY, X"1122_3344");
 
         info("Check ID");
-        check_axi_lite(net, AXIM, fn_addr(stdver_id), AXI_RSP_OKAY, G_DEVICE_ID);
-        write_axi_lite(net, AXIM, fn_addr(stdver_id), X"1122_3344", AXI_RSP_SLVERR, x"F");
+        check_axi_lite(net, AXIM, fn_addr(stdver_id), AXI_RESP_OKAY, G_DEVICE_ID);
+        write_axi_lite(net, AXIM, fn_addr(stdver_id), X"1122_3344", AXI_RESP_SLVERR, x"F");
         check_axi_lite(net, AXIM, fn_addr(stdver_id), AXI_RSP_OKAY, G_DEVICE_ID);
 
         info("Check version");
-        check_axi_lite(net, AXIM, fn_addr(stdver_version), AXI_RSP_OKAY, X"E001_0203");
-        write_axi_lite(net, AXIM, fn_addr(stdver_version), X"1122_3344", AXI_RSP_SLVERR, x"F");
-        check_axi_lite(net, AXIM, fn_addr(stdver_version), AXI_RSP_OKAY, X"E001_0203");
+        check_axi_lite(net, AXIM, fn_addr(stdver_version), AXI_RESP_OKAY, X"DE01_0203");
+        write_axi_lite(net, AXIM, fn_addr(stdver_version), X"1122_3344", AXI_RESP_SLVERR, x"F");
+        check_axi_lite(net, AXIM, fn_addr(stdver_version), AXI_RSP_OKAY, X"DE01_0203");
 
         info("Check build date");
-        check_axi_lite(net, AXIM, fn_addr(stdver_date), AXI_RSP_OKAY, X"B000_000B");
-        write_axi_lite(net, AXIM, fn_addr(stdver_date), X"1122_3344", AXI_RSP_SLVERR, x"F");
+        check_axi_lite(net, AXIM, fn_addr(stdver_date), AXI_RESP_OKAY, X"B000_000B");
+        write_axi_lite(net, AXIM, fn_addr(stdver_date), X"1122_3344", AXI_RESP_SLVERR, x"F");
         check_axi_lite(net, AXIM, fn_addr(stdver_date), AXI_RSP_OKAY, X"B000_000B");
 
         info("Check build time");
-        check_axi_lite(net, AXIM, fn_addr(stdver_time), AXI_RSP_OKAY, X"00C0_000C");
-        write_axi_lite(net, AXIM, fn_addr(stdver_time), X"1122_3344", AXI_RSP_SLVERR, x"F");
-        check_axi_lite(net, AXIM, fn_addr(stdver_time), AXI_RSP_OKAY, X"00C0_000C");
+        check_axi_lite(net, AXIM, fn_addr(stdver_time), AXI_RESP_OKAY, X"00C0_000C");
+        write_axi_lite(net, AXIM, fn_addr(stdver_time), X"1122_3344", AXI_RESP_SLVERR, x"F");
+        check_axi_lite(net, AXIM, fn_addr(stdver_time), AXI_RESP_OKAY, X"00C0_000C");
 
         info("Check git hash");
-        check_axi_lite(net, AXIM, fn_addr(stdver_githash), AXI_RSP_OKAY, X"A000_000A");
-        write_axi_lite(net, AXIM, fn_addr(stdver_githash), X"1122_3344", AXI_RSP_SLVERR, x"F");
-        check_axi_lite(net, AXIM, fn_addr(stdver_githash), AXI_RSP_OKAY, X"A000_000A");
+        check_axi_lite(net, AXIM, fn_addr(stdver_githash), AXI_RESP_OKAY, X"A000_000A");
+        write_axi_lite(net, AXIM, fn_addr(stdver_githash), X"1122_3344", AXI_RESP_SLVERR, x"F");
+        check_axi_lite(net, AXIM, fn_addr(stdver_githash), AXI_RESP_OKAY, X"A000_000A");
 
       end if;
 
@@ -152,22 +151,20 @@ begin
   -- ---------------------------------------------------------------------------
   u_stdver_axil : entity work.stdver_axil
   generic map (
-    G_DEVICE_ID   => G_DEVICE_ID,
-    G_VER_MAJOR   => G_VER_MAJOR,
-    G_VER_MINOR   => G_VER_MINOR,
-    G_VER_PATCH   => G_VER_PATCH,
-    G_LOCAL_BUILD => G_LOCAL_BUILD,
-    G_DEV_BUILD   => G_DEV_BUILD,
-    G_BUILD_DATE  => G_BUILD_DATE,
-    G_BUILD_TIME  => G_BUILD_TIME,
-    G_GIT_HASH    => G_GIT_HASH,
-    G_GIT_DIRTY   => G_GIT_DIRTY
+    G_DEVICE_ID  => G_DEVICE_ID,
+    G_VER_MAJOR  => G_VER_MAJOR,
+    G_VER_MINOR  => G_VER_MINOR,
+    G_VER_PATCH  => G_VER_PATCH,
+    G_ENGR_BUILD => G_ENGR_BUILD,
+    G_BUILD_DATE => G_BUILD_DATE,
+    G_BUILD_TIME => G_BUILD_TIME,
+    G_GIT_HASH   => G_GIT_HASH,
+    G_GIT_DIRTY  => G_GIT_DIRTY
   )
   port map (
-    clk        => clk,
-    srst       => srst,
-    s_axil_req => axil_req,
-    s_axil_rsp => axil_rsp
+    clk    => clk,
+    srst   => srst,
+    s_axil => axil
   );
 
   -- ---------------------------------------------------------------------------
@@ -176,9 +173,8 @@ begin
     G_BUS_HANDLE => AXIM
   )
   port map (
-    clk        => clk,
-    m_axil_req => axil_req,
-    m_axil_rsp => axil_rsp
+    clk    => clk,
+    m_axil => axil
   );
 
 end architecture;

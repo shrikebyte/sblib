@@ -20,7 +20,7 @@ use work.bus_pkg.all;
 
 entity axil_decoder is
   generic (
-    G_BASEADDRS  : slv_arr_t(open)(AXIL_ADDR_WIDTH - 1 downto 0)
+    G_BASEADDRS : slv_arr_t(open)(AXIL_ADDR_WIDTH - 1 downto 0)
   );
   port (
     clk    : in    std_logic;
@@ -236,7 +236,7 @@ begin
   end process;
 
   -- ---------------------------------------------------------------------------
-  prc_assign_wr_rsp : process (all) is begin
+  prc_assign_rsp : process (all) is begin
     if wr_select = SLAVE_NOT_SELECTED_IDX then
       s_axil.awready <= '0';
       s_axil.wready  <= '0';
@@ -246,17 +246,14 @@ begin
       s_axil.awready <= wr_dec_err_awready;
       s_axil.wready  <= wr_dec_err_wready;
       s_axil.bvalid  <= wr_dec_err_bvalid;
-      s_axil.bresp   <= AXI_RESP_DECERR;
+      s_axil.bresp   <= AXI_RSP_DECERR;
     else
       s_axil.awready <= m_axil(wr_select).awready;
       s_axil.wready  <= m_axil(wr_select).wready;
       s_axil.bvalid  <= m_axil(wr_select).bvalid;
       s_axil.bresp   <= m_axil(wr_select).bresp;
     end if;
-  end process;
 
-  -- ---------------------------------------------------------------------------
-  prc_assign_rd_rsp : process (all) is begin
     if rd_select = SLAVE_NOT_SELECTED_IDX then
       s_axil.arready <= '0';
       s_axil.rvalid  <= '0';
@@ -266,7 +263,7 @@ begin
       s_axil.arready <= rd_dec_err_arready;
       s_axil.rvalid  <= rd_dec_err_rvalid;
       s_axil.rdata   <= (others => '-');
-      s_axil.rresp   <= AXI_RESP_DECERR;
+      s_axil.rresp   <= AXI_RSP_DECERR;
     else
       s_axil.arready <= m_axil(rd_select).arready;
       s_axil.rvalid  <= m_axil(rd_select).rvalid;
@@ -276,30 +273,22 @@ begin
   end process;
 
   -- ---------------------------------------------------------------------------
-  prc_assign_req : process (all) is begin
-    for slave in m_axil'range loop
-
-      m_axil(slave).awvalid <= s_axil.awvalid;
-      m_axil(slave).awaddr  <= s_axil.awaddr;
-      m_axil(slave).wvalid  <= s_axil.wvalid;
-      m_axil(slave).wstrb   <= s_axil.wstrb;
-      m_axil(slave).wdata   <= s_axil.wdata;
-      m_axil(slave).bready  <= s_axil.bready;
-      m_axil(slave).arvalid <= s_axil.arvalid;
-      m_axil(slave).araddr  <= s_axil.araddr;
-      m_axil(slave).rready  <= s_axil.rready;
-
-      if wr_select /= slave then
-        m_axil(slave).awvalid <= '0';
-        m_axil(slave).wvalid  <= '0';
-        m_axil(slave).bready  <= '0';
-      end if;
-
-      if rd_select /= slave then
-        m_axil(slave).arvalid <= '0';
-        m_axil(slave).rready  <= '0';
-      end if;
-    end loop;
-  end process;
+  gen_assign_req : for i in m_axil'range generate
+    signal writing : std_ulogic_vector(m_axil'range);
+    signal reading : std_ulogic_vector(m_axil'range);
+  begin
+    writing(i) <= to_sl(wr_select = i and wr_state = ST_WR_WRITING);
+    reading(i) <= to_sl(rd_select = i and rd_state = ST_RD_READING);
+    --
+    m_axil(i).awvalid <= s_axil.awvalid and writing(i);
+    m_axil(i).awaddr  <= s_axil.awaddr;
+    m_axil(i).wvalid  <= s_axil.wvalid and writing(i);
+    m_axil(i).wstrb   <= s_axil.wstrb;
+    m_axil(i).wdata   <= s_axil.wdata;
+    m_axil(i).bready  <= s_axil.bready and writing(i);
+    m_axil(i).arvalid <= s_axil.arvalid and reading(i);
+    m_axil(i).araddr  <= s_axil.araddr;
+    m_axil(i).rready  <= s_axil.rready and reading(i);
+  end generate;
 
 end architecture;

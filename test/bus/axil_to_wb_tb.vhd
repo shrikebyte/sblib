@@ -13,6 +13,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.util_pkg.all;
+use work.bus_pkg.all;
 
 library vunit_lib;
   context vunit_lib.vunit_context;
@@ -34,12 +35,10 @@ architecture tb of axil_to_wb_tb is
   constant MEM_DEPTH  : integer := 1024;
 
   -- DUT ports
-  signal clk      : std_logic := '1';
-  signal srst     : std_logic := '1';
-  signal axil_req : axil_req_t;
-  signal axil_rsp : axil_rsp_t;
-  signal wb_req   : wb_req_t;
-  signal wb_rsp   : wb_rsp_t;
+  signal clk  : std_logic := '1';
+  signal srst : std_logic := '1';
+  signal axil : bus_axil_t;
+  signal wb   : bus_wb_t;
 
   -- Testbench BFMs
   constant AXIM : bus_master_t := new_bus (
@@ -96,7 +95,7 @@ begin
       if run("test_0") then
         info("Running test_0");
 
-        info("Wishbone slave responds with an ack (no error) and in one clock cycle");
+        info("Wishbone slave responds with an ack (no error) and in 1 clock cycle");
         wb_tb_error   <= '0';
         wb_tb_latency <= 1;
 
@@ -105,37 +104,37 @@ begin
         addr  := x"00000008";
         data  := x"11223344";
         wstrb := x"F";
-        write_axi_lite(net, AXIM, addr, data, AXI_RSP_OKAY, wstrb);
-        check_axi_lite(net, AXIM, addr, AXI_RSP_OKAY, data, "Check 0 failed.");
+        write_axi_lite(net, AXIM, addr, data, AXI_RESP_OKAY, wstrb);
+        check_axi_lite(net, AXIM, addr, AXI_RESP_OKAY, data, "Check 0 failed.");
 
         addr  := x"00000008";
         data  := x"22334455";
         wstrb := x"1";
-        write_axi_lite(net, AXIM, addr, data, AXI_RSP_OKAY, wstrb);
+        write_axi_lite(net, AXIM, addr, data, AXI_RESP_OKAY, wstrb);
 
         addr  := x"00000010";
         data  := x"33445566";
         wstrb := x"5";
-        write_axi_lite(net, AXIM, addr, data, AXI_RSP_OKAY, wstrb);
+        write_axi_lite(net, AXIM, addr, data, AXI_RESP_OKAY, wstrb);
 
         addr  := x"00000014";
         data  := x"44556677";
         wstrb := x"F";
-        write_axi_lite(net, AXIM, addr, data, AXI_RSP_OKAY, wstrb);
+        write_axi_lite(net, AXIM, addr, data, AXI_RESP_OKAY, wstrb);
 
         addr := x"00000008";
         data := x"11223355";
-        check_axi_lite(net, AXIM, addr, AXI_RSP_OKAY, data, "Check 1 failed.");
+        check_axi_lite(net, AXIM, addr, AXI_RESP_OKAY, data, "Check 1 failed.");
 
         addr := x"00000010";
         data := x"00440066";
-        check_axi_lite(net, AXIM, addr, AXI_RSP_OKAY, data, "Check 2 failed.");
+        check_axi_lite(net, AXIM, addr, AXI_RESP_OKAY, data, "Check 2 failed.");
 
         addr := x"00000014";
         data := x"44556677";
-        check_axi_lite(net, AXIM, addr, AXI_RSP_OKAY, data, "Check 3 failed.");
+        check_axi_lite(net, AXIM, addr, AXI_RESP_OKAY, data, "Check 3 failed.");
 
-        info("Wishbone slave responds with an error and in three clock cycles");
+        info("Wishbone slave responds with an error and in 3 clock cycles");
         prd_wait_clk(8);
         wb_tb_error   <= '1';
         wb_tb_latency <= 3;
@@ -144,8 +143,8 @@ begin
         addr  := x"00000018";
         data  := x"44556677";
         wstrb := x"F";
-        write_axi_lite(net, AXIM, addr, data, AXI_RSP_SLVERR, wstrb);
-        check_axi_lite(net, AXIM, addr, AXI_RSP_SLVERR, data, "Check 4 failed.");
+        write_axi_lite(net, AXIM, addr, data, AXI_RESP_SLVERR, wstrb);
+        check_axi_lite(net, AXIM, addr, AXI_RESP_SLVERR, data, "Check 4 failed.");
 
         info("Wishbone slave responds with an ack (no error) and in 5 clock cycles");
         prd_wait_clk(8);
@@ -156,17 +155,14 @@ begin
         addr  := x"0000001C";
         data  := x"AABBCCDD";
         wstrb := x"F";
-        write_axi_lite(net, AXIM, addr, data, AXI_RSP_OKAY, wstrb);
+        write_axi_lite(net, AXIM, addr, data, AXI_RESP_OKAY, wstrb);
         addr  := x"0000001C";
         data  := x"11223344";
         wstrb := x"8";
-        write_axi_lite(net, AXIM, addr, data, AXI_RSP_OKAY, wstrb);
+        write_axi_lite(net, AXIM, addr, data, AXI_RESP_OKAY, wstrb);
         addr  := x"0000001C";
         data  := x"11BBCCDD";
-        check_axi_lite(net, AXIM, addr, AXI_RSP_OKAY, data, "Check 4 failed.");
-
-      -- elsif run("test_1") then
-      --   info("Running test_1");
+        check_axi_lite(net, AXIM, addr, AXI_RESP_OKAY, data, "Check 4 failed.");
 
       end if;
 
@@ -188,12 +184,10 @@ begin
   -- ---------------------------------------------------------------------------
   u_axil_to_wb : entity work.axil_to_wb
   port map (
-    clk        => clk,
-    srst       => srst,
-    s_axil_req => axil_req,
-    s_axil_rsp => axil_rsp,
-    m_wb_req   => wb_req,
-    m_wb_rsp   => wb_rsp
+    clk    => clk,
+    srst   => srst,
+    s_axil => axil,
+    m_wb   => wb
   );
 
   -- ---------------------------------------------------------------------------
@@ -202,9 +196,8 @@ begin
     G_BUS_HANDLE => AXIM
   )
   port map (
-    clk        => clk,
-    m_axil_req => axil_req,
-    m_axil_rsp => axil_rsp
+    clk    => clk,
+    m_axil => axil
   );
 
   -- ---------------------------------------------------------------------------
@@ -213,15 +206,15 @@ begin
       wb_ack_sr <= wb_ack_sr(wb_ack_sr'left - 1 downto 0) & ack;
       wb_err_sr <= wb_err_sr(wb_err_sr'left - 1 downto 0) & err;
 
-      if wb_req.stb then
-        if wb_req.wen then
+      if wb.stb then
+        if wb.wen then
           for i in 0 to 3 loop
-            if wb_req.wsel(i) then
-              ram(to_integer(unsigned(wb_req.addr)))(i * 8 + 7 downto i * 8) <= wb_req.wdat(i * 8 + 7 downto i * 8);
+            if wb.wsel(i) then
+              ram(to_integer(unsigned(wb.addr)))(i * 8 + 7 downto i * 8) <= wb.wdat(i * 8 + 7 downto i * 8);
             end if;
           end loop;
         else
-          wb_rsp.rdat <= ram(to_integer(unsigned(wb_req.addr)));
+          wb.rdat <= ram(to_integer(unsigned(wb.addr)));
         end if;
       end if;
     end if;
@@ -235,15 +228,15 @@ begin
   port map (
     clk     => clk,
     srst    => srst,
-    din(0)  => wb_req.stb and not wb_tb_error,
-    din(1)  => wb_req.stb and wb_tb_error,
+    din(0)  => wb.stb and not wb_tb_error,
+    din(1)  => wb.stb and wb_tb_error,
     rise(0) => ack,
     rise(1) => err,
     fall    => open,
     both    => open
   );
 
-  wb_rsp.ack <= wb_ack_sr(wb_tb_latency - 1);
-  wb_rsp.err <= wb_err_sr(wb_tb_latency - 1);
+  wb.ack <= wb_ack_sr(wb_tb_latency - 1);
+  wb.err <= wb_err_sr(wb_tb_latency - 1);
 
 end architecture;

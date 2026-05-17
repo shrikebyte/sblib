@@ -36,14 +36,13 @@ begin
 
   -- Wishbone manager guarantees that these stay stable during the
   -- transaction, so no need to waste resources by registering them in the fsm
-  m_axil.awaddr  <= s_wb.addr;
-  m_axil.wdata   <= s_wb.wdat;
-  m_axil.wstrb   <= s_wb.wsel;
-  m_axil.araddr  <= s_wb.addr;
+  m_axil.awaddr <= s_wb.addr;
+  m_axil.wdata  <= s_wb.wdat;
+  m_axil.wstrb  <= s_wb.wsel;
+  m_axil.araddr <= s_wb.addr;
 
   prc_wb_to_axil : process (clk) is begin
     if rising_edge(clk) then
-
       s_wb.ack <= '0';
       s_wb.err <= '0';
 
@@ -71,12 +70,12 @@ begin
           end if;
 
           if m_axil.wready then
-            m_axil.wvalid  <= '0';
+            m_axil.wvalid <= '0';
           end if;
 
           if not m_axil.awvalid and not m_axil.wvalid then
-            m_axil.bready  <= '1';
-            state          <= ST_WRITE_RSP_WAIT;
+            m_axil.bready <= '1';
+            state         <= ST_WRITE_RSP_WAIT;
           end if;
 
         -- ---------------------------------------------------------------------
@@ -84,7 +83,7 @@ begin
           if m_axil.bvalid then
             m_axil.bready <= '0';
             s_wb.ack      <= '1';
-            s_wb.err      <= to_sl((m_axil.bresp = AXI_RESP_SLVERR) or (m_axil.bresp = AXI_RESP_DECERR));
+            s_wb.err      <= to_sl((m_axil.bresp = AXI_RSP_SLVERR) or (m_axil.bresp = AXI_RSP_DECERR));
             state         <= ST_IDLE;
           end if;
 
@@ -101,7 +100,7 @@ begin
           if m_axil.rvalid then
             m_axil.rready <= '0';
             s_wb.ack      <= '1';
-            s_wb.err      <= to_sl((m_axil.bresp = AXI_RESP_SLVERR) or (m_axil.bresp = AXI_RESP_DECERR));
+            s_wb.err      <= to_sl((m_axil.bresp = AXI_RSP_SLVERR) or (m_axil.bresp = AXI_RSP_DECERR));
             s_wb.rdat     <= m_axil.rdata;
             state         <= ST_IDLE;
           end if;

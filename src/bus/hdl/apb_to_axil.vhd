@@ -17,8 +17,8 @@ use work.bus_pkg.all;
 
 entity apb_to_axil is
   port (
-    clk    : in   std_ulogic;
-    srst   : in   std_ulogic;
+    clk    : in    std_ulogic;
+    srst   : in    std_ulogic;
     s_apb  : view s_apb_view;
     m_axil : view m_axil_view
   );
@@ -38,11 +38,12 @@ begin
     m_axil => m_axil
   );
 
-  wb.stb        <= s_apb.psel and s_apb.penable;
-  wb.wen        <= s_apb.pwrite;
-  wb.addr       <= s_apb.paddr;
-  wb.wdat       <= s_apb.pwdata;
-  wb.wsel       <= s_apb.pstrb;
+  wb.stb  <= s_apb.psel and s_apb.penable;
+  wb.wen  <= s_apb.pwrite;
+  wb.addr <= s_apb.paddr;
+  wb.wdat <= s_apb.pwdata;
+  wb.wsel <= s_apb.pstrb;
+  --
   s_apb.prdata  <= wb.rdat;
   s_apb.pready  <= wb.ack;
   s_apb.pslverr <= wb.err;

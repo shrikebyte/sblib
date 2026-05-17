@@ -29,8 +29,8 @@ entity axil_to_reg is
     G_RD_LATENCY : positive := 1
   );
   port (
-    clk    : in   std_ulogic;
-    srst   : in   std_ulogic;
+    clk    : in    std_ulogic;
+    srst   : in    std_ulogic;
     s_axil : view s_axil_view;
     m_reg  : view m_reg_view
   );
@@ -38,29 +38,29 @@ end entity;
 
 architecture rtl of axil_to_reg is
 
-  signal rvalid  : std_ulogic;
-  signal rdata   : std_ulogic_vector(AXIL_DATA_RANGE);
-  signal rresp   : std_ulogic_vector(AXIL_RESP_RANGE);
-  signal bvalid  : std_ulogic;
-  signal bresp   : std_ulogic_vector(AXIL_RESP_RANGE);
+  signal rvalid : std_ulogic;
+  signal rdata  : std_ulogic_vector(AXIL_DATA_RANGE);
+  signal rresp  : std_ulogic_vector(AXIL_RSP_RANGE);
+  signal bvalid : std_ulogic;
+  signal bresp  : std_ulogic_vector(AXIL_RSP_RANGE);
   --
   signal axil_r0 : axis_t (
     tdata(AXIL_DATA_RANGE),
     tkeep(0 downto 0),
-    tuser(AXIL_RESP_RANGE)
+    tuser(AXIL_RSP_RANGE)
   );
   signal axil_r1 : axis_t (
     tdata(AXIL_DATA_RANGE),
     tkeep(0 downto 0),
-    tuser(AXIL_RESP_RANGE)
+    tuser(AXIL_RSP_RANGE)
   );
   signal axil_b0 : axis_t (
-    tdata(AXIL_RESP_RANGE),
+    tdata(AXIL_RSP_RANGE),
     tkeep(0 downto 0),
     tuser(0 downto 0)
   );
   signal axil_b1 : axis_t (
-    tdata(AXIL_RESP_RANGE),
+    tdata(AXIL_RSP_RANGE),
     tkeep(0 downto 0),
     tuser(0 downto 0)
   );
@@ -92,7 +92,8 @@ begin
     d(0) => m_reg.ren,
     q(0) => rvalid
   );
-  rresp <= AXI_RESP_SLVERR when m_reg.rerr else AXI_RESP_OKAY;
+
+  rresp <= AXI_RSP_SLVERR when m_reg.rerr else AXI_RSP_OKAY;
   rdata <= m_reg.rdata;
 
   -- Read response buffer.
@@ -101,20 +102,21 @@ begin
   -- if the master is stalling the read response channel while there are still
   -- outstanding requests that the slave has not yet completed.
   u_r_fifo : entity work.axis_fifo
-  generic map(
-    G_DEPTH => round_up_pwr2(G_RD_LATENCY + 2),
-    G_PACKET_MODE => false,
+  generic map (
+    G_DEPTH         => round_up_pwr2(G_RD_LATENCY + 2),
+    G_PACKET_MODE   => false,
     G_DROP_OVERSIZE => false,
-    G_USE_TLAST => false,
-    G_USE_TKEEP => false,
-    G_USE_TUSER => true
+    G_USE_TLAST     => false,
+    G_USE_TKEEP     => false,
+    G_USE_TUSER     => true
   )
-  port map(
+  port map (
     clk    => clk,
     srst   => srst,
     s_axis => axil_r0,
     m_axis => axil_r1
   );
+
   axil_r0.tvalid <= rvalid;
   axil_r0.tdata  <= rdata;
   axil_r0.tlast  <= '1';
@@ -125,7 +127,6 @@ begin
   s_axil.rvalid  <= axil_r1.tvalid;
   s_axil.rdata   <= axil_r1.tdata;
   s_axil.rresp   <= axil_r1.tuser;
-
 
   -- ---------------------------------------------------------------------------
   m_reg.wen      <= s_axil.awvalid and s_axil.wvalid and (s_axil.bready or not s_axil.bvalid);
@@ -149,23 +150,25 @@ begin
     d(0) => m_reg.wen,
     q(0) => bvalid
   );
-  bresp <= AXI_RESP_SLVERR when m_reg.werr else AXI_RESP_OKAY;
+
+  bresp <= AXI_RSP_SLVERR when m_reg.werr else AXI_RSP_OKAY;
 
   u_b_fifo : entity work.axis_fifo
-  generic map(
-    G_DEPTH => round_up_pwr2(G_WR_LATENCY + 2),
-    G_PACKET_MODE => false,
+  generic map (
+    G_DEPTH         => round_up_pwr2(G_WR_LATENCY + 2),
+    G_PACKET_MODE   => false,
     G_DROP_OVERSIZE => false,
-    G_USE_TLAST => false,
-    G_USE_TKEEP => false,
-    G_USE_TUSER => false
+    G_USE_TLAST     => false,
+    G_USE_TKEEP     => false,
+    G_USE_TUSER     => false
   )
-  port map(
+  port map (
     clk    => clk,
     srst   => srst,
     s_axis => axil_b0,
     m_axis => axil_b1
   );
+
   axil_b0.tvalid <= bvalid;
   axil_b0.tdata  <= bresp;
   axil_b0.tlast  <= '1';

@@ -93,7 +93,7 @@ begin
   end process;
 
   -- ---------------------------------------------------------------------------
-  prc_assign_wr_req : process (all) is begin
+  prc_assign_req : process (all) is begin
     if wr_state = ST_WR_WRITING then
       m_axil.awvalid <= s_axil(wr_select).awvalid;
       m_axil.awaddr  <= s_axil(wr_select).awaddr;
@@ -109,10 +109,7 @@ begin
       m_axil.wstrb   <= (others=> '-');
       m_axil.bready  <= '0';
     end if;
-  end process;
 
-  -- ---------------------------------------------------------------------------
-  prc_assign_rd_req : process (all) is begin
     if rd_state = ST_RD_READING then
       m_axil.arvalid <= s_axil(rd_select).arvalid;
       m_axil.araddr  <= s_axil(rd_select).araddr;
@@ -125,23 +122,21 @@ begin
   end process;
 
   -- ---------------------------------------------------------------------------
-  prc_assign_rsp : process (all) is begin
-    for master in s_axil'range loop
-
-      s_axil(master) <= m_axil;
-
-      if wr_select /= master or wr_state /= ST_WR_WRITING then
-        s_axil(master).awready <= '0';
-        s_axil(master).wready  <= '0';
-        s_axil(master).bvalid  <= '0';
-      end if;
-
-      if rd_select /= master or rd_state /= ST_RD_READING then
-        s_axil(master).arready <= '0';
-        s_axil(master).rvalid  <= '0';
-      end if;
-
-    end loop;
-  end process;
+  gen_assign_rsp : for i in s_axil'range generate
+    signal writing : std_ulogic_vector(s_axil'range);
+    signal reading : std_ulogic_vector(s_axil'range);
+  begin
+    writing(i) <= to_sl(wr_select = i and wr_state = ST_WR_WRITING);
+    reading(i) <= to_sl(rd_select = i and rd_state = ST_RD_READING);
+    --
+    s_axil(i).awready <= m_axil.awready and writing(i);
+    s_axil(i).wready  <= m_axil.wready and writing(i);
+    s_axil(i).bvalid  <= m_axil.bvalid and writing(i);
+    s_axil(i).bresp   <= m_axil.bresp;
+    s_axil(i).arready <= m_axil.arready and reading(i);
+    s_axil(i).rvalid  <= m_axil.rvalid and reading(i);
+    s_axil(i).rresp   <= m_axil.rresp;
+    s_axil(i).rdata   <= m_axil.rdata;
+  end generate;
 
 end architecture;

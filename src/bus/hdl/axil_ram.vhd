@@ -29,7 +29,7 @@ entity axil_ram is
   port (
     clk    : in    std_ulogic;
     srst   : in    std_ulogic;
-    s_axil : view  s_axil_view;
+    s_axil : view  s_axil_view
   );
 end entity;
 
@@ -69,7 +69,7 @@ begin
     a_rdat => open,
     b_clk  => clk,
     b_en   => '1',
-    b_wen  => b"0000",
+    b_wen  => (others=> '0'),
     b_addr => i0_reg.raddr(G_ADDR_WIDTH - 1 + 2 downto 2),
     b_wdat => (others=> '0'),
     b_rdat => i0_reg.rdata
