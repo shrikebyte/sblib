@@ -61,8 +61,8 @@ entity spi_mgr is
   port (
     clk      : in    std_ulogic;
     srst     : in    std_ulogic;
-    s_axis   : view  s_axis_v;
-    m_axis   : view  m_axis_v;
+    s_axis   : view  s_axis_view;
+    m_axis   : view  m_axis_view;
     spi_sck  : out   std_ulogic;
     spi_csn  : out   std_ulogic_vector((2 ** G_CS_BITS) - 1 downto 0);
     spi_mosi : out   std_ulogic;
