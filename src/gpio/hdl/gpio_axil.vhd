@@ -16,18 +16,15 @@ use work.util_pkg.all;
 use work.bus_pkg.all;
 use work.gpio_regs_pkg.all;
 use work.gpio_register_record_pkg.all;
-use work.gpio_pkg.all;
 
 entity gpio_axil is
   generic (
-    --! Channel mode
-    G_CH_MODE : gpio_mode_arr_t(gpio_range) := (others => GPIO_MODE_INOUT);
-    --! Insert bit synchronizer before input. Only applicable for "IN" and "INOUT".
-    G_CH_SYNC : bool_arr_t(gpio_range) := (others => false);
-    -- Default output value. Only applicable for "OUT" and "INOUT".
-    G_CH_DFLT_O : slv_arr_t(gpio_range)(AXIL_DATA_RANGE) := (others => (others => '0'));
-    -- Default tri-state value. Only applicable for "OUT" and "INOUT".
-    G_CH_DFLT_T : slv_arr_t(gpio_range)(AXIL_DATA_RANGE) := (others => (others => '0'))
+    -- Use double-flop input synchronizer
+    G_SYNC_I : boolean := false;
+    -- Default output value
+    G_RST_VAL_O : std_ulogic_vector(AXIL_DATA_RANGE) := (others => '0');
+    -- Default tri-state value
+    G_RST_VAL_T : std_ulogic_vector(AXIL_DATA_RANGE) := (others => '0')
   );
   port (
     clk  : in    std_logic;
@@ -36,98 +33,105 @@ entity gpio_axil is
     --
     s_axil : view s_axil_view;
     --
-    gpio_i : in    slv_arr_t(gpio_range)(AXIL_DATA_RANGE) := (others => (others => '0'));
-    gpio_o : out   slv_arr_t(gpio_range)(AXIL_DATA_RANGE);
-    gpio_t : out   slv_arr_t(gpio_range)(AXIL_DATA_RANGE)
+    gpio_i : in    std_ulogic_vector(AXIL_DATA_RANGE) := (others => '0');
+    gpio_o : out   std_ulogic_vector(AXIL_DATA_RANGE);
+    gpio_t : out   std_ulogic_vector(AXIL_DATA_RANGE)
   );
 end entity;
 
 architecture rtl of gpio_axil is
 
-  signal i : gpio_regs_up_t         := gpio_regs_up_init;
-  signal o : gpio_regs_down_t       := gpio_regs_down_init;
-  signal r : gpio_reg_was_read_t    := gpio_reg_was_read_init;
-  signal w : gpio_reg_was_written_t := gpio_reg_was_written_init;
+  signal u : gpio_regs_up_t;
+  signal d : gpio_regs_down_t;
+  signal r : gpio_reg_was_read_t;
+  signal w : gpio_reg_was_written_t;
 
-  signal irq_pre     : std_logic_vector(gpio_range);
-  signal regi_din    : slv_arr_t(gpio_range)(AXIL_DATA_RANGE);
-  signal regi_dout   : slv_arr_t(gpio_range)(AXIL_DATA_RANGE);
-  signal rego_dout   : slv_arr_t(gpio_range)(AXIL_DATA_RANGE);
-  signal regw_dout   : std_logic_vector(gpio_range);
-  signal regi_tri    : slv_arr_t(gpio_range)(AXIL_DATA_RANGE);
-  signal rego_tri    : slv_arr_t(gpio_range)(AXIL_DATA_RANGE);
-  signal regw_tri    : std_logic_vector(gpio_range);
-  signal rego_inten  : slv_arr_t(gpio_range)(AXIL_DATA_RANGE);
-  signal regi_intsts : slv_arr_t(gpio_range)(AXIL_DATA_RANGE);
-  signal rego_intsts : slv_arr_t(gpio_range)(AXIL_DATA_RANGE);
+  signal gpio_in : std_ulogic_vector(AXIL_DATA_RANGE);
+  signal edge    : std_ulogic_vector(AXIL_DATA_RANGE);
+  signal irq_sts : std_ulogic_vector(AXIL_DATA_RANGE);
 
 begin
 
   -- ---------------------------------------------------------------------------
-  u_gpio_reg_file : entity work.gpio_register_file_axi_lite
+  u_reg_file : entity work.gpio_register_file_axi_lite
   port map (
     clk             => clk,
     reset           => srst,
     s_axil          => s_axil,
-    regs_up         => i,
-    regs_down       => o,
+    regs_up         => u,
+    regs_down       => d,
     reg_was_read    => r,
     reg_was_written => w
   );
 
   -- ---------------------------------------------------------------------------
-  prc_irq_reduce : process (clk) is begin
+  gen_sync : if G_SYNC_I generate
+
+    u_cdc_bit : entity work.cdc_bit
+    generic map (
+      G_USE_SRC_REG => false,
+      G_EXTRA_SYNC  => 0
+    )
+    port map (
+      src_bit => gpio_i,
+      dst_clk => clk,
+      dst_bit => gpio_in
+    );
+
+  else generate
+
+    gpio_in <= gpio_i;
+
+  end generate;
+
+  -- ---------------------------------------------------------------------------
+  u_edge_detect : entity work.edge_detect
+  generic map (
+    G_WIDTH => AXIL_DATA_WIDTH
+  )
+  port map (
+    clk  => clk,
+    srst => srst,
+    din  => gpio_in,
+    both => edge
+  );
+
+  u_irq_reg : entity work.irq_reg
+  generic map (
+    G_WIDTH => AXIL_DATA_WIDTH
+  )
+  port map (
+    clk  => clk,
+    srst => srst,
+    clr  => std_logic_vector(d.isr.isr),
+    en   => std_logic_vector(d.ier.ier),
+    set  => edge,
+    sts  => irq_sts,
+    irq  => irq
+  );
+
+  u.isr.isr <= unsigned(irq_sts);
+  u.din.din <= unsigned(gpio_in);
+
+  -- ---------------------------------------------------------------------------
+  prc_sticky_regs : process (clk) is begin
     if rising_edge(clk) then
-      irq <= or irq_pre;
+      if w.dout then
+        gpio_o <= std_logic_vector(d.dout.dout);
+      end if;
+
+      if w.tri then
+        gpio_t <= std_logic_vector(d.tri.tri);
+      end if;
 
       if srst then
-        irq <= '0';
+        gpio_o <= G_RST_VAL_O;
+        gpio_t <= G_RST_VAL_T;
       end if;
     end if;
   end process;
 
-  -- ---------------------------------------------------------------------------
-  gen_chans : for j in gpio_range generate
-
-    u_gpio_chan : entity work.gpio_chan
-    generic map (
-      G_CH_WIDTH  => AXIL_DATA_WIDTH,
-      G_CH_MODE   => G_CH_MODE(j),
-      G_CH_SYNC   => G_CH_SYNC(j),
-      G_CH_DFLT_O => G_CH_DFLT_O(j),
-      G_CH_DFLT_T => G_CH_DFLT_T(j)
-    )
-    port map (
-      clk         => clk,
-      srst        => srst,
-      irq         => irq_pre(j),
-      regi_din    => regi_din(j),
-      regi_dout   => regi_dout(j),
-      rego_dout   => rego_dout(j),
-      regw_dout   => regw_dout(j),
-      regi_tri    => regi_tri(j),
-      rego_tri    => rego_tri(j),
-      regw_tri    => regw_tri(j),
-      rego_inten  => rego_inten(j),
-      regi_intsts => regi_intsts(j),
-      rego_intsts => rego_intsts(j),
-      gpio_i      => gpio_i(j),
-      gpio_o      => gpio_o(j),
-      gpio_t      => gpio_t(j)
-    );
-
-    i.chan(j).din.din   <= unsigned(regi_din(j));
-    i.chan(j).dout.dout <= unsigned(regi_dout(j));
-    i.chan(j).tri.tri   <= unsigned(regi_tri(j));
-    i.chan(j).isr.isr   <= unsigned(regi_intsts(j));
-
-    rego_intsts(j) <= std_logic_vector(o.chan(j).isr.isr);
-    rego_dout(j)   <= std_logic_vector(o.chan(j).dout.dout);
-    regw_dout(j)   <= w.chan(j).dout;
-    rego_tri(j)    <= std_logic_vector(o.chan(j).tri.tri);
-    regw_tri(j)    <= w.chan(j).tri;
-    rego_inten(j)  <= std_logic_vector(o.chan(j).ier.ier);
-
-  end generate;
+  u.dout.dout <= unsigned(gpio_o);
+  u.tri.tri   <= unsigned(gpio_t);
 
 end architecture;

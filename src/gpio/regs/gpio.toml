@@ -9,33 +9,15 @@
 # Registers for the GPIO (General Purpose Input Output) module
 ################################################################################
 
-################################################################################
-[chan]
-
-type = "register_array"
-array_length = 3
-description = """
-GPIO Channel Registers.
-
-The GPIO module has three 32-bit channels, each of which can be configured by
-the firmware designer as output-only, input-only or input-output. Having the
-firmware designer designate a channel as input-only or output-only helps prevent
-software from accidentally assigning the wrong direction to a pin when the GPIO
-direction is known ahead of time, preventing potential hardware damage.
-"""
-
 
 ################################################################################
-[chan.isr]
+[isr]
+description = "Interrupt Status Register"
 mode = "r_wpulse"
-description = """
-Interrupt Status Register.
-"""
 
-[chan.isr.isr]
-type = "bit_vector"
-width = 32
-description = """
+isr.type = "bit_vector"
+isr.width = 32
+isr.description = """
 The Interrupt Status Register uses one bit to represent each interrupt
 condition. When an interrupt condition occurs, it is immediately latched in
 this register. The latched interrupt condition is cleared by writing a 1 to its
@@ -60,24 +42,19 @@ Write definition for each bit:
 * 1 = Clear interrupt status
 
 For the GPIO module,
-an interrupt is latched for a specific bit if the bit is configured as an input
-and a 0->1 or 1->0 transition is detected. This implies that interrupts may only
-occur for a GPIO bit that has been configured as an input, either statically
-by the firmware designer, or dynamically at run-time by software.
+an interrupt is latched for a specific bit's input if
+a 0->1 or 1->0 transition is detected.
 """
 
 
 ################################################################################
-[chan.ier]
+[ier]
+description = "Interrupt Enable Register"
 mode = "r_w"
-description = """
-Interrupt Enable Register.
-"""
 
-[chan.ier.ier]
-type = "bit_vector"
-width = 32
-description = """
+ier.type = "bit_vector"
+ier.width = 32
+ier.description = """
 Read & write definition for each bit:
 
 * 0 = Disable interrupt
@@ -86,72 +63,53 @@ Read & write definition for each bit:
 
 
 ################################################################################
-[chan.dout]
+[dout]
+description = "Output Data Register"
 mode = "r_wpulse"
-description = """
-Output Data Register.
-"""
 
-[chan.dout.dout]
-type = "bit_vector"
-width = 32
-description = """
-When the channel is configured for output mode, data written to this register
-is output at the GPIO channel's output port.
+dout.type = "bit_vector"
+dout.width = 32
+dout.description = """
+Data written to this register is output at the GPIO channel's output port.
 
 The default value of this register is hard-coded by the FPGA. Ignore the generic
 default value given in this register description (it is overridden in the FPGA).
 Additional documentation must be provided by the firmware designer that gives
 the true default value and for the mapping of these register bits to FPGA
-signals, because these settings will be change for different firmware builds.
-
-This register is only applicable when the channel is configured for input or
-inout mode.
+signals, because these settings could change for different firmware builds.
 """
 
 ################################################################################
-[chan.din]
+[din]
 mode = "r"
-description = """
-Input Data Register.
-"""
+description = "Input Data Register"
 
-[chan.din.din]
-type = "bit_vector"
-width = 32
-description = """
-When the channel is configured for input mode, reads to this register return the
-data present at the GPIO channel's input port.
+din.type = "bit_vector"
+din.width = 32
+din.description = """
+Reads to this register return the data present at the GPIO channel's input port.
 
 Additional documentation must be provided by the firmware designer that gives
 the mapping of these register bits to FPGA
-signals, because these settings will be change for different firmware builds.
-
-This register is only applicable when the channel is configured for output or
-inout mode.
+signals, because these settings could change for different firmware builds.
 """
 
 ################################################################################
-[chan.tri]
+[tri]
 mode = "r_wpulse"
-description = """
-Tri-state (Input) Enable Register.
-"""
+description = "Tri-state (Input) Enable Register"
 
-[chan.tri.tri]
-type = "bit_vector"
-width = 32
-description = """
+tri.type = "bit_vector"
+tri.width = 32
+tri.description = """
 Read & write definition for each bit:
 
-* 0 = Configure as output
-* 1 = Configure as input
+* 0 = Configure pin as output
+* 1 = Configure pin as input
 
 The default value of this register is hard-coded by the FPGA. Ignore the generic
 default value given in this register description (it is overridden in the FPGA).
 Additional documentation must be provided by the firmware designer that gives
 the true default value and for the mapping of these register bits to FPGA
-signals, because these settings will be change for different firmware builds.
-
-This register is only applicable when the channel is configured for inout mode.
+signals, because these settings could change for different firmware builds.
 """

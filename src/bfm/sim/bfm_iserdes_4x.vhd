@@ -14,23 +14,23 @@ use ieee.std_logic_1164.all;
 
 entity bfm_iserdes_4x is
   port (
-    clk_2x : in    std_logic;
-    clk_1x : in    std_logic;
-    d      : in    std_logic;
-    q      : out   std_logic_vector(3 downto 0)
+    clk_2x : in    std_ulogic;
+    clk_1x : in    std_ulogic;
+    d      : in    std_ulogic;
+    q      : out   std_ulogic_vector(3 downto 0)
   );
 end entity;
 
 architecture sim of bfm_iserdes_4x is
 
-  signal dp   : std_logic;
-  signal dn   : std_logic;
-  signal q1   : std_logic;
-  signal q2   : std_logic;
-  signal q1ff : std_logic;
-  signal q2ff : std_logic;
-  signal q1f2 : std_logic;
-  signal q2f2 : std_logic;
+  signal dp   : std_ulogic;
+  signal dn   : std_ulogic;
+  signal q1   : std_ulogic;
+  signal q2   : std_ulogic;
+  signal q1ff : std_ulogic;
+  signal q2ff : std_ulogic;
+  signal q1f2 : std_ulogic;
+  signal q2f2 : std_ulogic;
 
 begin
 

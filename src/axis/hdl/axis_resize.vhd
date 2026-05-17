@@ -107,7 +107,7 @@ begin
     signal   data_reg_shft         : std_ulogic_vector(S_DW - 1 downto 0);
     signal   user_reg_shft         : std_ulogic_vector(S_UW - 1 downto 0);
     signal   keep_reg_shft         : std_ulogic_vector(S_KW - 1 downto 0);
-    signal   keep_reg_shft_is_zero : std_logic;
+    signal   keep_reg_shft_is_zero : std_ulogic;
     signal   tkeep_contracted      : std_ulogic_vector(RATIO - 1 downto 0);
 
     function find_last_idx (

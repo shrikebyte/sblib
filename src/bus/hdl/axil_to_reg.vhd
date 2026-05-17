@@ -80,10 +80,10 @@ begin
   -- rready will always be high whenever an rvalid pulse arrives.
   u_r_delay : entity work.shift_reg
   generic map (
-    G_WIDTH     => 1,
-    G_DEPTH     => G_RD_LATENCY - 1,
-    G_RESET_VAL => "0",
-    G_OUT_REG   => true
+    G_WIDTH   => 1,
+    G_DEPTH   => G_RD_LATENCY - 1,
+    G_RST_VAL => "0",
+    G_OUT_REG => true
   )
   port map (
     clk  => clk,
@@ -138,10 +138,10 @@ begin
 
   u_b_delay : entity work.shift_reg
   generic map (
-    G_WIDTH     => 1,
-    G_DEPTH     => G_WR_LATENCY - 1,
-    G_RESET_VAL => "0",
-    G_OUT_REG   => true
+    G_WIDTH   => 1,
+    G_DEPTH   => G_WR_LATENCY - 1,
+    G_RST_VAL => "0",
+    G_OUT_REG => true
   )
   port map (
     clk  => clk,

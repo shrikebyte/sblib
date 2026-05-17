@@ -11,27 +11,20 @@
 
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 entity irq_reg is
   generic (
-    --! Bit width of the interrupt vector
-    G_WIDTH : positive := 32
+    G_WIDTH : positive
   );
   port (
-    --! Clock
-    clk : in    std_logic;
-    --! Synchronous reset
-    srst : in    std_logic;
-    --! Pulse to clear the sticky interrupt
-    clr : in    std_logic_vector(G_WIDTH - 1 downto 0);
-    --! Enable the interrupt source to set the global interrupt
-    en : in    std_logic_vector(G_WIDTH - 1 downto 0);
-    --! Pulse to set the sticky interrupt
-    src : in    std_logic_vector(G_WIDTH - 1 downto 0);
-    --! Interrupt status
-    sts : out   std_logic_vector(G_WIDTH - 1 downto 0);
-    --! Global interrupt status
-    irq : out   std_logic
+    clk  : in    std_ulogic;
+    srst : in    std_ulogic;
+    clr  : in    std_ulogic_vector(G_WIDTH - 1 downto 0);
+    en   : in    std_ulogic_vector(G_WIDTH - 1 downto 0);
+    set  : in    std_ulogic_vector(G_WIDTH - 1 downto 0);
+    sts  : out   std_ulogic_vector(G_WIDTH - 1 downto 0);
+    irq  : out   std_ulogic
   );
 end entity;
 
@@ -39,15 +32,14 @@ architecture rtl of irq_reg is
 
 begin
 
-  -- ---------------------------------------------------------------------------
   prc_irq : process (clk) is begin
     if rising_edge(clk) then
 
-      for i0 in 0 to G_WIDTH - 1 loop
-        if clr(i0) then
-          sts(i0) <= '0';
-        elsif src(i0) then
-          sts(i0) <= '1';
+      for i in sts'range loop
+        if clr(i) then
+          sts(i) <= '0';
+        elsif set(i) then
+          sts(i) <= '1';
         end if;
       end loop;
 

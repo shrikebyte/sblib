@@ -56,18 +56,18 @@ entity ram is
     G_RD_LATENCY : positive := 1
   );
   port (
-    a_clk  : in    std_logic                                                     := '0';
-    a_en   : in    std_logic                                                     := '1';
-    a_wen  : in    std_logic_vector(G_BYTES_PER_ROW - 1 downto 0)                := (others=> '0');
-    a_addr : in    std_logic_vector(G_ADDR_WIDTH - 1 downto 0)                   := (others=> '0');
-    a_wdat : in    std_logic_vector(G_BYTES_PER_ROW * G_BYTE_WIDTH - 1 downto 0) := (others=> '0');
-    a_rdat : out   std_logic_vector(G_BYTES_PER_ROW * G_BYTE_WIDTH - 1 downto 0);
-    b_clk  : in    std_logic                                                     := '0';
-    b_en   : in    std_logic                                                     := '1';
-    b_wen  : in    std_logic_vector(G_BYTES_PER_ROW - 1 downto 0)                := (others=> '0');
-    b_addr : in    std_logic_vector(G_ADDR_WIDTH - 1 downto 0)                   := (others=> '0');
-    b_wdat : in    std_logic_vector(G_BYTES_PER_ROW * G_BYTE_WIDTH - 1 downto 0) := (others=> '0');
-    b_rdat : out   std_logic_vector(G_BYTES_PER_ROW * G_BYTE_WIDTH - 1 downto 0)
+    a_clk  : in    std_ulogic                                                     := '0';
+    a_en   : in    std_ulogic                                                     := '1';
+    a_wen  : in    std_ulogic_vector(G_BYTES_PER_ROW - 1 downto 0)                := (others=> '0');
+    a_addr : in    std_ulogic_vector(G_ADDR_WIDTH - 1 downto 0)                   := (others=> '0');
+    a_wdat : in    std_ulogic_vector(G_BYTES_PER_ROW * G_BYTE_WIDTH - 1 downto 0) := (others=> '0');
+    a_rdat : out   std_ulogic_vector(G_BYTES_PER_ROW * G_BYTE_WIDTH - 1 downto 0);
+    b_clk  : in    std_ulogic                                                     := '0';
+    b_en   : in    std_ulogic                                                     := '1';
+    b_wen  : in    std_ulogic_vector(G_BYTES_PER_ROW - 1 downto 0)                := (others=> '0');
+    b_addr : in    std_ulogic_vector(G_ADDR_WIDTH - 1 downto 0)                   := (others=> '0');
+    b_wdat : in    std_ulogic_vector(G_BYTES_PER_ROW * G_BYTE_WIDTH - 1 downto 0) := (others=> '0');
+    b_rdat : out   std_ulogic_vector(G_BYTES_PER_ROW * G_BYTE_WIDTH - 1 downto 0)
   );
 end entity;
 

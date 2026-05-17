@@ -23,8 +23,8 @@ entity axil_decoder is
     G_BASEADDRS : slv_arr_t(open)(AXIL_ADDR_WIDTH - 1 downto 0)
   );
   port (
-    clk    : in    std_logic;
-    srst   : in    std_logic;
+    clk    : in    std_ulogic;
+    srst   : in    std_ulogic;
     s_axil : view  s_axil_view;
     m_axil : view (m_axil_view) of bus_axil_arr_t
   );
@@ -123,15 +123,15 @@ architecture rtl of axil_decoder is
   type   wr_state_t is (ST_WR_IDLE, ST_WR_WRITING, ST_WR_DECODE_ERR_W, ST_WR_DECODE_ERR_B);
   signal wr_state           : wr_state_t;
   signal wr_select          : natural range 0 to SLAVE_NOT_SELECTED_IDX;
-  signal wr_dec_err_awready : std_logic;
-  signal wr_dec_err_wready  : std_logic;
-  signal wr_dec_err_bvalid  : std_logic;
+  signal wr_dec_err_awready : std_ulogic;
+  signal wr_dec_err_wready  : std_ulogic;
+  signal wr_dec_err_bvalid  : std_ulogic;
 
   type   rd_state_t is (ST_RD_IDLE, ST_RD_READING, ST_RD_DECODE_ERR);
   signal rd_state           : rd_state_t;
   signal rd_select          : natural range 0 to SLAVE_NOT_SELECTED_IDX;
-  signal rd_dec_err_arready : std_logic;
-  signal rd_dec_err_rvalid  : std_logic;
+  signal rd_dec_err_arready : std_ulogic;
+  signal rd_dec_err_rvalid  : std_ulogic;
 
 begin
 

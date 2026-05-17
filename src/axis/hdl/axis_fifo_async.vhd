@@ -43,7 +43,7 @@ entity axis_fifo_async is
     s_sts_depth_spec : out   u_unsigned(clog2(G_DEPTH) downto 0);
     s_sts_depth_comm : out   u_unsigned(clog2(G_DEPTH) downto 0);
     -- Output interface
-    m_clk            : in    std_logic;
+    m_clk            : in    std_ulogic;
     m_axis           : view  m_axis_view;
     m_sts_dropped    : out   std_ulogic;
     m_sts_depth_spec : out   u_unsigned(clog2(G_DEPTH) downto 0);

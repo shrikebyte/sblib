@@ -18,19 +18,18 @@ entity shift_reg is
   generic (
     G_WIDTH : positive;
     G_DEPTH : natural;
-    --! Only applicable if G_OUT_REG is true
-    G_RESET_VAL : std_logic_vector(G_WIDTH - 1 downto 0) := (others => '0');
-    --! Adds an additional output register to the shift register, changing the
-    --! depth to G_DEPTH + 1
+    -- Only applicable if G_OUT_REG is true
+    G_RST_VAL : std_ulogic_vector(G_WIDTH - 1 downto 0) := (others=> '0');
+    -- Adds an additional output register to the shift register, changing the
+    -- depth to G_DEPTH + 1. This must be enabled to specify a reset value.
     G_OUT_REG : boolean := false
   );
   port (
-    clk : in    std_logic;
-    --! srst is only applicable if G_OUT_REG is true
-    srst : in    std_logic := '0';
-    en   : in    std_logic := '1';
-    d    : in    std_logic_vector(G_WIDTH - 1 downto 0);
-    q    : out   std_logic_vector(G_WIDTH - 1 downto 0)
+    clk  : in    std_ulogic;
+    srst : in    std_ulogic := '0';
+    en   : in    std_ulogic := '1';
+    d    : in    std_ulogic_vector(G_WIDTH - 1 downto 0);
+    q    : out   std_ulogic_vector(G_WIDTH - 1 downto 0)
   );
 end entity;
 
@@ -55,7 +54,7 @@ begin
         end if;
 
         if srst then
-          q <= G_RESET_VAL;
+          q <= G_RST_VAL;
         end if;
       end if;
     end process;
@@ -64,7 +63,7 @@ begin
   -- Shift register
   else generate
 
-    signal sr : slv_arr_t(G_DEPTH - 1 downto 0)(G_WIDTH - 1 downto 0) := (others=> G_RESET_VAL);
+    signal sr : slv_arr_t(G_DEPTH - 1 downto 0)(d'range);
 
   begin
 
@@ -78,14 +77,14 @@ begin
 
     gen_out_reg : if G_OUT_REG generate
 
-      signal cnt : integer range 0 to G_DEPTH;
+      signal cnt : integer range 0 to G_DEPTH - 1;
 
     begin
 
       prc_out_reg : process (clk) is begin
         if rising_edge(clk) then
           if en then
-            if cnt = G_DEPTH then
+            if cnt = (G_DEPTH - 1) then
               q <= sr(G_DEPTH - 1);
             else
               cnt <= cnt + 1;
@@ -93,7 +92,7 @@ begin
           end if;
 
           if srst then
-            q   <= G_RESET_VAL;
+            q   <= G_RST_VAL;
             cnt <= 0;
           end if;
         end if;

@@ -15,7 +15,7 @@ use ieee.numeric_std.all;
 
 entity cnt_reg is
   generic (
-    G_WIDTH : positive := 32
+    G_WIDTH : positive
   );
   port (
     clk  : in    std_ulogic;
@@ -28,13 +28,11 @@ end entity;
 
 architecture rtl of cnt_reg is
 
-  constant MAX : u_unsigned(cnt'range) := (others=> '1');
-
 begin
 
   prc_cnt : process (clk) is begin
     if rising_edge(clk) then
-      if inc = '1' and cnt /= MAX then
+      if inc and not (and cnt) then
         cnt <= cnt + 1;
       end if;
 

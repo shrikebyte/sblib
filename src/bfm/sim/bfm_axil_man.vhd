@@ -25,7 +25,7 @@ entity bfm_axil_man is
     G_BUS_HANDLE : bus_master_t
   );
   port (
-    clk    : in    std_logic;
+    clk    : in    std_ulogic;
     m_axil : view  m_axil_view
   );
 end entity;

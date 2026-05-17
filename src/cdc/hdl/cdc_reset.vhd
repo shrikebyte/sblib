@@ -30,8 +30,8 @@ architecture rtl of cdc_reset is
 
   constant SYNC_LEN : positive := 2 + G_EXTRA_SYNC;
 
-  signal cdc_regs : std_logic_vector(SYNC_LEN - 1 downto 0) := (others=> '1');
-  signal arst_0   : std_logic;
+  signal cdc_regs : std_ulogic_vector(SYNC_LEN - 1 downto 0) := (others=> '1');
+  signal arst_0   : std_ulogic;
 
   attribute async_reg                 : string;
   attribute shreg_extract             : string;

@@ -20,19 +20,19 @@ use work.stdver_register_record_pkg.all;
 
 entity stdver_axil is
   generic (
-    G_DEVICE_ID  : std_logic_vector(31 downto 0) := x"DEAD_BEEF";
-    G_VER_MAJOR  : natural range 0 to 255        := 0;
-    G_VER_MINOR  : natural range 0 to 255        := 1;
-    G_VER_PATCH  : natural range 0 to 255        := 0;
-    G_ENGR_BUILD : boolean                       := true;
-    G_BUILD_DATE : std_logic_vector(31 downto 0) := x"DEAD_BEEF";
-    G_BUILD_TIME : std_logic_vector(23 downto 0) := x"DE_BEEF";
-    G_GIT_HASH   : std_logic_vector(31 downto 0) := x"DEAD_BEEF";
-    G_GIT_DIRTY  : boolean                       := true
+    G_DEVICE_ID  : std_ulogic_vector(31 downto 0) := x"DEAD_BEEF";
+    G_VER_MAJOR  : natural range 0 to 255         := 0;
+    G_VER_MINOR  : natural range 0 to 255         := 1;
+    G_VER_PATCH  : natural range 0 to 255         := 0;
+    G_ENGR_BUILD : boolean                        := true;
+    G_BUILD_DATE : std_ulogic_vector(31 downto 0) := x"DEAD_BEEF";
+    G_BUILD_TIME : std_ulogic_vector(23 downto 0) := x"DE_BEEF";
+    G_GIT_HASH   : std_ulogic_vector(31 downto 0) := x"DEAD_BEEF";
+    G_GIT_DIRTY  : boolean                        := true
   );
   port (
-    clk    : in    std_logic;
-    srst   : in    std_logic;
+    clk    : in    std_ulogic;
+    srst   : in    std_ulogic;
     s_axil : view  s_axil_view
   );
 end entity;
@@ -46,7 +46,7 @@ architecture rtl of stdver_axil is
 
 begin
 
-  u_stdver_reg_file : entity work.stdver_register_file_axi_lite
+  u_reg_file : entity work.stdver_register_file_axi_lite
   port map (
     clk             => clk,
     reset           => srst,

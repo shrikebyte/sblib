@@ -18,7 +18,7 @@ package util_pkg is
 
   -- ---------------------------------------------------------------------------
   -- Array types
-  type slv_arr_t is array(natural range <>) of std_logic_vector;
+  type slv_arr_t is array(natural range <>) of std_ulogic_vector;
   type unsigned_arr_t is array(natural range <>) of u_unsigned;
   type signed_arr_t is array(natural range <>) of u_signed;
   type int_arr_t is array(natural range <>) of integer;
@@ -30,7 +30,7 @@ package util_pkg is
   -- ---------------------------------------------------------------------------
   -- Functions
   function cnt_ones (
-    vec : std_logic_vector
+    vec : std_ulogic_vector
   ) return natural;
 
   function cnt_ones (
@@ -46,12 +46,12 @@ package util_pkg is
   ) return boolean;
 
   function is_onehot (
-    vec : std_logic_vector
+    vec : std_ulogic_vector
   ) return boolean;
 
   function is_onehot (
-    vec : std_logic_vector
-  ) return std_logic;
+    vec : std_ulogic_vector
+  ) return std_ulogic;
 
   function bin_to_gray (
     bin : u_unsigned
@@ -74,11 +74,11 @@ package util_pkg is
   ) return natural;
 
   function find_hi_idx (
-    vec : std_logic_vector
+    vec : std_ulogic_vector
   ) return natural;
 
   function find_lo_idx (
-    vec : std_logic_vector
+    vec : std_ulogic_vector
   ) return natural;
 
   function to_sl (
@@ -152,7 +152,7 @@ package body util_pkg is
   -- ---------------------------------------------------------------------------
   -- Count the number of ones in a vector.
   function cnt_ones (
-    vec : std_logic_vector
+    vec : std_ulogic_vector
   ) return natural is
     variable tmp : natural := 0;
   begin
@@ -215,7 +215,7 @@ package body util_pkg is
   -- ---------------------------------------------------------------------------
   -- Return true if the vector has only one bit set to 1, otherwise false
   function is_onehot (
-    vec : std_logic_vector
+    vec : std_ulogic_vector
   ) return boolean is
     variable tmp : boolean := false;
   begin
@@ -232,9 +232,9 @@ package body util_pkg is
   -- ---------------------------------------------------------------------------
   -- Return 1 if the vector has only one bit set to 1, otherwise 0
   function is_onehot (
-    vec : std_logic_vector
-  ) return std_logic is
-    variable tmp : std_logic := '0';
+    vec : std_ulogic_vector
+  ) return std_ulogic is
+    variable tmp : std_ulogic := '0';
   begin
     for i in vec'range loop
       if vec(i) = '1' and tmp = '0' then
@@ -290,7 +290,7 @@ package body util_pkg is
     value : positive
   ) return boolean is
   begin
-    return is_onehot(std_logic_vector(to_unsigned(value, 32)));
+    return is_onehot(std_ulogic_vector(to_unsigned(value, 32)));
   end function;
 
   -- ---------------------------------------------------------------------------
@@ -312,7 +312,7 @@ package body util_pkg is
   -- Find the left-most index of an slv that is '1'. If no match, return
   -- left-most idx.
   function find_hi_idx (
-    vec : std_logic_vector
+    vec : std_ulogic_vector
   ) return natural is
   begin
     for i in vec'high downto vec'low loop
@@ -327,7 +327,7 @@ package body util_pkg is
   -- Find the right-most index of an slv that is '1'. If no match, return
   -- left-most idx.
   function find_lo_idx (
-    vec : std_logic_vector
+    vec : std_ulogic_vector
   ) return natural is
   begin
     for i in vec'low to vec'high loop

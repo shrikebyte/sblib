@@ -45,8 +45,8 @@ entity axil_init_mgr is
     G_XACTIONS : bus_xact_arr_t
   );
   port (
-    clk    : in    std_logic;
-    srst   : in    std_logic;
+    clk    : in    std_ulogic;
+    srst   : in    std_ulogic;
     m_axil : view  m_axil_view;
     m_axis : view  m_axis_view
   );

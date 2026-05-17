@@ -42,7 +42,7 @@ begin
   u_edge_detect : entity work.edge_detect
   generic map (
     G_WIDTH   => 1,
-    G_OUT_REG => false
+    G_RST_VAL => "0"
   )
   port map (
     clk     => clk,

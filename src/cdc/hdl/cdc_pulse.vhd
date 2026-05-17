@@ -14,15 +14,15 @@ use ieee.std_logic_1164.all;
 
 entity cdc_pulse is
   generic (
-    --! Number of additional synchronizer flip-flops
+    -- Number of additional synchronizer flip-flops
     G_EXTRA_SYNC : natural := 0;
-    --! Protect against pulse overloading at the input. If the user sends pulses
-    --! infrequently or if the src clock is over 2x slower than the output clock
-    --! then this can be set to false.
-    --! When set to true, this guarantees that one or more input pulses will
-    --! produce at least one output pulse. This does not guarantee that the same
-    --! number of pulses will be produced at the output as were received at
-    --! the input.
+    -- Protect against pulse overloading at the input. If the user sends pulses
+    -- infrequently or if the src clock is over 2x slower than the output clock
+    -- then this can be set to false.
+    -- When set to true, this guarantees that one or more input pulses will
+    -- produce at least one output pulse. This does not guarantee that the same
+    -- number of pulses will be produced at the output as were received at
+    -- the input.
     G_USE_FEEDBACK : boolean := true
   );
   port (

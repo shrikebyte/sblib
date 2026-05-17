@@ -19,10 +19,10 @@ use ieee.std_logic_1164.all;
 
 entity cdc_bit is
   generic (
-    --! True: Register the input; False: Don't register the input; If set to
-    --! false then src_clk is unused.
+    -- True: Register the input; False: Don't register the input; If set to
+    -- false then src_clk is unused.
     G_USE_SRC_REG : boolean := false;
-    --! Number of extra synchronizer flip-flops.
+    -- Number of extra synchronizer flip-flops.
     G_EXTRA_SYNC : natural := 0
   );
   port (

@@ -15,27 +15,6 @@ import sim_utils
 # TB definitions and generic permutations
 ################################################################################
 def add_configs(lib):
-    ## Stream Pipes
-    tb = lib.test_bench("strm_pipes_tb")
-
-    stagess = [1, 3]
-    ready_pipes = [True, False]
-    data_pipes = [True, False]
-    stall_probs = [50]
-
-    for stages, ready_pipe, data_pipe, stall_prob in product(
-        stagess, ready_pipes, data_pipes, stall_probs
-    ):
-        sim_utils.named_config(
-            tb,
-            {
-                "G_STAGES": stages,
-                "G_READY_PIPE": ready_pipe,
-                "G_DATA_PIPE": data_pipe,
-                "G_AXIS_STALL_PROB": stall_prob,
-            },
-        )
-
     ## CDC Vector
     tb = lib.test_bench("cdc_vector_tb")
 

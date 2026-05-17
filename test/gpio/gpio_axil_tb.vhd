@@ -6,7 +6,7 @@
 --# Copyright (C) Shrikebyte, LLC
 --# Licensed under the Apache 2.0 license, see LICENSE for details.
 --# ============================================================================
---# GPIO module testbench
+--# AXIL GPIO testbench
 --##############################################################################
 
 library ieee;
@@ -20,7 +20,6 @@ use vunit_lib.axi_lite_master_pkg.all;
 use work.util_pkg.all;
 use work.bus_pkg.all;
 use work.gpio_regs_pkg.all;
-use work.gpio_pkg.all;
 
 entity gpio_axil_tb is
   generic (
@@ -35,25 +34,24 @@ architecture tb of gpio_axil_tb is
   constant CLK_TO_Q   : time := 1 ns;
 
   -- Generics
-  constant G_CH_MODE   : gpio_mode_arr_t(gpio_range)                 := (GPIO_MODE_OUT, GPIO_MODE_IN, GPIO_MODE_INOUT);
-  constant G_CH_SYNC   : bool_arr_t                                  := (false, true, true);
-  constant G_CH_DFLT_O : slv_arr_t(gpio_chan_range)(axil_data_range) := (x"000000AA", x"0000CCDD", x"00112233");
-  constant G_CH_DFLT_T : slv_arr_t(gpio_chan_range)(axil_data_range) := (x"000000BB", x"0000EEFF", x"00445566");
+  constant G_SYNC_I    : boolean                            := true;
+  constant G_RST_VAL_O : std_ulogic_vector(AXIL_DATA_RANGE) := x"00112233";
+  constant G_RST_VAL_T : std_ulogic_vector(AXIL_DATA_RANGE) := x"00445566";
 
   -- Ports
   signal clk    : std_logic := '1';
   signal srst   : std_logic := '1';
   signal irq    : std_logic;
   signal axil   : bus_axil_t;
-  signal gpio_i : slv_arr_t(gpio_chan_range)(axil_data_range);
-  signal gpio_o : slv_arr_t(gpio_chan_range)(axil_data_range);
-  signal gpio_t : slv_arr_t(gpio_chan_range)(axil_data_range);
+  signal gpio_i : std_ulogic_vector(AXIL_DATA_RANGE);
+  signal gpio_o : std_ulogic_vector(AXIL_DATA_RANGE);
+  signal gpio_t : std_ulogic_vector(AXIL_DATA_RANGE);
 
   constant AXIM : bus_master_t := new_bus(
       data_length => AXIL_DATA_WIDTH, address_length => AXIL_ADDR_WIDTH
     );
 
-  function fn_addr (
+  function addr (
     idx : natural
   ) return std_logic_vector is begin
     return std_logic_vector(to_unsigned(idx * 4, AXIL_ADDR_WIDTH));
@@ -73,7 +71,7 @@ begin
       end loop;
     end procedure;
 
-    variable axil_data : std_logic_vector(axil_data_range) := (others => '0');
+    variable data : std_logic_vector(axil_data_range) := (others => '0');
 
   begin
 
@@ -89,290 +87,107 @@ begin
       if run("test_0") then
         info("test_0");
 
-        gpio_i <= (others => (others => '0'));
+        gpio_i <= (others => '0');
 
         prd_cycle(4);
 
         -- ---------------------------------------------------------------------
-        info("Test channel 0");
-        info("Check ch0 defaults");
-        axil_data := G_CH_DFLT_O(0);
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_dout(0)), AXI_RSP_OKAY,
-          axil_data, "Check ch0 default out reg.");
+        info("Check defaults");
+        data := G_RST_VAL_O;
+        check_axi_lite(net, AXIM, addr(gpio_dout), AXI_RSP_OKAY, data, "Check default out reg.");
 
-        prd_cycle;
-        check_equal(gpio_o(0), G_CH_DFLT_O(0),
-          "Check ch0 default out sig.");
+        prd_cycle(4);
+        check_equal(gpio_o, G_RST_VAL_O, "Check default out sig.");
 
-        axil_data := x"00000000";
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_tri(0)), AXI_RSP_OKAY,
-          axil_data, "Check ch0 default tri reg.");
+        data := G_RST_VAL_T;
+        check_axi_lite(net, AXIM, addr(gpio_tri), AXI_RSP_OKAY, data, "Check default tri reg.");
 
-        prd_cycle;
-        check_equal(gpio_t(0), axil_data,
-          "Check ch0 default tri sig.");
+        prd_cycle(4);
+        check_equal(gpio_t, G_RST_VAL_T, "Check default tri sig.");
 
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_din(0)), AXI_RSP_OKAY,
-          axil_data, "Check ch0 default in reg.");
+        data := (others => '0');
+        check_axi_lite(net, AXIM, addr(gpio_din), AXI_RSP_OKAY, data, "Check default in reg.");
 
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_ier(0)), AXI_RSP_OKAY,
-          axil_data, "Check ch0 default irq en reg.");
+        data := (others => '0');
+        check_axi_lite(net, AXIM, addr(gpio_ier), AXI_RSP_OKAY, data, "Check default irq en reg.");
 
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(0)), AXI_RSP_OKAY,
-          axil_data, "Check ch0 irq sts reg.");
-
-        info("Write to the ch0 interrupt enable register.");
-        axil_data := x"11223344";
-        write_axi_lite(net, AXIM, fn_addr(gpio_chan_ier(0)), axil_data,
-          AXI_RSP_OKAY, x"F");
-
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_ier(0)), AXI_RSP_OKAY,
-          axil_data, "Check ch0 irq en reg after writing to it.");
-
-        info("Write to the ch0 data out register.");
-        axil_data := x"11223344";
-        write_axi_lite(net, AXIM, fn_addr(gpio_chan_dout(0)), axil_data,
-          AXI_RSP_OKAY, x"F");
-
-        axil_data := x"11223344";
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_dout(0)), AXI_RSP_OKAY,
-          axil_data, "Check ch0 out reg after writing to it.");
-
-        prd_cycle;
-        check_equal(gpio_o(0), axil_data,
-          "Check ch0 out sig after writing to it.");
-
-        check_equal(irq, '0',
-          "Ch0 verify interrupt is not latched.");
-
-        info("Write to the ch0 tri-state register.");
-        axil_data := x"44556677";
-        write_axi_lite(net, AXIM, fn_addr(gpio_chan_tri(0)), axil_data,
-          AXI_RSP_OKAY, x"F");
-
-        axil_data := x"00000000";
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_tri(0)), AXI_RSP_OKAY,
-          axil_data, "Check ch0 tri reg after writing to it.");
-
-        prd_cycle;
-        check_equal(gpio_t(0), axil_data,
-          "Check ch0 tri sig after writing to it.");
+        data := (others => '0');
+        check_axi_lite(net, AXIM, addr(gpio_isr), AXI_RSP_OKAY, data, "Check default irq sts reg.");
 
         -- ---------------------------------------------------------------------
-        info("Test channel 1");
-        info("Check ch1 defaults");
-        axil_data := x"00000000";
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_dout(1)), AXI_RSP_OKAY,
-          axil_data, "Check ch1 default out reg.");
+        info("Write to the interrupt enable register.");
+        data := x"11223344";
+        write_axi_lite(net, AXIM, addr(gpio_ier), data, AXI_RSP_OKAY, x"F");
+        check_axi_lite(net, AXIM, addr(gpio_ier), AXI_RSP_OKAY, data, "Check irq en reg after writing to it.");
 
-        prd_cycle;
-        check_equal(gpio_o(1), axil_data,
-          "Check ch1 default out sig.");
+        info("Write to the data out register.");
+        data := x"11223344";
+        write_axi_lite(net, AXIM, addr(gpio_dout), data, AXI_RSP_OKAY, x"F");
+        check_axi_lite(net, AXIM, addr(gpio_dout), AXI_RSP_OKAY, data, "Check data out reg after writing to it.");
 
-        axil_data := x"FFFFFFFF";
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_tri(1)), AXI_RSP_OKAY,
-          axil_data, "Check ch1 default tri reg.");
+        prd_cycle(4);
+        check_equal(gpio_o, data, "Check data out sig after writing it.");
 
-        prd_cycle;
-        check_equal(gpio_t(1), axil_data,
-          "Check ch1 default tri sig.");
+        check_equal(irq, '0', "Verify interrupt is not latched.");
 
-        axil_data := x"00000000";
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_din(1)), AXI_RSP_OKAY,
-          axil_data, "Check ch1 in reg.");
+        info("Write to the tri-state register.");
+        data := x"44556677";
+        write_axi_lite(net, AXIM, addr(gpio_tri), data, AXI_RSP_OKAY, x"F");
+        check_axi_lite(net, AXIM, addr(gpio_tri), AXI_RSP_OKAY, data, "Check tri reg after writing to it.");
 
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_ier(1)), AXI_RSP_OKAY,
-          axil_data, "Check ch1 default irq en reg.");
-
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(1)), AXI_RSP_OKAY,
-          axil_data, "Check ch1 irq sts reg.");
-
-        prd_cycle;
-        gpio_i(1) <= x"0000FFFF";
-        prd_cycle;
-
-        axil_data := x"0000FFFF";
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_din(1)), AXI_RSP_OKAY,
-          axil_data, "Check ch1 input register after updating the input signal.");
-
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(1)), AXI_RSP_OKAY,
-          axil_data, "Verify that interrupts were caught on ch1.");
-
-        check_equal(irq, '0',
-          "Ch1 verify interrupt sig is not latched (interrupts disabled).");
-
-        info("Clear ch1 interrupt register.");
-        axil_data := x"0000FFFF";
-        write_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(1)), axil_data,
-          AXI_RSP_OKAY, x"F");
-
-        axil_data := x"00000000";
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(1)), AXI_RSP_OKAY,
-          axil_data, "Verify that ch1 interrupts were cleared.");
-
-        info("Enable interrupts.");
-        axil_data := x"0000FFFF";
-        write_axi_lite(net, AXIM, fn_addr(gpio_chan_ier(1)), axil_data,
-          AXI_RSP_OKAY, x"F");
-
-        info("Change the state of some of the ch1 GPIO inputs.");
-        prd_cycle;
-        gpio_i(1) <= x"0000F0FE";
-        prd_cycle;
-
-        axil_data := gpio_i(1);
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_din(1)), AXI_RSP_OKAY,
-          axil_data, "Check ch1 input register after updating the value of the input signal.");
-
-        axil_data := x"0000" & not gpio_i(1)(15 downto 0);
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(1)), AXI_RSP_OKAY,
-          axil_data, "Verify that the expected interrupts were caught on ch1.");
-
-        check_equal(irq, '1',
-          "Ch1 verify interrupt signal is latched (interrupts enabled).");
-
-        info("Clear some (but not all) of the bits in the ch1 isr.");
-        axil_data := x"0000FF00";
-        write_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(1)), axil_data,
-          AXI_RSP_OKAY, x"F");
-
-        axil_data := x"000000" & not gpio_i(1)(7 downto 0);
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(1)), AXI_RSP_OKAY,
-          axil_data, "Verify that the expected interrupts were cleared on ch1 (1).");
-
-        check_equal(irq, '1',
-          "Ch1 verify interrupt signal is still latched (not all interrupts cleared).");
-
-        info("Clear the rest of the bits in the ch1 isr.");
-        axil_data := x"000000FF";
-        write_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(1)), axil_data,
-          AXI_RSP_OKAY, x"F");
-
-        axil_data := x"00000000";
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(1)), AXI_RSP_OKAY,
-          axil_data, "Verify that the expected interrupts were cleared on ch1 (2).");
-
-        check_equal(irq, '0',
-          "Ch1 verify interrupt signal has been cleared.");
+        prd_cycle(4);
+        check_equal(gpio_t, data, "Check tri sig after writing to it.");
 
         -- ---------------------------------------------------------------------
-        info("Test channel 2");
-        info("Check ch2 defaults");
-        axil_data := G_CH_DFLT_O(2);
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_dout(2)), AXI_RSP_OKAY,
-          axil_data, "Check ch2 default out reg.");
-
+        info("Pulse an input bit that should not trigger an interrupt.");
+        gpio_i(31) <= '1';
+        prd_cycle(4);
+        data       := x"80000000";
+        check_axi_lite(net, AXIM, addr(gpio_din), AXI_RSP_OKAY, data, "Check din register during pulse 0.");
+        data       := x"80000000";
+        check_axi_lite(net, AXIM, addr(gpio_isr), AXI_RSP_OKAY, data, "Check irq status register during pulse 0.");
         prd_cycle;
-        check_equal(gpio_o(2), axil_data,
-          "Check ch2 default out signal.");
+        gpio_i(31) <= '0';
+        prd_cycle(4);
+        data       := x"00000000";
+        check_axi_lite(net, AXIM, addr(gpio_din), AXI_RSP_OKAY, data, "Check din register after pulse 0.");
+        data       := x"80000000";
+        check_axi_lite(net, AXIM, addr(gpio_isr), AXI_RSP_OKAY, data, "Check irq status register after pulse 0.");
+        check_equal(irq, '0', "Verify interrupt is not latched after pulse 0.");
+        prd_cycle(4);
 
-        axil_data := G_CH_DFLT_T(2);
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_tri(2)), AXI_RSP_OKAY,
-          axil_data, "Check ch2 default tri reg.");
-
+        info("Pulse an input bit that should trigger an interrupt.");
+        gpio_i(2) <= '1';
+        prd_cycle(4);
+        data      := x"00000004";
+        check_axi_lite(net, AXIM, addr(gpio_din), AXI_RSP_OKAY, data, "Check din register during pulse 1.");
+        data      := x"80000004";
+        check_axi_lite(net, AXIM, addr(gpio_isr), AXI_RSP_OKAY, data, "Check irq status register during pulse 1.");
         prd_cycle;
-        check_equal(gpio_t(2), axil_data, "Check ch2 default tri signal.");
+        gpio_i(2) <= '0';
+        prd_cycle(4);
+        data      := x"00000000";
+        check_axi_lite(net, AXIM, addr(gpio_din), AXI_RSP_OKAY, data, "Check din register after pulse 1.");
+        data      := x"80000004";
+        check_axi_lite(net, AXIM, addr(gpio_isr), AXI_RSP_OKAY, data, "Check irq status register after pulse 1.");
+        check_equal(irq, '1', "Verify interrupt is latched after pulse 1.");
+        prd_cycle(4);
 
-        axil_data := x"00000000";
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_din(2)), AXI_RSP_OKAY,
-          axil_data, "Check ch2 in reg.");
+        info("Clear the first irq status bit");
+        data := x"80000000";
+        write_axi_lite(net, AXIM, addr(gpio_isr), data, AXI_RSP_OKAY, x"F");
+        data := x"00000004";
+        check_axi_lite(net, AXIM, addr(gpio_isr), AXI_RSP_OKAY, data, "Check isr after clearing first bit.");
+        prd_cycle(4);
+        check_equal(irq, '1', "Verify interrupt is still latched.");
 
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_ier(2)), AXI_RSP_OKAY,
-          axil_data, "Check ch2 default irq en reg.");
-
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(2)), AXI_RSP_OKAY,
-          axil_data, "Check ch2 irq sts reg.");
-
-        info("Change the state of all the ch2 GPIO inputs.");
-        prd_cycle;
-        gpio_i(2) <= x"00FFFFFF";
-        prd_cycle;
-
-        axil_data := x"00FFFFFF";
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_din(2)), AXI_RSP_OKAY,
-          axil_data, "Check ch2 input register after updating the input signal value.");
-
-        axil_data := x"00FFFFFF";
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(2)), AXI_RSP_OKAY,
-          axil_data, "Verify that interrupts were caught on ch2.");
-
-        check_equal(irq, '0', "Ch2 verify interrupt signal not asserted.");
-
-        info("Clear ch2 interrupt register.");
-        axil_data := x"00FFFFFF";
-        write_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(2)), axil_data,
-          AXI_RSP_OKAY, x"F");
-
-        axil_data := x"00000000";
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(2)), AXI_RSP_OKAY,
-          axil_data, "Verify that ch2 interrupts were cleared.");
-
-        info("Enable ch2 interrupts.");
-        axil_data := x"00FFFFFF";
-        write_axi_lite(net, AXIM, fn_addr(gpio_chan_ier(2)), axil_data,
-          AXI_RSP_OKAY, x"F");
-
-        info("Change the state of some of the ch2 GPIO inputs.");
-        prd_cycle;
-        gpio_i(2) <= x"00ABF0FE";
-        prd_cycle;
-
-        axil_data := gpio_i(2);
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_din(2)), AXI_RSP_OKAY,
-          axil_data, "Check ch2 input register after updating value on wire.");
-
-        axil_data := x"00" & not gpio_i(2)(23 downto 0);
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(2)), AXI_RSP_OKAY,
-          axil_data, "Verify that the expected interrupts were caught on ch2.");
-
-        check_equal(irq, '1', "Ch2 verify interrupt signal asserted.");
-
-        info("Clear some (but not all) of the bits in the ch2 isr.");
-        axil_data := x"00FFF000";
-        write_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(2)), axil_data,
-          AXI_RSP_OKAY, x"F");
-
-        axil_data := x"00000" & not gpio_i(2)(11 downto 0);
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(2)), AXI_RSP_OKAY,
-          axil_data, "Verify that the expected interrupts were cleared on ch2 (1).");
-
-        check_equal(irq, '1', "Ch2 verify interrupt signal still asserted.");
-
-        info("Clear the rest of the bits in the ch2 isr.");
-        axil_data := x"00000FFF";
-        write_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(2)), axil_data,
-          AXI_RSP_OKAY, x"F");
-
-        axil_data := x"00000000";
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_isr(2)), AXI_RSP_OKAY,
-          axil_data, "Verify that the expected interrupts were cleared on ch2 (2).");
-
-        check_equal(irq, '0', "Ch2 verify interrupt signal got de-asserted.");
-
-        info("Write the output data on GPIO ch2.");
-        axil_data := x"55667788";
-        write_axi_lite(net, AXIM, fn_addr(gpio_chan_dout(2)), axil_data,
-          AXI_RSP_OKAY, x"F");
-
-        axil_data := x"55667788";
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_dout(2)), AXI_RSP_OKAY,
-          axil_data, "Check ch2 out reg after writing to it.");
-
-        prd_cycle;
-        check_equal(gpio_o(2), axil_data,
-          "Check ch2 out signal after writing to it.");
-
-        axil_data := x"44556677";
-        write_axi_lite(net, AXIM, fn_addr(gpio_chan_tri(2)), axil_data,
-          AXI_RSP_OKAY, x"0");
-
-        axil_data := x"44556677";
-        check_axi_lite(net, AXIM, fn_addr(gpio_chan_tri(2)), AXI_RSP_OKAY,
-          axil_data, "Check ch2 tri reg after writing to it.");
-
-        prd_cycle;
-        check_equal(gpio_t(2), axil_data,
-          "Check ch2 tri signal after writing to it.");
+        info("Clear the second irq status bit");
+        data := x"00000004";
+        write_axi_lite(net, AXIM, addr(gpio_isr), data, AXI_RSP_OKAY, x"F");
+        data := x"00000000";
+        check_axi_lite(net, AXIM, addr(gpio_isr), AXI_RSP_OKAY, data, "Check isr after clearing second bit.");
+        prd_cycle(4);
+        check_equal(irq, '0', "Verify interrupt signal has lowered.");
 
       end if;
 
@@ -387,10 +202,9 @@ begin
   -- ---------------------------------------------------------------------------
   u_gpio_axil : entity work.gpio_axil
   generic map (
-    G_CH_MODE   => G_CH_MODE,
-    G_CH_SYNC   => G_CH_SYNC,
-    G_CH_DFLT_O => G_CH_DFLT_O,
-    G_CH_DFLT_T => G_CH_DFLT_T
+    G_SYNC_I    => G_SYNC_I,
+    G_RST_VAL_O => G_RST_VAL_O,
+    G_RST_VAL_T => G_RST_VAL_T
   )
   port map (
     clk    => clk,

@@ -25,21 +25,21 @@ use ieee.numeric_std.all;
 
 entity gbox_10to4 is
   port (
-    clk  : in    std_logic;
-    srst : in    std_logic;
-    oe   : in    std_logic;
-    ce   : out   std_logic;
-    din  : in    std_logic_vector(9 downto 0);
-    dout : out   std_logic_vector(3 downto 0)
+    clk  : in    std_ulogic;
+    srst : in    std_ulogic;
+    oe   : in    std_ulogic;
+    ce   : out   std_ulogic;
+    din  : in    std_ulogic_vector(9 downto 0);
+    dout : out   std_ulogic_vector(3 downto 0)
   );
 end entity;
 
 architecture rtl of gbox_10to4 is
 
-  signal dreg0 : std_logic_vector(19 downto 0);
-  signal dreg1 : std_logic_vector(19 downto 0);
+  signal dreg0 : std_ulogic_vector(19 downto 0);
+  signal dreg1 : std_ulogic_vector(19 downto 0);
   signal cnt   : integer range 0 to 4;
-  signal sel   : std_logic;
+  signal sel   : std_ulogic;
 
 begin
 
