@@ -69,6 +69,7 @@ begin
     d(0) => m_reg.ren,
     q(0) => rvalid
   );
+
   rresp <= AXI_RSP_SLVERR when m_reg.rerr else AXI_RSP_OKAY;
   rdata <= m_reg.rdata;
 
@@ -89,6 +90,7 @@ begin
     s_axis => axil_r0,
     m_axis => axil_r1
   );
+
   axil_r0.tvalid <= rvalid;
   axil_r0.tdata  <= rdata;
   axil_r0.tuser  <= rresp;
@@ -120,6 +122,7 @@ begin
     d(0) => m_reg.wen,
     q(0) => bvalid
   );
+
   bresp <= AXI_RSP_SLVERR when m_reg.werr else AXI_RSP_OKAY;
 
   u_b_buffer : entity work.axis_pipes
@@ -134,6 +137,7 @@ begin
     s_axis => axil_b0,
     m_axis => axil_b1
   );
+
   axil_b0.tvalid <= bvalid;
   axil_b0.tuser  <= bresp;
   --
