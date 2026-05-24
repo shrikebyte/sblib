@@ -18,7 +18,7 @@ use work.bus_pkg.all;
 
 entity axil_xbar is
   generic (
-    G_BASEADDRS : slv_arr_t(open)(AXIL_ADDR_WIDTH - 1 downto 0)
+    G_BASEADDRS : slv_arr_t(open)(AXIL_ADDR_RANGE)
   );
   port (
     clk    : in    std_ulogic;
@@ -34,7 +34,7 @@ architecture rtl of axil_xbar is
 
 begin
 
-  u_axil_arbiter : entity work.axil_arbiter
+  u_axil_arbiter : entity work.axil_arb
   port map (
     clk    => clk,
     srst   => srst,
@@ -42,7 +42,7 @@ begin
     m_axil => i0_axil
   );
 
-  u_axil_decoder : entity work.axil_decoder
+  u_axil_decoder : entity work.axil_dec
   generic map (
     G_BASEADDRS => G_BASEADDRS
   )

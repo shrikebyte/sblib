@@ -6,8 +6,8 @@
 --# Copyright (C) Shrikebyte, LLC
 --# Licensed under the Apache 2.0 license, see LICENSE for details.
 --# ============================================================================
---# Arbitrates packets with simple, fixed-priority. Higher subordinate
---# channel numbers have higher priority.
+--# Arbitrates packets with simple, fixed-priority. Higher
+--# index has higher priority.
 --#
 --# NOTICE: Since this uses fixed-priority, if a higher channel holds valid high
 --# on every clock cycle, then it will hog all of the bandwidth,

@@ -33,7 +33,7 @@ entity axis_mux is
     s_axis : view (s_axis_view) of axis_arr_t;
     --
     m_axis : view m_axis_view;
-    --! Input Select
+    -- Input Select
     sel : in    integer range s_axis'range
   );
 end entity;
