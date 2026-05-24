@@ -9,12 +9,6 @@
 --# AXI lite to register bus bridge.
 --# This bridge supports full throughput to a simplified bus with fixed read
 --# and write latency.
---#
---# TODO: Investigate replacing response fifos with axis ready pipes.
---# The fifos have a 2 cycle latency, whereas the pipes do not. Fifos will
---# have better timing for large values of G_*_LATENCY, and the pipes will have
---# lower response latency, which could improve thruput for managers that
---# only support one outstanding transaction.
 --##############################################################################
 
 library ieee;
@@ -38,32 +32,15 @@ end entity;
 
 architecture rtl of axil_to_reg is
 
-  signal rvalid : std_ulogic;
-  signal rdata  : std_ulogic_vector(AXIL_DATA_RANGE);
-  signal rresp  : std_ulogic_vector(AXIL_RSP_RANGE);
-  signal bvalid : std_ulogic;
-  signal bresp  : std_ulogic_vector(AXIL_RSP_RANGE);
-  --
-  signal axil_r0 : axis_t (
-    tdata(AXIL_DATA_RANGE),
-    tkeep(0 downto 0),
-    tuser(AXIL_RSP_RANGE)
-  );
-  signal axil_r1 : axis_t (
-    tdata(AXIL_DATA_RANGE),
-    tkeep(0 downto 0),
-    tuser(AXIL_RSP_RANGE)
-  );
-  signal axil_b0 : axis_t (
-    tdata(AXIL_RSP_RANGE),
-    tkeep(0 downto 0),
-    tuser(0 downto 0)
-  );
-  signal axil_b1 : axis_t (
-    tdata(AXIL_RSP_RANGE),
-    tkeep(0 downto 0),
-    tuser(0 downto 0)
-  );
+  signal rvalid  : std_ulogic;
+  signal rdata   : std_ulogic_vector(AXIL_DATA_RANGE);
+  signal rresp   : std_ulogic_vector(AXIL_RSP_RANGE);
+  signal bvalid  : std_ulogic;
+  signal bresp   : std_ulogic_vector(AXIL_RSP_RANGE);
+  signal axil_r0 : axis_t(tdata(AXIL_DATA_RANGE), tkeep(-1 downto 0), tuser(AXIL_RSP_RANGE));
+  signal axil_r1 : axis_t(tdata(AXIL_DATA_RANGE), tkeep(-1 downto 0), tuser(AXIL_RSP_RANGE));
+  signal axil_b0 : axis_t(tdata(-1 downto 0), tkeep(-1 downto 0), tuser(AXIL_RSP_RANGE));
+  signal axil_b1 : axis_t(tdata(-1 downto 0), tkeep(-1 downto 0), tuser(AXIL_RSP_RANGE));
 
 begin
 
@@ -92,7 +69,6 @@ begin
     d(0) => m_reg.ren,
     q(0) => rvalid
   );
-
   rresp <= AXI_RSP_SLVERR when m_reg.rerr else AXI_RSP_OKAY;
   rdata <= m_reg.rdata;
 
@@ -101,14 +77,11 @@ begin
   -- is assumed to always take G_RD_LATENCY cycles. This buffer stores responses
   -- if the master is stalling the read response channel while there are still
   -- outstanding requests that the slave has not yet completed.
-  u_r_fifo : entity work.axis_fifo
+  u_r_buffer : entity work.axis_pipes
   generic map (
-    G_DEPTH         => round_up_pwr2(G_RD_LATENCY + 2),
-    G_PACKET_MODE   => false,
-    G_DROP_OVERSIZE => false,
-    G_USE_TLAST     => false,
-    G_USE_TKEEP     => false,
-    G_USE_TUSER     => true
+    G_STAGES     => G_RD_LATENCY,
+    G_DATA_PIPE  => false,
+    G_READY_PIPE => true
   )
   port map (
     clk    => clk,
@@ -116,11 +89,8 @@ begin
     s_axis => axil_r0,
     m_axis => axil_r1
   );
-
   axil_r0.tvalid <= rvalid;
   axil_r0.tdata  <= rdata;
-  axil_r0.tlast  <= '1';
-  axil_r0.tkeep  <= "1";
   axil_r0.tuser  <= rresp;
   --
   axil_r1.tready <= s_axil.rready;
@@ -150,17 +120,13 @@ begin
     d(0) => m_reg.wen,
     q(0) => bvalid
   );
-
   bresp <= AXI_RSP_SLVERR when m_reg.werr else AXI_RSP_OKAY;
 
-  u_b_fifo : entity work.axis_fifo
+  u_b_buffer : entity work.axis_pipes
   generic map (
-    G_DEPTH         => round_up_pwr2(G_WR_LATENCY + 2),
-    G_PACKET_MODE   => false,
-    G_DROP_OVERSIZE => false,
-    G_USE_TLAST     => false,
-    G_USE_TKEEP     => false,
-    G_USE_TUSER     => false
+    G_STAGES     => G_WR_LATENCY,
+    G_DATA_PIPE  => false,
+    G_READY_PIPE => true
   )
   port map (
     clk    => clk,
@@ -168,15 +134,11 @@ begin
     s_axis => axil_b0,
     m_axis => axil_b1
   );
-
   axil_b0.tvalid <= bvalid;
-  axil_b0.tdata  <= bresp;
-  axil_b0.tlast  <= '1';
-  axil_b0.tkeep  <= "1";
-  axil_b0.tuser  <= "0";
+  axil_b0.tuser  <= bresp;
   --
   axil_b1.tready <= s_axil.bready;
   s_axil.bvalid  <= axil_b1.tvalid;
-  s_axil.bresp   <= axil_b1.tdata;
+  s_axil.bresp   <= axil_b1.tuser;
 
 end architecture;
