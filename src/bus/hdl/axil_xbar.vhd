@@ -42,7 +42,7 @@ begin
     m_axil => i0_axil
   );
 
-  u_axil_decoder : entity work.axil_decoder
+  u_axil_decoder : entity work.axil_dec
   generic map (
     G_BASEADDRS => G_BASEADDRS
   )

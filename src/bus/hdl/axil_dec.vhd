@@ -114,7 +114,7 @@ architecture rtl of axil_dec is
   constant DECODE_RANGE : addr_decode_range_t := find_addr_decode_range(G_BASEADDRS);
 
   -- ---------------------------------------------------------------------------
-  type   wr_state_t is (ST_WR_IDLE, ST_WR_AW, ST_WR_W, ST_WR_B);
+  type   wr_state_t is (ST_WR_IDLE, ST_WR_W, ST_WR_B);
   signal wr_state : wr_state_t;
   signal wr_sel   : natural range 0 to DECODE_ERR;
 
@@ -140,31 +140,26 @@ begin
           if s_axil.awvalid then
             wr_sel   <= decode(s_axil.awaddr, DECODE_RANGE, G_BASEADDRS);
             aw_en    <= '1';
-            w_en     <= '0';
-            b_en     <= '0';
-            wr_state <= ST_WR_AW;
-          end if;
-
-        when ST_WR_AW =>
-          if s_axil.awvalid and s_axil.awready then
-            aw_en    <= '0';
             w_en     <= '1';
-            b_en     <= '0';
             wr_state <= ST_WR_W;
           end if;
 
         when ST_WR_W =>
+          if s_axil.awvalid and s_axil.awready then
+            aw_en <= '0';
+          end if;
+
           if s_axil.wvalid and s_axil.wready then
-            aw_en    <= '0';
-            w_en     <= '0';
+            w_en <= '0';
+          end if;
+
+          if not aw_en and not w_en then
             b_en     <= '1';
             wr_state <= ST_WR_B;
           end if;
 
         when ST_WR_B =>
           if s_axil.bvalid and s_axil.bready then
-            aw_en    <= '0';
-            w_en     <= '0';
             b_en     <= '0';
             wr_state <= ST_WR_IDLE;
           end if;

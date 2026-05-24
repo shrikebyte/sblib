@@ -26,13 +26,13 @@ end entity;
 
 architecture rtl of axil_arb is
 
-  type   wr_state_t is (ST_WR_IDLE, ST_WR_AW, ST_WR_W, ST_WR_B);
-  signal wr_state  : wr_state_t;
-  signal wr_sel    : natural range s_axil'range;
+  type   wr_state_t is (ST_WR_IDLE, ST_WR_W, ST_WR_B);
+  signal wr_state : wr_state_t;
+  signal wr_sel   : natural range s_axil'range;
 
   type   rd_state_t is (ST_RD_IDLE, ST_RD_AR, ST_RD_R);
-  signal rd_state  : rd_state_t;
-  signal rd_sel    : natural range s_axil'range;
+  signal rd_state : rd_state_t;
+  signal rd_sel   : natural range s_axil'range;
 
   signal aw_en : std_ulogic;
   signal w_en  : std_ulogic;
@@ -51,32 +51,27 @@ begin
             if s_axil(i).awvalid then
               wr_sel   <= i;
               aw_en    <= '1';
-              w_en     <= '0';
-              b_en     <= '0';
-              wr_state <= ST_WR_AW;
+              w_en     <= '1';
+              wr_state <= ST_WR_W;
             end if;
           end loop;
 
-        when ST_WR_AW =>
+        when ST_WR_W =>
           if m_axil.awvalid and m_axil.awready then
-            aw_en    <= '0';
-            w_en     <= '1';
-            b_en     <= '0';
-            wr_state <= ST_WR_W;
+            aw_en <= '0';
           end if;
 
-        when ST_WR_W =>
           if m_axil.wvalid and m_axil.wready then
-            aw_en    <= '0';
-            w_en     <= '0';
+            w_en <= '0';
+          end if;
+
+          if not aw_en and not w_en then
             b_en     <= '1';
             wr_state <= ST_WR_B;
           end if;
 
         when ST_WR_B =>
           if m_axil.bvalid and m_axil.bready then
-            aw_en    <= '0';
-            w_en     <= '0';
             b_en     <= '0';
             wr_state <= ST_WR_IDLE;
           end if;
