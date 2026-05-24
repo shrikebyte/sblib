@@ -153,7 +153,8 @@ begin
             w_en <= '0';
           end if;
 
-          if not aw_en and not w_en then
+          if (not aw_en or (s_axil.awvalid and s_axil.awready)) and
+             (not w_en or (s_axil.wvalid  and s_axil.wready)) then
             b_en     <= '1';
             wr_state <= ST_WR_B;
           end if;
