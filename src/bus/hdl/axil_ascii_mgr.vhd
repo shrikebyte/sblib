@@ -1,18 +1,18 @@
 --##############################################################################
---# File : axil_dbg_mgr.vhd
+--# File : axil_ascii_mgr.vhd
 --# Auth : David Gussler
 --# ============================================================================
 --# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
 --# Copyright (C) Shrikebyte, LLC
 --# Licensed under the Apache 2.0 license, see LICENSE for details.
 --# ============================================================================
---# AXI Lite debug bus manager. This is a state machine with a user-friendly
---# ASCII character based interface on one end and an AXI Lite manager interface
---# on the other end. This module is primarily intended to be connected to a
---# UART to enable a straightforward terminal-based register access interface,
+--# AXI Lite ASCII-based bus manager. This is a state machine with a human-
+--# friendly character-based streaming interface on one end and an AXI Lite
+--# manager interface on the other end. This module is primarily intended to be
+--# connected to a UART to enable processor-less terminal-based register access,
 --# but since this uses a set of generic axi streams,
 --# any other stream-based interface could be used to manage the bus.
---# For example, a UDP-based ethernet interface would be a faster alternative
+--# For example, a UDP-based ethernet interface could be an alternative
 --# to UART.
 --#
 --# The simple user protocol supports two commands: read and write.
@@ -23,7 +23,7 @@
 --# | Read            | r aaaaaaaa          | dddddddd      | ! or ?    |
 --# | Write Increment | w dddddddd          | +             | ! or ?    |
 --# | Read Increment  | r                   | dddddddd      | ! or ?    |
---# | Repeat          | <LF>                | + or dddddddd | ! or ?    |
+--# | Previous        | p                   | + or dddddddd | ! or ?    |
 --#
 --# The protocol was designed to work equally well with an interactive terminal
 --# or a scripted software parser. An interactive terminal could be used
@@ -35,7 +35,7 @@
 --# * Read - Read data from an address
 --# * Write Increment - Write to the last command's address + 4
 --# * Read Increment - Read from the last command's address + 4
---# * Repeat - Re-run the last command
+--# * Previous - Re-run the previous command
 --# * 'w' or 'W' is a write command.
 --# * 'r' or 'R' is a read command.
 --# * 'aaaaaaaa' is a 32-bit hex formatted address. It can be anywhere
@@ -79,7 +79,8 @@ end entity;
 
 architecture rtl of axil_dbg_mgr is
 
-
 begin
+
+  -- TODO:
 
 end architecture;
