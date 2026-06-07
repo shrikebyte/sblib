@@ -57,13 +57,11 @@ entity ram is
   );
   port (
     a_clk  : in    std_ulogic                                                     := '0';
-    a_en   : in    std_ulogic                                                     := '1';
     a_wen  : in    std_ulogic_vector(G_BYTES_PER_ROW - 1 downto 0)                := (others=> '0');
     a_addr : in    std_ulogic_vector(G_ADDR_WIDTH - 1 downto 0)                   := (others=> '0');
     a_wdat : in    std_ulogic_vector(G_BYTES_PER_ROW * G_BYTE_WIDTH - 1 downto 0) := (others=> '0');
     a_rdat : out   std_ulogic_vector(G_BYTES_PER_ROW * G_BYTE_WIDTH - 1 downto 0);
     b_clk  : in    std_ulogic                                                     := '0';
-    b_en   : in    std_ulogic                                                     := '1';
     b_wen  : in    std_ulogic_vector(G_BYTES_PER_ROW - 1 downto 0)                := (others=> '0');
     b_addr : in    std_ulogic_vector(G_ADDR_WIDTH - 1 downto 0)                   := (others=> '0');
     b_wdat : in    std_ulogic_vector(G_BYTES_PER_ROW * G_BYTE_WIDTH - 1 downto 0) := (others=> '0');
@@ -103,35 +101,31 @@ begin
     -- -------------------------------------------------------------------------
     -- Port A
     if rising_edge(a_clk) then
-      if a_en then
 
-        for i in 0 to G_BYTES_PER_ROW - 1 loop
-          if a_wen(i) then
-            ram(a_idx)(i * BW + BW - 1 downto i * BW) <= a_wdat(i * BW + BW - 1 downto i * BW);
-          end if;
-        end loop;
+      for i in 0 to G_BYTES_PER_ROW - 1 loop
+        if a_wen(i) then
+          ram(a_idx)(i * BW + BW - 1 downto i * BW) <= a_wdat(i * BW + BW - 1 downto i * BW);
+        end if;
+      end loop;
 
-        a_pipe(0)                     <= ram(a_idx);
-        a_pipe(1 to G_RD_LATENCY - 1) <= a_pipe(0 to G_RD_LATENCY - 2);
+      a_pipe(0)                     <= ram(a_idx);
+      a_pipe(1 to G_RD_LATENCY - 1) <= a_pipe(0 to G_RD_LATENCY - 2);
 
-      end if;
     end if;
 
     -- -------------------------------------------------------------------------
     -- Port B
     if rising_edge(b_clk) then
-      if b_en then
 
-        for i in 0 to G_BYTES_PER_ROW - 1 loop
-          if b_wen(i) then
-            ram(b_idx)(i * BW + BW - 1 downto i * BW) <= b_wdat(i * BW + BW - 1 downto i * BW);
-          end if;
-        end loop;
+      for i in 0 to G_BYTES_PER_ROW - 1 loop
+        if b_wen(i) then
+          ram(b_idx)(i * BW + BW - 1 downto i * BW) <= b_wdat(i * BW + BW - 1 downto i * BW);
+        end if;
+      end loop;
 
-        b_pipe(0)                     <= ram(b_idx);
-        b_pipe(1 to G_RD_LATENCY - 1) <= b_pipe(0 to G_RD_LATENCY - 2);
+      b_pipe(0)                     <= ram(b_idx);
+      b_pipe(1 to G_RD_LATENCY - 1) <= b_pipe(0 to G_RD_LATENCY - 2);
 
-      end if;
     end if;
 
   end process;

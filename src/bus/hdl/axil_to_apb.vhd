@@ -39,6 +39,8 @@ begin
     m_wb   => wb
   );
 
+  -- This works because axil_to_wb guarantees that wb.stb is dropped low
+  -- between transactions.
   u_edge_detect : entity work.edge_detect
   generic map (
     G_WIDTH   => 1,

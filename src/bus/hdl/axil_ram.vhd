@@ -6,8 +6,8 @@
 --# Copyright (C) Shrikebyte, LLC
 --# Licensed under the Apache 2.0 license, see LICENSE for details.
 --# ============================================================================
---# AXI lite ram.
---# Supports full thruput one read and one write per clock cycle.
+--# AXI Lite RAM
+--# Supports maximum thruput one read and one write per clock cycle.
 --##############################################################################
 
 library ieee;
@@ -35,7 +35,7 @@ end entity;
 
 architecture rtl of axil_ram is
 
-  signal i0_reg : bus_reg_t;
+  signal reg : bus_reg_t;
 
 begin
 
@@ -48,7 +48,7 @@ begin
     clk    => clk,
     srst   => srst,
     s_axil => s_axil,
-    m_reg  => i0_reg
+    m_reg  => reg
   );
 
   u_ram : entity work.ram
@@ -62,20 +62,18 @@ begin
   )
   port map (
     a_clk  => clk,
-    a_en   => i0_reg.wen,
-    a_wen  => i0_reg.wstrb,
-    a_addr => i0_reg.waddr(G_ADDR_WIDTH - 1 + 2 downto 2),
-    a_wdat => i0_reg.wdata,
+    a_wen  => reg.wen and reg.wstrb,
+    a_addr => reg.waddr(G_ADDR_WIDTH - 1 + 2 downto 2),
+    a_wdat => reg.wdata,
     a_rdat => open,
     b_clk  => clk,
-    b_en   => '1',
     b_wen  => (others=> '0'),
-    b_addr => i0_reg.raddr(G_ADDR_WIDTH - 1 + 2 downto 2),
+    b_addr => reg.raddr(G_ADDR_WIDTH - 1 + 2 downto 2),
     b_wdat => (others=> '0'),
-    b_rdat => i0_reg.rdata
+    b_rdat => reg.rdata
   );
 
-  i0_reg.werr <= '0';
-  i0_reg.rerr <= '0';
+  reg.werr <= '0';
+  reg.rerr <= '0';
 
 end architecture;

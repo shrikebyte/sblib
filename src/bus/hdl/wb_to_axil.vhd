@@ -73,7 +73,7 @@ begin
             m_axil.wvalid <= '0';
           end if;
 
-          if not m_axil.awvalid and not m_axil.wvalid then
+          if (not m_axil.awvalid or m_axil.awready) and (not m_axil.wvalid or m_axil.wready) then
             m_axil.bready <= '1';
             state         <= ST_WRITE_RSP_WAIT;
           end if;

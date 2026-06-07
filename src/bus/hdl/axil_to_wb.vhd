@@ -7,22 +7,20 @@
 --# Licensed under the Apache 2.0 license, see LICENSE for details.
 --# ============================================================================
 --# AXI Lite to Wishbone B4 (Synchronous, non-pipelined) bridge. At best, this
---# bridge can issue one read or one write request every four clock cycles.
---# This best-case throughput assumes that the the Wishbone slave responds in
---# one clock cycle, that the AXI Lite master read / write response channels are
+--# bridge can issue one read or one write request every three clock cycles.
+--# This best-case throughput assumes that the the Wishbone subordinate responds
+--# immediately, that the AXI Lite manager read / write response channels are
 --# always ready, and that write transaction address and data arrive at the same
 --# time. If these factors are not met, then the throughput will be even lower.
 --# C0: AXIL request
---# C1: Wishbone request
---# C2: Wishbone response
---# C3: AXIL response
+--# C1: Wishbone request and response
+--# C2: AXIL response
 --# This module has not been designed for maximum throughput, but rather for
 --# simplicity. Most of the time, simple register access does not require high
 --# throughput so any extra resources required to make this module better would
 --# be wasted.
---# Writes are prioritized over reads, therefore, if the axi lite interface
---# issues back-to-back writes and a read at the same time, the read will not
---# get executed until the write requests stop.
+--# Reads and writes have round robin arbitration priority, so this module
+--# guarantees that one of the channels will not be starved.
 --##############################################################################
 
 library ieee;
@@ -41,31 +39,47 @@ end entity;
 
 architecture rtl of axil_to_wb is
 
-  type state_t is (
+  type   state_t is (
     ST_IDLE, ST_WAIT_WB_WRITE_RESP, ST_WRITE_RESP_CMPLT, ST_WAIT_WB_READ_RESP,
     ST_READ_RESP_CMPLT
   );
-
-  signal state : state_t;
+  signal state    : state_t;
+  signal priority : std_ulogic;
+  signal wr_start : std_ulogic;
+  signal rd_start : std_ulogic;
 
 begin
 
+  -- ---------------------------------------------------------------------------
+  -- Swap the priority of reads and writes after every transaction
+  prc_arb : process (all) is begin
+
+    wr_start <= '0';
+    rd_start <= '0';
+
+    if priority then
+      if s_axil.awvalid and s_axil.wvalid then
+        wr_start <= '1';
+      elsif s_axil.arvalid then
+        rd_start <= '1';
+      end if;
+    else
+      if s_axil.arvalid then
+        rd_start <= '1';
+      elsif s_axil.awvalid and s_axil.wvalid then
+        wr_start <= '1';
+      end if;
+    end if;
+  end process;
+
+  -- ---------------------------------------------------------------------------
   prc_axil_to_wb : process (clk) is begin
     if rising_edge(clk) then
       case state is
+
         -- ---------------------------------------------------------------------
         when ST_IDLE =>
-          -- Idle defaults
-          m_wb.stb       <= '0';
-          s_axil.awready <= '0';
-          s_axil.wready  <= '0';
-          s_axil.bvalid  <= '0';
-          s_axil.arready <= '0';
-          s_axil.rvalid  <= '0';
-
-          -- Forward the AXIL wr request to Wishbone and complete the AXIL
-          -- wr request
-          if s_axil.awvalid and s_axil.wvalid then
+          if wr_start then
             m_wb.stb       <= '1';
             m_wb.wen       <= '1';
             m_wb.addr      <= s_axil.awaddr;
@@ -74,10 +88,7 @@ begin
             s_axil.awready <= '1';
             s_axil.wready  <= '1';
             state          <= ST_WAIT_WB_WRITE_RESP;
-
-          -- Forward the AXIL rd request to Wishbone and complete the AXIL
-          -- rd request
-          elsif s_axil.arvalid then
+          elsif rd_start then
             m_wb.stb       <= '1';
             m_wb.wen       <= '0';
             m_wb.addr      <= s_axil.araddr;
@@ -91,23 +102,19 @@ begin
           s_axil.wready  <= '0';
 
           -- Wait for the Wishbone response then initiate the AXIL wr response
-          if m_wb.err then
+          if m_wb.ack or m_wb.err then
             m_wb.stb      <= '0';
             s_axil.bvalid <= '1';
-            s_axil.bresp  <= AXI_RSP_SLVERR;
-            state         <= ST_WRITE_RESP_CMPLT;
-          elsif m_wb.ack then
-            m_wb.stb      <= '0';
-            s_axil.bvalid <= '1';
-            s_axil.bresp  <= AXI_RSP_OKAY;
+            s_axil.bresp  <= AXI_RSP_SLVERR when m_wb.err else AXI_RSP_OKAY;
             state         <= ST_WRITE_RESP_CMPLT;
           end if;
 
         -- ---------------------------------------------------------------------
         when ST_WRITE_RESP_CMPLT =>
-          -- Wait for the master to complete the AXIL wr response
+          -- Wait for the manager to complete the AXIL wr response
           if s_axil.bready then
             s_axil.bvalid <= '0';
+            priority      <= not priority;
             state         <= ST_IDLE;
           end if;
 
@@ -116,17 +123,11 @@ begin
           s_axil.arready <= '0';
 
           -- Wait for the Wishbone response then initiate the AXIL rd response
-          if m_wb.err then
+          if m_wb.ack or m_wb.err then
             m_wb.stb      <= '0';
             s_axil.rdata  <= m_wb.rdat;
             s_axil.rvalid <= '1';
-            s_axil.rresp  <= AXI_RSP_SLVERR;
-            state         <= ST_READ_RESP_CMPLT;
-          elsif m_wb.ack then
-            m_wb.stb      <= '0';
-            s_axil.rdata  <= m_wb.rdat;
-            s_axil.rvalid <= '1';
-            s_axil.rresp  <= AXI_RSP_OKAY;
+            s_axil.rresp  <= AXI_RSP_SLVERR when m_wb.err else AXI_RSP_OKAY;
             state         <= ST_READ_RESP_CMPLT;
           end if;
 
@@ -135,6 +136,7 @@ begin
           -- Wait for the master to complete the AXIL rd response
           if s_axil.rready then
             s_axil.rvalid <= '0';
+            priority      <= not priority;
             state         <= ST_IDLE;
           end if;
 
@@ -149,6 +151,7 @@ begin
         s_axil.arready <= '0';
         s_axil.rvalid  <= '0';
         m_wb.stb       <= '0';
+        priority       <= '0';
         state          <= ST_IDLE;
       end if;
 
