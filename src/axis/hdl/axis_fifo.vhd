@@ -17,27 +17,39 @@ use work.axis_pkg.all;
 
 entity axis_fifo is
   generic (
+    G_DW    : positive;
+    G_UW    : positive;
+    --
     -- Depth of the FIFO in axis beats. Must be a power of 2.
-    G_DEPTH : positive := 1024;
+    G_DEPTH : positive;
+    --
+    G_USE_TKEEP : boolean := true;
+    G_USE_TLAST : boolean := true;
+    G_USE_TUSER : boolean := true;
     -- If true, then output will not go valid until one full packet has been
     -- stored at the input. This guarantees that output valid will never
     -- be lowered during a packet.
     G_PACKET_MODE : boolean := false;
-    -- Drop oversized packets that do not fit in the FIFO.
+    -- If true: drop oversized packets that do not fit in the FIFO.
+    -- If false: use "cut-through" mode.
     -- Only applicable in packet mode.
-    G_DROP_OVERSIZE : boolean := false;
-    --
-    G_USE_TLAST : boolean := true;
-    G_USE_TKEEP : boolean := true;
-    G_USE_TUSER : boolean := true
+    G_DROP_OVERSIZE : boolean := false
   );
   port (
     clk  : in    std_ulogic;
     srst : in    std_ulogic;
     --
-    s_axis : view s_axis_view;
+    s_axis : view s_axis_view of axis_t(
+      tdata(G_DW - 1 downto 0),
+      tkeep(G_DW / 8 - 1 downto 0),
+      tuser(G_UW - 1 downto 0)
+    );
     --
-    m_axis : view m_axis_view;
+    m_axis : view m_axis_view of axis_t(
+      tdata(G_DW - 1 downto 0),
+      tkeep(G_DW / 8 - 1 downto 0),
+      tuser(G_UW - 1 downto 0)
+    );
     --
     -- Drop the current packet that is being written or next packet that will be
     -- written to the FIFO. This input
@@ -53,18 +65,18 @@ entity axis_fifo is
     -- Only applicable in packet mode.
     sts_dropped : out   std_ulogic;
     -- Current speculative fill depth of the FIFO, in beats.
+    -- Only applicable in packet mode.
     sts_depth_spec : out   u_unsigned(clog2(G_DEPTH) downto 0);
     -- Current committed fill depth of the FIFO, in beats.
-    -- Only applicable in packet mode.
     sts_depth_comm : out   u_unsigned(clog2(G_DEPTH) downto 0)
   );
 end entity;
 
 architecture rtl of axis_fifo is
 
-  constant DW : integer := m_axis.tdata'length;
-  constant KW : integer := if_then_else(G_USE_TKEEP, m_axis.tkeep'length, 0);
-  constant UW : integer := if_then_else(G_USE_TUSER, m_axis.tuser'length, 0);
+  constant DW : integer := G_DW;
+  constant KW : integer := if_then_else(G_USE_TKEEP, G_DW / 8, 0);
+  constant UW : integer := if_then_else(G_USE_TUSER, G_UW, 0);
   constant LW : integer := if_then_else(G_USE_TLAST, 1, 0);
   constant RW : integer := DW + UW + KW + LW; -- Ram width
   constant AW : integer := clog2(G_DEPTH);    -- Address width

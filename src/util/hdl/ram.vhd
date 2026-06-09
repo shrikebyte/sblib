@@ -79,58 +79,78 @@ architecture rtl of ram is
   -- ---------------------------------------------------------------------------
   signal a_idx  : natural range 0 to 2 ** AW - 1;
   signal b_idx  : natural range 0 to 2 ** AW - 1;
-  signal a_pipe : slv_arr_t(0 to G_RD_LATENCY - 1)(DW - 1 downto 0);
-  signal b_pipe : slv_arr_t(0 to G_RD_LATENCY - 1)(DW - 1 downto 0);
-  signal ram    : slv_arr_t(0 to 2 ** AW - 1)(DW - 1 downto 0) := G_RAM_INIT;
+  signal a_rdat_pre : std_ulogic_vector(G_BYTES_PER_ROW * G_BYTE_WIDTH - 1 downto 0);
+  signal b_rdat_pre : std_ulogic_vector(G_BYTES_PER_ROW * G_BYTE_WIDTH - 1 downto 0);
+
+  -- Any tool warnings about this shared variable can be ignored.
+  -- This is technically illegal in VHDL'08, but most tools accept it.
+  -- Most vendor synthesis tools require this format to infer a bram, despite
+  -- it being an illegal construct. Smh.
+  shared variable ram : slv_arr_t(0 to 2 ** AW - 1)(DW - 1 downto 0) := G_RAM_INIT;
 
   -- ---------------------------------------------------------------------------
   attribute ram_style : string;
-  attribute ram_style of ram : signal is G_RAM_STYLE;
+  attribute ram_style of ram : variable is G_RAM_STYLE;
 
 begin
 
-  a_idx <= to_integer(unsigned(a_addr));
-  b_idx <= to_integer(unsigned(b_addr));
+  a_idx  <= to_integer(unsigned(a_addr));
+  b_idx  <= to_integer(unsigned(b_addr));
 
   -- ---------------------------------------------------------------------------
-  -- Notice that this process is sensitive to both clocks. Somewhat non-standard
-  -- but it works for implementing a tdpr without a shared variable, making it
-  -- compliant with VHDL 08.
-  prc_ram : process (a_clk, b_clk) is begin
-
-    -- -------------------------------------------------------------------------
-    -- Port A
+  prc_ram_a : process (a_clk) is begin
     if rising_edge(a_clk) then
+
+      a_rdat_pre <= ram(a_idx);
 
       for i in 0 to G_BYTES_PER_ROW - 1 loop
         if a_wen(i) then
-          ram(a_idx)(i * BW + BW - 1 downto i * BW) <= a_wdat(i * BW + BW - 1 downto i * BW);
+          ram(a_idx)(i * BW + BW - 1 downto i * BW) := a_wdat(i * BW + BW - 1 downto i * BW);
         end if;
       end loop;
 
-      a_pipe(0)                     <= ram(a_idx);
-      a_pipe(1 to G_RD_LATENCY - 1) <= a_pipe(0 to G_RD_LATENCY - 2);
-
     end if;
+  end process;
 
-    -- -------------------------------------------------------------------------
-    -- Port B
+  prc_ram_b : process (b_clk) is begin
     if rising_edge(b_clk) then
+
+      b_rdat_pre <= ram(b_idx);
 
       for i in 0 to G_BYTES_PER_ROW - 1 loop
         if b_wen(i) then
-          ram(b_idx)(i * BW + BW - 1 downto i * BW) <= b_wdat(i * BW + BW - 1 downto i * BW);
+          ram(b_idx)(i * BW + BW - 1 downto i * BW) := b_wdat(i * BW + BW - 1 downto i * BW);
         end if;
       end loop;
-
-      b_pipe(0)                     <= ram(b_idx);
-      b_pipe(1 to G_RD_LATENCY - 1) <= b_pipe(0 to G_RD_LATENCY - 2);
 
     end if;
 
   end process;
 
-  a_rdat <= a_pipe(G_RD_LATENCY - 1);
-  b_rdat <= b_pipe(G_RD_LATENCY - 1);
+  -- ---------------------------------------------------------------------------
+  u_shift_reg_a : entity work.shift_reg
+  generic map (
+    G_WIDTH   => G_BYTES_PER_ROW * G_BYTE_WIDTH,
+    G_DEPTH   => G_RD_LATENCY - 1,
+    G_OUT_REG => false
+  )
+  port map(
+    clk  => a_clk,
+    d    => a_rdat_pre,
+    q    => a_rdat
+  );
+
+  -- ---------------------------------------------------------------------------
+  u_shift_reg_b : entity work.shift_reg
+  generic map (
+    G_WIDTH   => G_BYTES_PER_ROW * G_BYTE_WIDTH,
+    G_DEPTH   => G_RD_LATENCY - 1,
+    G_OUT_REG => false
+  )
+  port map(
+    clk  => b_clk,
+    d    => b_rdat_pre,
+    q    => b_rdat
+  );
 
 end architecture;

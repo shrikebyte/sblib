@@ -17,11 +17,11 @@ package axis_pkg is
 
   -- AXI-Stream type
   type axis_t is record
-    tready : std_ulogic;
     tvalid : std_ulogic;
-    tlast  : std_ulogic;
-    tkeep  : std_ulogic_vector;
+    tready : std_ulogic;
     tdata  : std_ulogic_vector;
+    tkeep  : std_ulogic_vector;
+    tlast  : std_ulogic;
     tuser  : std_ulogic_vector;
   end record;
 
@@ -30,11 +30,11 @@ package axis_pkg is
 
   -- Manager view
 	view m_axis_view of axis_t is
-    tready : in;
     tvalid : out;
-    tlast  : out;
-    tkeep  : out;
+    tready : in;
     tdata  : out;
+    tkeep  : out;
+    tlast  : out;
     tuser  : out;
   end view;
 
@@ -43,11 +43,11 @@ package axis_pkg is
 
   -- Probe view
   view p_axis_view of axis_t is
-    tready : in;
     tvalid : in;
-    tlast  : in;
-    tkeep  : in;
+    tready : in;
     tdata  : in;
+    tkeep  : in;
+    tlast  : in;
     tuser  : in;
   end view;
 
@@ -70,11 +70,11 @@ package body axis_pkg is
     signal m_axis : view m_axis_view of axis_t
   ) is
   begin
-    s_axis.tready <= m_axis.tready;
     m_axis.tvalid <= s_axis.tvalid;
-    m_axis.tlast  <= s_axis.tlast;
-    m_axis.tkeep  <= s_axis.tkeep;
+    s_axis.tready <= m_axis.tready;
     m_axis.tdata  <= s_axis.tdata;
+    m_axis.tkeep  <= s_axis.tkeep;
+    m_axis.tlast  <= s_axis.tlast;
     m_axis.tuser  <= s_axis.tuser;
   end procedure;
 
@@ -84,11 +84,11 @@ package body axis_pkg is
   ) is
   begin
     for i in s_axis'range loop
-      s_axis(i).tready <= m_axis(i).tready;
       m_axis(i).tvalid <= s_axis(i).tvalid;
-      m_axis(i).tlast  <= s_axis(i).tlast;
-      m_axis(i).tkeep  <= s_axis(i).tkeep;
+      s_axis(i).tready <= m_axis(i).tready;
       m_axis(i).tdata  <= s_axis(i).tdata;
+      m_axis(i).tkeep  <= s_axis(i).tkeep;
+      m_axis(i).tlast  <= s_axis(i).tlast;
       m_axis(i).tuser  <= s_axis(i).tuser;
     end loop;
   end procedure;

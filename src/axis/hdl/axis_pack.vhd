@@ -29,6 +29,8 @@ use work.axis_pkg.all;
 
 entity axis_pack is
   generic (
+    G_DW    : positive;
+    G_UW    : positive;
     -- This reduces the crit path by 2 logic levels on Artix 7
     -- when tkeep width is set to 8. This will add more of noticeable
     -- improvement for larger tkeep.
@@ -40,17 +42,25 @@ entity axis_pack is
     clk  : in    std_ulogic;
     srst : in    std_ulogic;
     --
-    s_axis : view s_axis_view;
+    s_axis : view s_axis_view of axis_t(
+      tdata(G_DW - 1 downto 0),
+      tkeep(G_DW / 8 - 1 downto 0),
+      tuser(G_UW - 1 downto 0)
+    );
     --
-    m_axis : view m_axis_view
+    m_axis : view m_axis_view of axis_t(
+      tdata(G_DW - 1 downto 0),
+      tkeep(G_DW / 8 - 1 downto 0),
+      tuser(G_UW - 1 downto 0)
+    )
   );
 end entity;
 
 architecture rtl of axis_pack is
 
-  constant DW  : integer := m_axis.tdata'length;
-  constant KW  : integer := m_axis.tkeep'length;
-  constant UW  : integer := m_axis.tuser'length;
+  constant DW  : integer := G_DW;
+  constant KW  : integer := G_DW / 8;
+  constant UW  : integer := G_UW;
   constant DBW : integer := DW / KW;
   constant UBW : integer := UW / KW;
 
@@ -59,20 +69,20 @@ architecture rtl of axis_pack is
   signal state_reg : state_t;
 
   signal pipe0_axis : axis_t (
-    tkeep(KW - 1 downto 0),
     tdata(DW - 1 downto 0),
+    tkeep(KW - 1 downto 0),
     tuser(UW - 1 downto 0)
   );
 
   signal pipe1_axis_nxt : axis_t (
-    tkeep(KW * 2 - 1 downto 0),
     tdata(DW * 2 - 1 downto 0),
+    tkeep(KW * 2 - 1 downto 0),
     tuser(UW * 2 - 1 downto 0)
   );
 
   signal pipe1_axis_reg : axis_t (
-    tkeep(KW * 2 - 1 downto 0),
     tdata(DW * 2 - 1 downto 0),
+    tkeep(KW * 2 - 1 downto 0),
     tuser(UW * 2 - 1 downto 0)
   );
 
@@ -133,9 +143,9 @@ begin
       if rising_edge(clk) then
         if s_axis.tvalid and s_axis.tready then
           pipe0_axis.tvalid <= '1';
-          pipe0_axis.tlast  <= s_axis.tlast;
           pipe0_axis.tdata  <= s_axis.tdata;
           pipe0_axis.tkeep  <= s_axis.tkeep;
+          pipe0_axis.tlast  <= s_axis.tlast;
           pipe0_axis.tuser  <= s_axis.tuser;
           --
           pipe0_axis_cnt <= cnt_ones_contig(s_axis.tkeep);
@@ -160,9 +170,9 @@ begin
   -- ---------------------------------------------------------------------------
   prc_fsm_comb : process (all) is begin
     pipe1_axis_nxt.tvalid <= pipe1_axis_reg.tvalid;
-    pipe1_axis_nxt.tlast  <= pipe1_axis_reg.tlast;
-    pipe1_axis_nxt.tkeep  <= pipe1_axis_reg.tkeep;
     pipe1_axis_nxt.tdata  <= pipe1_axis_reg.tdata;
+    pipe1_axis_nxt.tkeep  <= pipe1_axis_reg.tkeep;
+    pipe1_axis_nxt.tlast  <= pipe1_axis_reg.tlast;
     pipe1_axis_nxt.tuser  <= pipe1_axis_reg.tuser;
     --
     offset_nxt <= offset_reg;
@@ -209,14 +219,14 @@ begin
 
           if pipe1_axis_reg.tkeep(KW - 1) or pipe1_axis_reg.tlast then
             -- If the current output beat is full / last, then shift out.
-            pipe1_axis_nxt.tkeep                  <= std_ulogic_vector(shift_right(unsigned(pipe1_axis_reg.tkeep), KW));
             pipe1_axis_nxt.tdata(DW - 1 downto 0) <= pipe1_axis_reg.tdata(DW * 2 - 1 downto DW);
+            pipe1_axis_nxt.tkeep                  <= std_ulogic_vector(shift_right(unsigned(pipe1_axis_reg.tkeep), KW));
             pipe1_axis_nxt.tuser(UW - 1 downto 0) <= pipe1_axis_reg.tuser(UW * 2 - 1 downto UW);
           end if;
 
           -- Store the new input data at the buffer offset.
-          pipe1_axis_nxt.tkeep(offset_reg + KW - 1 downto offset_reg)                 <= pipe0_axis.tkeep;
           pipe1_axis_nxt.tdata((offset_reg * DBW) + DW - 1 downto (offset_reg * DBW)) <= pipe0_axis.tdata;
+          pipe1_axis_nxt.tkeep(offset_reg + KW - 1 downto offset_reg)                 <= pipe0_axis.tkeep;
           pipe1_axis_nxt.tuser((offset_reg * UBW) + UW - 1 downto (offset_reg * UBW)) <= pipe0_axis.tuser;
         elsif pipe1_axis_reg.tready then
           pipe1_axis_nxt.tvalid <= '0';
@@ -231,8 +241,8 @@ begin
           pipe1_axis_nxt.tlast  <= '1';
 
           -- Shift out
-          pipe1_axis_nxt.tkeep                  <= std_ulogic_vector(shift_right(unsigned(pipe1_axis_reg.tkeep), KW));
           pipe1_axis_nxt.tdata(DW - 1 downto 0) <= pipe1_axis_reg.tdata(DW * 2 - 1 downto DW);
+          pipe1_axis_nxt.tkeep                  <= std_ulogic_vector(shift_right(unsigned(pipe1_axis_reg.tkeep), KW));
           pipe1_axis_nxt.tuser(UW - 1 downto 0) <= pipe1_axis_reg.tuser(UW * 2 - 1 downto UW);
 
           state_nxt <= ST_PACK;
@@ -246,9 +256,9 @@ begin
   prc_fsm_ff : process (clk) is begin
     if rising_edge(clk) then
       pipe1_axis_reg.tvalid <= pipe1_axis_nxt.tvalid;
-      pipe1_axis_reg.tlast  <= pipe1_axis_nxt.tlast;
-      pipe1_axis_reg.tkeep  <= pipe1_axis_nxt.tkeep;
       pipe1_axis_reg.tdata  <= pipe1_axis_nxt.tdata;
+      pipe1_axis_reg.tkeep  <= pipe1_axis_nxt.tkeep;
+      pipe1_axis_reg.tlast  <= pipe1_axis_nxt.tlast;
       pipe1_axis_reg.tuser  <= pipe1_axis_nxt.tuser;
       --
       offset_reg <= offset_nxt;
@@ -266,11 +276,11 @@ begin
 
   -- ---------------------------------------------------------------------------
   pipe1_axis_reg.tready <= m_axis.tready;
-
+  --
   m_axis.tvalid <= pipe1_axis_reg.tvalid;
-  m_axis.tlast  <= pipe1_axis_reg.tlast;
-  m_axis.tkeep  <= pipe1_axis_reg.tkeep(KW - 1 downto 0);
   m_axis.tdata  <= pipe1_axis_reg.tdata(DW - 1 downto 0);
+  m_axis.tkeep  <= pipe1_axis_reg.tkeep(KW - 1 downto 0);
+  m_axis.tlast  <= pipe1_axis_reg.tlast;
   m_axis.tuser  <= pipe1_axis_reg.tuser(UW - 1 downto 0);
 
 end architecture;

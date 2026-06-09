@@ -41,7 +41,7 @@ library osvvm;
 use osvvm.randompkg.randomptype;
 use work.bfm_pkg.all;
 
-entity bfm_handshake_man is
+entity bfm_handshake_mgr is
   generic (
     G_STALL_CONFIG : stall_configuration_t
   );
@@ -56,7 +56,7 @@ entity bfm_handshake_man is
   );
 end entity;
 
-architecture sim of bfm_handshake_man is
+architecture sim of bfm_handshake_mgr is
 
   signal let_data_through : std_ulogic := '1';
 
@@ -74,7 +74,7 @@ begin
     begin
       -- Use salt so that parallel instances of this entity get unique random
       -- sequences.
-      get_seed(seed, salt=> bfm_handshake_man'path_name);
+      get_seed(seed, salt=> bfm_handshake_mgr'path_name);
       rnd.InitSeed(seed);
 
       loop

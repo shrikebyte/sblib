@@ -14,7 +14,7 @@
 --# feature is needed, then instantiate `axis_pack` between the output
 --# of this module and the downstream module that requires packed tkeep.
 --#
---# Output tkeep bits will alwyas be contiguous, so long as the input rules are
+--# Output tkeep bits will always be contiguous, so long as the input rules are
 --# followed.
 --##############################################################################
 
@@ -26,6 +26,8 @@ use work.axis_pkg.all;
 
 entity axis_slice is
   generic (
+    G_DW    : positive;
+    G_UW    : positive;
     -- Max number of bytes that can be sent out in each M0 packet
     G_MAX_M0_BYTES : positive := 2047;
     -- This reduces the crit path by 3 logic levels on Artix 7
@@ -39,26 +41,38 @@ entity axis_slice is
     clk  : in    std_ulogic;
     srst : in    std_ulogic;
     --
-    s_axis : view s_axis_view;
+    s_axis : view s_axis_view of axis_t(
+      tdata(G_DW - 1 downto 0),
+      tkeep(G_DW / 8 - 1 downto 0),
+      tuser(G_UW - 1 downto 0)
+    );
     --
-    m0_axis : view m_axis_view;
-    m1_axis : view m_axis_view;
-    --! Number of bytes from the start of the input to send to the first output
-    --! port. The remaining input bytes, until tlast, will be sent to the
-    --! second output port. Note tat this does not necessarily have to be
-    --! 8-bit bytes. For example, if data width is 32 and keep width is 2, then
-    --! byte width would be 16.
+    m0_axis : view m_axis_view of axis_t(
+      tdata(G_DW - 1 downto 0),
+      tkeep(G_DW / 8 - 1 downto 0),
+      tuser(G_UW - 1 downto 0)
+    );
+    m1_axis : view m_axis_view of axis_t(
+      tdata(G_DW - 1 downto 0),
+      tkeep(G_DW / 8 - 1 downto 0),
+      tuser(G_UW - 1 downto 0)
+    );
+    -- Number of bytes from the start of the input to send to the first output
+    -- port. The remaining input bytes, until tlast, will be sent to the
+    -- second output port. Note tat this does not necessarily have to be
+    -- 8-bit bytes. For example, if data width is 32 and keep width is 2, then
+    -- byte width would be 16.
     num_bytes : in    natural range 0 to G_MAX_M0_BYTES;
-    --! Pulses if the length of the input packet was shorter than split_bytes.
+    -- Pulses if the length of the input packet was shorter than split_bytes.
     sts_short : out   std_ulogic
   );
 end entity;
 
 architecture rtl of axis_slice is
 
-  constant KW  : integer := s_axis.tkeep'length;
-  constant DW  : integer := s_axis.tdata'length;
-  constant UW  : integer := s_axis.tuser'length;
+  constant DW  : integer := G_DW;
+  constant KW  : integer := G_DW / 8;
+  constant UW  : integer := G_UW;
   constant DBW : integer := DW / KW;
   constant UBW : integer := UW / KW;
 
@@ -75,14 +89,14 @@ architecture rtl of axis_slice is
   signal partial_tlast : std_ulogic;
 
   signal pipe0_axis : axis_t (
-    tkeep(KW - 1 downto 0),
     tdata(DW - 1 downto 0),
+    tkeep(KW - 1 downto 0),
     tuser(UW - 1 downto 0)
   );
 
-  signal int_axis_tlast : std_ulogic;
-  signal int_axis_tkeep : std_ulogic_vector(KW - 1 downto 0);
   signal int_axis_tdata : std_ulogic_vector(DW - 1 downto 0);
+  signal int_axis_tkeep : std_ulogic_vector(KW - 1 downto 0);
+  signal int_axis_tlast : std_ulogic;
   signal int_axis_tuser : std_ulogic_vector(UW - 1 downto 0);
 
   signal shft_tdata_arr : slv_arr_t(1 to KW - 1)(DW - 1 downto 0);
@@ -118,9 +132,9 @@ begin
       if rising_edge(clk) then
         if s_axis.tvalid and s_axis.tready then
           pipe0_axis.tvalid <= '1';
-          pipe0_axis.tlast  <= s_axis.tlast;
           pipe0_axis.tdata  <= s_axis.tdata;
           pipe0_axis.tkeep  <= s_axis.tkeep;
+          pipe0_axis.tlast  <= s_axis.tlast;
           pipe0_axis.tuser  <= s_axis.tuser;
           --
           pipe0_axis_cnt  <= cnt_ones_contig(s_axis.tkeep);

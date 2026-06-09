@@ -26,15 +26,29 @@ use work.util_pkg.all;
 use work.axis_pkg.all;
 
 entity axis_mux is
+  generic (
+    G_NUM_S : positive;
+    G_DW    : positive;
+    G_UW    : positive
+  );
   port (
     clk  : in    std_ulogic;
     srst : in    std_ulogic;
     --
-    s_axis : view (s_axis_view) of axis_arr_t;
-    --
-    m_axis : view m_axis_view;
     -- Input Select
-    sel : in    integer range s_axis'range
+    sel : in    integer range 0 to G_NUM_S - 1;
+    --
+    s_axis : view (s_axis_view) of axis_arr_t(0 to G_NUM_S - 1)(
+      tdata(G_DW - 1 downto 0),
+      tkeep(G_DW / 8 - 1 downto 0),
+      tuser(G_UW - 1 downto 0)
+    );
+    --
+    m_axis : view m_axis_view of axis_t(
+      tdata(G_DW - 1 downto 0),
+      tkeep(G_DW / 8 - 1 downto 0),
+      tuser(G_UW - 1 downto 0)
+    )
   );
 end entity;
 
@@ -42,7 +56,7 @@ architecture rtl of axis_mux is
 
   type   state_t is (ST_UNLOCKED, ST_LOCKED);
   signal state   : state_t;
-  signal sel_reg : integer range s_axis'range;
+  signal sel_reg : integer range 0 to G_NUM_S - 1;
   signal oe      : std_ulogic;
 
 begin
@@ -50,7 +64,7 @@ begin
   -- ---------------------------------------------------------------------------
   oe <= m_axis.tready or not m_axis.tvalid;
 
-  gen_assign_s_axis_tready : for i in s_axis'range generate
+  gen_assign_s_axis_tready : for i in 0 to G_NUM_S - 1 generate
     s_axis(i).tready <= oe and to_sl(state = ST_LOCKED and sel_reg = i);
   end generate;
 
@@ -71,9 +85,9 @@ begin
         when ST_LOCKED =>
           if s_axis(sel_reg).tvalid and oe then
             m_axis.tvalid <= '1';
-            m_axis.tlast  <= s_axis(sel_reg).tlast;
             m_axis.tdata  <= s_axis(sel_reg).tdata;
             m_axis.tkeep  <= s_axis(sel_reg).tkeep;
+            m_axis.tlast  <= s_axis(sel_reg).tlast;
             m_axis.tuser  <= s_axis(sel_reg).tuser;
 
             if s_axis(sel_reg).tlast then
@@ -84,7 +98,7 @@ begin
 
       if srst then
         m_axis.tvalid <= '0';
-        sel_reg       <= s_axis'low;
+        sel_reg       <= sel_reg'low;
         state         <= ST_UNLOCKED;
       end if;
     end if;

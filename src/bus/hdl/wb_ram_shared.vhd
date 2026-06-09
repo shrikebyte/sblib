@@ -29,7 +29,7 @@ entity wb_ram_shared is
     -- ignored.
     G_ADDR_WIDTH : positive                                                              := 10;
     G_RAM_STYLE  : string                                                                := "auto";
-    G_RAM_INIT   : slv_arr_t(0 to (2 ** G_ADDR_WIDTH) - 1)(AXIL_DATA_WIDTH - 1 downto 0) := (others=> (others=> '0'));
+    G_RAM_INIT   : slv_arr_t(0 to (2 ** G_ADDR_WIDTH) - 1)(AXIL_DATA_RANGE) := (others=> (others=> '0'));
     G_RD_LATENCY : positive                                                              := 1
   );
   port (
