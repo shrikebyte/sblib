@@ -29,7 +29,7 @@ entity axis_pack_tb is
     RUNNER_CFG      : string;
     G_ENABLE_JITTER : boolean := true;
     G_KW            : integer := 4;
-    G_DW            : integer := 16;
+    G_DW            : integer := 32;
     G_UW            : integer := 4;
     G_PACKED_STREAM : boolean := false
   );
@@ -54,15 +54,15 @@ architecture tb of axis_pack_tb is
 
   -- DUT Signals
   signal s_axis : axis_t (
-    tdata(DW downto 1),
-    tkeep(KW downto 1),
-    tuser(UW downto 1)
+    tdata(DW - 1 downto 0),
+    tkeep(KW - 1 downto 0),
+    tuser(UW - 1 downto 0)
   );
 
   signal m_axis : axis_t (
-    tdata(DW downto 1),
-    tkeep(KW downto 1),
-    tuser(UW downto 1)
+    tdata(DW - 1 downto 0),
+    tkeep(KW - 1 downto 0),
+    tuser(UW - 1 downto 0)
   );
 
   -- Testbench BFMs
@@ -161,6 +161,10 @@ begin
 
   -- ---------------------------------------------------------------------------
   u_axis_pack : entity work.axis_pack
+  generic map (
+    G_DW => DW,
+    G_UW => UW
+  )
   port map (
     clk    => clk,
     srst   => srst,
@@ -168,7 +172,7 @@ begin
     m_axis => m_axis
   );
 
-  u_bfm_axis_man : entity work.bfm_axis_man
+  u_bfm_axis_mgr : entity work.bfm_axis_mgr
   generic map (
     G_DATA_QUEUE    => DATA_QUEUE,
     G_USER_QUEUE    => USER_QUEUE,

@@ -51,15 +51,15 @@ architecture tb of axis_demux_tb is
 
   -- DUT Signals
   signal s_axis : axis_t (
-    tdata(DW downto 1),
-    tkeep(KW downto 1),
-    tuser(UW downto 1)
+    tdata(DW - 1 downto 0),
+    tkeep(KW - 1 downto 0),
+    tuser(UW - 1 downto 0)
   );
 
   signal m_axis : axis_arr_t(0 to NUM_OUTPUTS - 1)(
-    tdata(DW downto 1),
-    tkeep(KW downto 1),
-    tuser(UW downto 1)
+    tdata(DW - 1 downto 0),
+    tkeep(KW - 1 downto 0),
+    tuser(UW - 1 downto 0)
   );
 
   signal sel : integer range m_axis'range := m_axis'low;
@@ -166,6 +166,11 @@ begin
 
   -- ---------------------------------------------------------------------------
   u_axis_demux : entity work.axis_demux
+  generic map (
+    G_DW => DW,
+    G_UW => UW,
+    G_NUM_M => NUM_OUTPUTS
+  )
   port map (
     clk    => clk,
     srst   => srst,
@@ -174,7 +179,7 @@ begin
     sel    => sel
   );
 
-  u_bfm_axis_man : entity work.bfm_axis_man
+  u_bfm_axis_mgr : entity work.bfm_axis_mgr
   generic map (
     G_DATA_QUEUE   => DATA_QUEUE,
     G_USER_QUEUE   => USER_QUEUE,

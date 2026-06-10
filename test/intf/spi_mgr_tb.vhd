@@ -54,13 +54,13 @@ architecture tb of spi_mgr_tb is
   -- DUT Signals
   signal s_axis : axis_t (
     tdata(DW - 1 downto 0),
-    tkeep(0 downto 0),
+    tkeep(DW / 8 - 1 downto 0),
     tuser(UW - 1 downto 0)
   );
 
   signal m_axis : axis_t (
     tdata(DW - 1 downto 0),
-    tkeep(0 downto 0),
+    tkeep(DW / 8 - 1 downto 0),
     tuser(UW - 1 downto 0)
   );
 
@@ -185,6 +185,7 @@ begin
   -- ---------------------------------------------------------------------------
   u_spi_mgr : entity work.spi_mgr
   generic map (
+    G_DW      => DW,
     G_SCK_DIV => G_SCK_DIV,
     G_CS_BITS => G_CS_BITS,
     G_CS_LEAD => G_CS_LEAD,
@@ -205,7 +206,7 @@ begin
   -- Loopback
   spi_miso <= spi_mosi;
 
-  u_bfm_axis_man : entity work.bfm_axis_man
+  u_bfm_axis_mgr : entity work.bfm_axis_mgr
   generic map (
     G_DATA_QUEUE   => DATA_QUEUE,
     G_USER_QUEUE   => USER_QUEUE,

@@ -58,8 +58,7 @@ def add_configs(lib):
         sim_utils.named_config(
             tb,
             {
-                "G_ENABLE_JITTER": enable_jitter,
-                "G_LOW_AREA": low_area,
+                "G_ENABLE_JITTER": enable_jitter
             },
         )
 

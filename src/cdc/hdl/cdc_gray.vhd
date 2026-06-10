@@ -18,6 +18,7 @@ use work.util_pkg.all;
 
 entity cdc_gray is
   generic (
+    G_WIDTH      : positive;
     G_EXTRA_SYNC : natural := 0;
     G_OUT_REG    : boolean := false
   );
@@ -31,16 +32,15 @@ end entity;
 
 architecture rtl of cdc_gray is
 
-  constant DW : natural := src_cnt'length;
-
-  signal src_gray : std_ulogic_vector(DW - 1 downto 0);
-  signal dst_gray : std_ulogic_vector(DW - 1 downto 0);
+  signal src_gray : std_ulogic_vector(G_WIDTH - 1 downto 0);
+  signal dst_gray : std_ulogic_vector(G_WIDTH - 1 downto 0);
 
 begin
 
   -- ---------------------------------------------------------------------------
   u_cdc_bit : entity work.cdc_bit
   generic map (
+    G_WIDTH       => G_WIDTH,
     G_USE_SRC_REG => true,
     G_EXTRA_SYNC  => G_EXTRA_SYNC
   )

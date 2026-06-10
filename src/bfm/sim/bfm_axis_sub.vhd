@@ -142,8 +142,8 @@ begin
     report BASE_ERROR_MESSAGE &
            "User width must be an integer multiple of keep width.";
 
-  int_axis_tkeep <= s_axis.tkeep;
   int_axis_tdata <= s_axis.tdata;
+  int_axis_tkeep <= s_axis.tkeep;
   int_axis_tuser <= s_axis.tuser;
 
   -- ---------------------------------------------------------------------------
@@ -281,11 +281,11 @@ begin
     p_axis => p_axis
   );
 
-  p_axis.tready <= s_axis.tready;
   p_axis.tvalid <= s_axis.tvalid;
-  p_axis.tlast  <= s_axis.tlast;
-  p_axis.tkeep  <= s_axis.tkeep;
+  p_axis.tready <= s_axis.tready;
   p_axis.tdata  <= s_axis.tdata;
+  p_axis.tkeep  <= s_axis.tkeep;
+  p_axis.tlast  <= s_axis.tlast;
   p_axis.tuser  <= s_axis.tuser;
 
 end architecture;

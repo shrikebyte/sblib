@@ -51,15 +51,15 @@ architecture tb of axis_mux_tb is
 
   -- DUT Signals
   signal s_axis : axis_arr_t(0 to NUM_INPUTS - 1)(
-    tdata(DW downto 1),
-    tkeep(KW downto 1),
-    tuser(UW downto 1)
+    tdata(DW - 1 downto 0),
+    tkeep(KW - 1 downto 0),
+    tuser(UW - 1 downto 0)
   );
 
   signal m_axis : axis_t (
-    tdata(DW downto 1),
-    tkeep(KW downto 1),
-    tuser(UW downto 1)
+    tdata(DW - 1 downto 0),
+    tkeep(KW - 1 downto 0),
+    tuser(UW - 1 downto 0)
   );
 
   signal sel : integer range s_axis'range := s_axis'low;
@@ -178,6 +178,11 @@ begin
 
   -- ---------------------------------------------------------------------------
   u_axis_mux : entity work.axis_mux
+  generic map (
+    G_DW => DW,
+    G_UW => UW,
+    G_NUM_S => NUM_INPUTS
+  )
   port map (
     clk    => clk,
     srst   => srst,
@@ -188,7 +193,7 @@ begin
 
   gen_bfms : for i in s_axis'range generate
 
-    u_bfm_axis_man : entity work.bfm_axis_man
+    u_bfm_axis_mgr : entity work.bfm_axis_mgr
     generic map (
       G_DATA_QUEUE   => DATA_QUEUES(i),
       G_USER_QUEUE   => USER_QUEUES(i),

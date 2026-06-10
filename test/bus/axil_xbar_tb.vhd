@@ -153,6 +153,8 @@ begin
   -- ---------------------------------------------------------------------------
   u_axil_xbar : entity work.axil_xbar
   generic map (
+    G_NUM_M     => NUM_MGR,
+    G_NUM_S     => NUM_SUB,
     G_BASEADDRS => BASEADDRS
   )
   port map (
@@ -165,7 +167,7 @@ begin
   -- ---------------------------------------------------------------------------
   gen_mgrs : for i in 0 to NUM_MGR - 1 generate
 
-    u_axil_bfm : entity work.bfm_axil_man
+    u_bfm_axil_mgr : entity work.bfm_axil_mgr
     generic map (
       G_BUS_HANDLE => AXIM(i)
     )

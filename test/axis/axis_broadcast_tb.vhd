@@ -37,11 +37,10 @@ architecture tb of axis_broadcast_tb is
   constant RESET_TIME  : time    := 50 ns;
   constant CLK_PERIOD  : time    := 5 ns;
   constant NUM_OUTPUTS : integer := 3;
-  constant KW          : integer := 2;
   constant DW          : integer := 16;
   constant UW          : integer := 8;
-  constant DBW         : integer := DW / KW;
-  constant UBW         : integer := UW / KW;
+  constant DBW         : integer := DW / 8;
+  constant UBW         : integer := UW / 8;
 
   -- TB Signals
   signal clk   : std_ulogic := '1';
@@ -51,15 +50,15 @@ architecture tb of axis_broadcast_tb is
 
   -- DUT Signals
   signal s_axis : axis_t (
-    tdata(DW downto 1),
-    tkeep(KW downto 1),
-    tuser(UW downto 1)
+    tdata(DW - 1 downto 0),
+    tkeep(DW / 8 - 1 downto 0),
+    tuser(UW - 1 downto 0)
   );
 
   signal m_axis : axis_arr_t(0 to NUM_OUTPUTS - 1)(
-    tdata(DW downto 1),
-    tkeep(KW downto 1),
-    tuser(UW downto 1)
+    tdata(DW - 1 downto 0),
+    tkeep(DW / 8 - 1 downto 0),
+    tuser(UW - 1 downto 0)
   );
 
   -- Testbench BFMs
@@ -91,7 +90,7 @@ begin
 
     procedure send_random is
 
-      constant PACKET_LENGTH_BYTES : natural := rnd.Uniform(1, 5 * KW);
+      constant PACKET_LENGTH_BYTES : natural := rnd.Uniform(1, 5 * (DW / 8));
 
       variable data        : integer_array_t := null_integer_array;
       variable data_copy_0 : integer_array_t := null_integer_array;
@@ -195,6 +194,11 @@ begin
 
   -- ---------------------------------------------------------------------------
   u_axis_broadcast : entity work.axis_broadcast
+  generic map (
+    G_DW => DW,
+    G_UW => UW,
+    G_NUM_M => NUM_OUTPUTS
+  )
   port map (
     clk    => clk,
     srst   => srst,
@@ -202,7 +206,7 @@ begin
     m_axis => m_axis
   );
 
-  u_bfm_axis_man : entity work.bfm_axis_man
+  u_bfm_axis_mgr : entity work.bfm_axis_mgr
   generic map (
     G_DATA_QUEUE   => DATA_QUEUE,
     G_USER_QUEUE   => USER_QUEUE,

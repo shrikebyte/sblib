@@ -145,7 +145,7 @@ begin
 
     -- Use salt so that parallel instances of this entity get unique random
     -- sequences.
-    get_seed(seed, salt=> bfm_axis_man'path_name);
+    get_seed(seed, salt=> bfm_axis_mgr'path_name);
     rnd.InitSeed(seed);
 
     loop

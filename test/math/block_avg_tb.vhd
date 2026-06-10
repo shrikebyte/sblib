@@ -54,13 +54,13 @@ architecture tb of block_avg_tb is
   -- DUT Signals
   signal s_axis : axis_t (
     tdata(DW - 1 downto 0),
-    tkeep(0 downto 0),
+    tkeep(DW / 8 - 1 downto 0),
     tuser(0 downto 0)
   );
 
   signal m_axis : axis_t (
     tdata(DW - 1 downto 0),
-    tkeep(0 downto 0),
+    tkeep(DW / 8 - 1 downto 0),
     tuser(0 downto 0)
   );
 
@@ -217,6 +217,7 @@ begin
   -- ---------------------------------------------------------------------------
   u_block_avg : entity work.block_avg
   generic map (
+    G_DW         => DW,
     G_SIGNED     => G_SIGNED,
     G_MAX_AVGSEL => G_MAX_AVGSEL
   )
@@ -228,7 +229,7 @@ begin
     ctl_avgsel => ctl_avgsel
   );
 
-  u_bfm_axis_man : entity work.bfm_axis_man
+  u_bfm_axis_mgr : entity work.bfm_axis_mgr
   generic map (
     G_DATA_QUEUE   => DATA_QUEUE,
     G_USER_QUEUE   => USER_QUEUE,

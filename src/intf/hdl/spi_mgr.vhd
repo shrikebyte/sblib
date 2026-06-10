@@ -45,6 +45,7 @@ use work.axis_pkg.all;
 
 entity spi_mgr is
   generic (
+    G_DW : positive;
     -- Defines the spi_sck clock as a ratio of the FPGA clock. For example,
     -- if the FPGA clock is 100 MHz, then G_SCK_DIV=4 results in a spi_sck
     -- of 25 MHz.
@@ -61,8 +62,18 @@ entity spi_mgr is
   port (
     clk      : in    std_ulogic;
     srst     : in    std_ulogic;
-    s_axis   : view  s_axis_view;
-    m_axis   : view  m_axis_view;
+    --
+    s_axis : view s_axis_view of axis_t(
+      tdata(G_DW - 1 downto 0),
+      tkeep(G_DW / 8 - 1 downto 0),
+      tuser(G_CS_BITS + 2 - 1 downto 0)
+    );
+    --
+    m_axis : view m_axis_view of axis_t(
+      tdata(G_DW - 1 downto 0),
+      tkeep(G_DW / 8 - 1 downto 0),
+      tuser(G_CS_BITS + 2 - 1 downto 0)
+    );
     spi_sck  : out   std_ulogic;
     spi_csn  : out   std_ulogic_vector((2 ** G_CS_BITS) - 1 downto 0);
     spi_mosi : out   std_ulogic;
@@ -72,12 +83,10 @@ end entity;
 
 architecture rtl of spi_mgr is
 
-  constant DW   : positive := s_axis.tdata'length;
-  constant UW   : positive := s_axis.tuser'length;
-  constant KW   : positive := s_axis.tkeep'length;
-  constant ULSB : integer  := s_axis.tuser'low;
+  constant DW   : positive := G_DW;
+  constant KW   : positive := G_DW / 8;
+  constant UW   : positive := G_CS_BITS + 2;
 
-  constant TUSER_REQUIRED_WIDTH : positive          := 2 + G_CS_BITS;
   constant FSM_CNT_INT_ARR      : int_arr_t(0 to 3) := (
     G_CS_LEAD,
     G_CS_LAG,
@@ -100,27 +109,15 @@ architecture rtl of spi_mgr is
   signal sck_idle  : std_ulogic;                            -- Clock polarity
   signal cpha      : std_ulogic;                            -- Clock phase
   signal csdec     : natural range 0 to 2 ** G_CS_BITS - 1; -- CS Decode
-  signal tuser_reg : std_ulogic_vector(UW - 1 downto 0);
   signal tkeep_reg : std_ulogic_vector(KW - 1 downto 0);
   signal tlast_reg : std_ulogic;
+  signal tuser_reg : std_ulogic_vector(UW - 1 downto 0);
 
 begin
 
   assert (G_SCK_DIV mod 2) = 0
     report "ERROR: spi_man: G_SCK_DIV must be divisible by 2"
     severity error;
-
-  assert s_axis.tuser'length >= TUSER_REQUIRED_WIDTH
-    report "ERROR: spi_mgr: s_axis.tuser is too small. " &
-           "Required width: " & integer'image(TUSER_REQUIRED_WIDTH) &
-           " Provided width: " & integer'image(s_axis.tuser'length)
-    severity failure;
-
-  assert s_axis.tdata'length = m_axis.tdata'length
-    report "ERROR: spi_mgr: s_axis.tdata width does not match m_axis.tdata width " &
-           "s_axis.tdata width: " & integer'image(m_axis.tdata'length) &
-           " m_axis.tdata width: " & integer'image(s_axis.tdata'length)
-    severity warning;
 
   spi_mosi <= sr(DW - 1);
   sck_idle <= tuser_reg(0); -- CPOL
@@ -130,7 +127,7 @@ begin
   gen_csdec : if G_CS_BITS = 0 generate
     csdec <= 0;
   else generate
-    csdec <= to_integer(unsigned(tuser_reg(G_CS_BITS + ULSB + 2 - 1 downto ULSB + 2)));
+    csdec <= to_integer(unsigned(tuser_reg(G_CS_BITS + 2 - 1 downto 2)));
   end generate;
 
   prc_fsm : process (clk) is begin

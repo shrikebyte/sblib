@@ -195,6 +195,7 @@ begin
 
   u_cdc_gray_wr_ptr_spec : entity work.cdc_gray
   generic map (
+    G_WIDTH      => AW + 1,
     G_EXTRA_SYNC => G_EXTRA_SYNC,
     G_OUT_REG    => false
   )
@@ -207,6 +208,7 @@ begin
 
   u_cdc_gray_wr_ptr_comm : entity work.cdc_gray
   generic map (
+    G_WIDTH      => AW + 1,
     G_EXTRA_SYNC => G_EXTRA_SYNC,
     G_OUT_REG    => false
   )
@@ -219,6 +221,7 @@ begin
 
   u_cdc_gray_rd_ptr : entity work.cdc_gray
   generic map (
+    G_WIDTH      => AW + 1,
     G_EXTRA_SYNC => G_EXTRA_SYNC,
     G_OUT_REG    => false
   )

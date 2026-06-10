@@ -129,7 +129,7 @@ begin
 
   u_b_buffer : entity work.axis_pipes
   generic map (
-    G_DW         => AXIL_DATA_WIDTH,
+    G_DW         => 8,
     G_UW         => AXIL_RSP_WIDTH,
     G_STAGES     => G_WR_LATENCY,
     G_DATA_PIPE  => false,

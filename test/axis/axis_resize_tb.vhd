@@ -60,15 +60,15 @@ architecture tb of axis_resize_tb is
 
   -- DUT Signals
   signal s_axis : axis_t (
-    tdata(S_DW downto 1),
-    tkeep(S_KW downto 1),
-    tuser(S_UW downto 1)
+    tdata(S_DW - 1 downto 0),
+    tkeep(S_KW - 1 downto 0),
+    tuser(S_UW - 1 downto 0)
   );
 
   signal m_axis : axis_t (
-    tdata(M_DW downto 1),
-    tkeep(M_KW downto 1),
-    tuser(M_UW downto 1)
+    tdata(M_DW - 1 downto 0),
+    tkeep(M_KW - 1 downto 0),
+    tuser(M_UW - 1 downto 0)
   );
 
   -- ---------------------------------------------------------------------------
@@ -168,6 +168,12 @@ begin
 
   -- ---------------------------------------------------------------------------
   u_axis_resize : entity work.axis_resize
+  generic map (
+    G_S_DW => S_DW,
+    G_S_UW => S_UW,
+    G_M_DW => M_DW,
+    G_M_UW => M_UW
+  )
   port map (
     clk    => clk,
     srst   => srst,
@@ -175,7 +181,7 @@ begin
     m_axis => m_axis
   );
 
-  u_bfm_axis_man : entity work.bfm_axis_man
+  u_bfm_axis_mgr : entity work.bfm_axis_mgr
   generic map (
     G_DATA_QUEUE    => DATA_QUEUE,
     G_USER_QUEUE    => USER_QUEUE,
