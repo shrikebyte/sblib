@@ -195,8 +195,8 @@ begin
   -- ---------------------------------------------------------------------------
   u_axis_broadcast : entity work.axis_broadcast
   generic map (
-    G_DW => DW,
-    G_UW => UW,
+    G_DW    => DW,
+    G_UW    => UW,
     G_NUM_M => NUM_OUTPUTS
   )
   port map (

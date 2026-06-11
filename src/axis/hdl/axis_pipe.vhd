@@ -18,8 +18,8 @@ use work.axis_pkg.all;
 
 entity axis_pipe is
   generic (
-    G_DW    : positive;
-    G_UW    : positive;
+    G_DW : positive;
+    G_UW : positive;
     --
     G_DATA_PIPE  : boolean := true;
     G_READY_PIPE : boolean := true

@@ -301,8 +301,8 @@ begin
   -- ---------------------------------------------------------------------------
   u_axis_fifo : entity work.axis_fifo
   generic map (
-    G_DW => DW,
-    G_UW => UW,
+    G_DW            => DW,
+    G_UW            => UW,
     G_DEPTH         => G_DEPTH,
     G_PACKET_MODE   => G_PACKET_MODE,
     G_DROP_OVERSIZE => G_DROP_OVERSIZE,

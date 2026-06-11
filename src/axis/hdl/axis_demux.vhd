@@ -54,7 +54,7 @@ end entity;
 
 architecture rtl of axis_demux is
 
-  type   state_t is (ST_UNLOCKED, ST_LOCKED);
+  type state_t is (ST_UNLOCKED, ST_LOCKED);
 
   signal state   : state_t;
   signal sel_reg : integer range 0 to G_NUM_M - 1;

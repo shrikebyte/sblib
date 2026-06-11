@@ -143,7 +143,7 @@ begin
     m_axis => ar1
   );
 
-  ar0.tvalid     <= s_axil.bvalid;
+  ar0.tvalid     <= s_axil.arvalid;
   s_axil.arready <= ar0.tready;
   ar0.tdata      <= s_axil.araddr;
   --

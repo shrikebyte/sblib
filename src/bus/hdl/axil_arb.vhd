@@ -17,7 +17,7 @@ use work.bus_pkg.all;
 
 entity axil_arb is
   generic (
-    G_NUM_S : positive;
+    G_NUM_S : positive
   );
   port (
     clk    : in    std_ulogic;

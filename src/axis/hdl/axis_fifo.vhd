@@ -17,8 +17,8 @@ use work.axis_pkg.all;
 
 entity axis_fifo is
   generic (
-    G_DW    : positive;
-    G_UW    : positive;
+    G_DW : positive;
+    G_UW : positive;
     --
     -- Depth of the FIFO in axis beats. Must be a power of 2.
     G_DEPTH : positive;

@@ -19,7 +19,7 @@ use ieee.std_logic_1164.all;
 
 entity cdc_vector is
   generic (
-    G_WIDTH : positive;
+    G_WIDTH      : positive;
     G_EXTRA_SYNC : natural := 0
   );
   port (

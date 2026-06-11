@@ -30,7 +30,7 @@ entity cdc_bit is
     src_clk : in    std_ulogic := 'U';
     src_bit : in    std_ulogic_vector(G_WIDTH - 1 downto 0);
     dst_clk : in    std_ulogic;
-    dst_bit : out   std_ulogic_vector(G_WIDTH - 1 downto 0);
+    dst_bit : out   std_ulogic_vector(G_WIDTH - 1 downto 0)
   );
 end entity;
 

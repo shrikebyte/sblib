@@ -332,8 +332,8 @@ begin
   -- ---------------------------------------------------------------------------
   u_axis_fifo_async : entity work.axis_fifo_async
   generic map (
-    G_DW => DW,
-    G_UW => UW,
+    G_DW            => DW,
+    G_UW            => UW,
     G_EXTRA_SYNC    => 0,
     G_DEPTH         => G_DEPTH,
     G_PACKET_MODE   => G_PACKET_MODE,

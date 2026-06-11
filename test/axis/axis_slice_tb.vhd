@@ -253,8 +253,8 @@ begin
   -- ---------------------------------------------------------------------------
   u_axis_slice : entity work.axis_slice
   generic map (
-    G_DW => DW,
-    G_UW => UW,
+    G_DW           => DW,
+    G_UW           => UW,
     G_MAX_M0_BYTES => MAX_M0_BYTES
   )
   port map (

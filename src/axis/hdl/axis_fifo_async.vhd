@@ -17,8 +17,8 @@ use work.axis_pkg.all;
 
 entity axis_fifo_async is
   generic (
-    G_DW    : positive;
-    G_UW    : positive;
+    G_DW : positive;
+    G_UW : positive;
     --
     -- Depth of the FIFO in axis beats. Must be a power of 2.
     G_DEPTH : positive;
@@ -44,7 +44,7 @@ entity axis_fifo_async is
     --
     -- Input interface
     s_clk            : in    std_ulogic;
-    s_axis : view s_axis_view of axis_t(
+    s_axis           : view s_axis_view of axis_t(
       tdata(G_DW - 1 downto 0),
       tkeep(G_DW / 8 - 1 downto 0),
       tuser(G_UW - 1 downto 0)
@@ -56,7 +56,7 @@ entity axis_fifo_async is
     --
     -- Output interface
     m_clk            : in    std_ulogic;
-    m_axis : view m_axis_view of axis_t(
+    m_axis           : view m_axis_view of axis_t(
       tdata(G_DW - 1 downto 0),
       tkeep(G_DW / 8 - 1 downto 0),
       tuser(G_UW - 1 downto 0)

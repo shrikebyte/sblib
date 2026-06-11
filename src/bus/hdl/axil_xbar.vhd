@@ -18,8 +18,8 @@ use work.bus_pkg.all;
 
 entity axil_xbar is
   generic (
-    G_NUM_M : positive;
-    G_NUM_S : positive;
+    G_NUM_M     : positive;
+    G_NUM_S     : positive;
     G_BASEADDRS : slv_arr_t(0 to G_NUM_S - 1)(AXIL_ADDR_RANGE)
   );
   port (

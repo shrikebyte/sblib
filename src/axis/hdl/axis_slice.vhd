@@ -26,8 +26,8 @@ use work.axis_pkg.all;
 
 entity axis_slice is
   generic (
-    G_DW    : positive;
-    G_UW    : positive;
+    G_DW : positive;
+    G_UW : positive;
     -- Max number of bytes that can be sent out in each M0 packet
     G_MAX_M0_BYTES : positive := 2047;
     -- This reduces the crit path by 3 logic levels on Artix 7

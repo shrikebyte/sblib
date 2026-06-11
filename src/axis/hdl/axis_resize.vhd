@@ -34,10 +34,10 @@ use work.axis_pkg.all;
 
 entity axis_resize is
   generic (
-    G_S_DW    : positive;
-    G_S_UW    : positive;
-    G_M_DW    : positive;
-    G_M_UW    : positive;
+    G_S_DW : positive;
+    G_S_UW : positive;
+    G_M_DW : positive;
+    G_M_UW : positive
   );
   port (
     clk  : in    std_ulogic;

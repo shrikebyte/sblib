@@ -68,8 +68,8 @@ begin
   -- ---------------------------------------------------------------------------
   u_axis_mux : entity work.axis_mux
   generic map (
-    G_NUM_S => G_NUM_S ,
-    G_DW    => G_DW    ,
+    G_NUM_S => G_NUM_S,
+    G_DW    => G_DW,
     G_UW    => G_UW
   )
   port map (

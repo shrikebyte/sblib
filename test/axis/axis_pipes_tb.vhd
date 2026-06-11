@@ -160,8 +160,8 @@ begin
   -- ---------------------------------------------------------------------------
   u_axis_pipes : entity work.axis_pipes
   generic map (
-    G_DW => DW,
-    G_UW => UW,
+    G_DW         => DW,
+    G_UW         => UW,
     G_STAGES     => 3,
     G_READY_PIPE => G_READY_PIPE,
     G_DATA_PIPE  => G_DATA_PIPE

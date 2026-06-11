@@ -38,7 +38,7 @@ architecture tb of axis_arb_tb is
   constant CLK_PERIOD : time    := 5 ns;
   constant NUM_INPUTS : integer := 4;
   constant DW         : integer := 16;
-  constant UW         : integer := 8;
+  constant UW         : integer := 32;
   constant DBW        : integer := DW / 8;
   constant UBW        : integer := UW / 8;
 
@@ -129,8 +129,9 @@ begin
       push_ref(DATA_QUEUES(INPUT_IDX), data);
       push_ref(REF_DATA_QUEUES(INPUT_IDX), data_copy);
 
-      -- Assign the input channel number to tuser. This will be used to route
-      -- result packets to the appropriate checker.
+      -- Assign the input channel number to tuser. This will be used to
+      -- mark the source of the packet so that the result can be routed
+      -- to the appropriate checker.
       for i in 0 to PACKET_LENGTH_BYTES - 1 loop
         set(user, i, INPUT_IDX);
       end loop;

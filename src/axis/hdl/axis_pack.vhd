@@ -29,8 +29,8 @@ use work.axis_pkg.all;
 
 entity axis_pack is
   generic (
-    G_DW    : positive;
-    G_UW    : positive;
+    G_DW : positive;
+    G_UW : positive;
     -- This reduces the crit path by 2 logic levels on Artix 7
     -- when tkeep width is set to 8. This will add more of noticeable
     -- improvement for larger tkeep.

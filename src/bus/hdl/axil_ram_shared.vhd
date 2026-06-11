@@ -16,10 +16,10 @@ use work.bus_pkg.all;
 
 entity axil_ram_shared is
   generic (
-    G_ADDR_WIDTH : positive                                                              := 10;
-    G_RAM_STYLE  : string                                                                := "auto";
+    G_ADDR_WIDTH : positive                                                 := 10;
+    G_RAM_STYLE  : string                                                   := "auto";
     G_RAM_INIT   : slv_arr_t(0 to (2 ** G_ADDR_WIDTH) - 1)(AXIL_DATA_RANGE) := (others=> (others=> '0'));
-    G_RD_LATENCY : positive                                                              := 1
+    G_RD_LATENCY : positive                                                 := 1
   );
   port (
     axil_clk  : in    std_ulogic;

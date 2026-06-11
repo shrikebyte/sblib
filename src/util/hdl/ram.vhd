@@ -77,8 +77,8 @@ architecture rtl of ram is
   constant BW : integer := G_BYTE_WIDTH;
 
   -- ---------------------------------------------------------------------------
-  signal a_idx  : natural range 0 to 2 ** AW - 1;
-  signal b_idx  : natural range 0 to 2 ** AW - 1;
+  signal a_idx      : natural range 0 to 2 ** AW - 1;
+  signal b_idx      : natural range 0 to 2 ** AW - 1;
   signal a_rdat_pre : std_ulogic_vector(G_BYTES_PER_ROW * G_BYTE_WIDTH - 1 downto 0);
   signal b_rdat_pre : std_ulogic_vector(G_BYTES_PER_ROW * G_BYTE_WIDTH - 1 downto 0);
 
@@ -94,13 +94,12 @@ architecture rtl of ram is
 
 begin
 
-  a_idx  <= to_integer(unsigned(a_addr));
-  b_idx  <= to_integer(unsigned(b_addr));
+  a_idx <= to_integer(unsigned(a_addr));
+  b_idx <= to_integer(unsigned(b_addr));
 
   -- ---------------------------------------------------------------------------
   prc_ram_a : process (a_clk) is begin
     if rising_edge(a_clk) then
-
       a_rdat_pre <= ram(a_idx);
 
       for i in 0 to G_BYTES_PER_ROW - 1 loop
@@ -114,7 +113,6 @@ begin
 
   prc_ram_b : process (b_clk) is begin
     if rising_edge(b_clk) then
-
       b_rdat_pre <= ram(b_idx);
 
       for i in 0 to G_BYTES_PER_ROW - 1 loop
@@ -134,10 +132,10 @@ begin
     G_DEPTH   => G_RD_LATENCY - 1,
     G_OUT_REG => false
   )
-  port map(
-    clk  => a_clk,
-    d    => a_rdat_pre,
-    q    => a_rdat
+  port map (
+    clk => a_clk,
+    d   => a_rdat_pre,
+    q   => a_rdat
   );
 
   -- ---------------------------------------------------------------------------
@@ -147,10 +145,10 @@ begin
     G_DEPTH   => G_RD_LATENCY - 1,
     G_OUT_REG => false
   )
-  port map(
-    clk  => b_clk,
-    d    => b_rdat_pre,
-    q    => b_rdat
+  port map (
+    clk => b_clk,
+    d   => b_rdat_pre,
+    q   => b_rdat
   );
 
 end architecture;

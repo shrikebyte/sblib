@@ -167,8 +167,8 @@ begin
   -- ---------------------------------------------------------------------------
   u_axis_demux : entity work.axis_demux
   generic map (
-    G_DW => DW,
-    G_UW => UW,
+    G_DW    => DW,
+    G_UW    => UW,
     G_NUM_M => NUM_OUTPUTS
   )
   port map (

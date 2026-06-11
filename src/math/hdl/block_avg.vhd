@@ -3,24 +3,25 @@
 --# Author   : David Gussler
 --# Language : VHDL '08
 --# ============================================================================
---# Block averager & decimator (not a moving average filter)
+--# Block average & decimator (not a moving average filter)
 --#
---# AXI4-Stream Table
---# ----------------------------------------------------------------------------
---# Signal        | Description
---# --------------|-------------------------------------------------------------
---# s_axis.tready | Used.
---# s_axis.tvalid | Used.
---# s_axis.tdata  | Used.
---# s_axis.tlast  | Ignore.
---# s_axis.tkeep  | Ignore.
---# s_axis.tuser  | Ignore.
---# m_axis.tready | Used.
---# m_axis.tvalid | Used.
---# m_axis.tdata  | Used.
---# m_axis.tlast  | Ignore.
---# m_axis.tkeep  | Ignore.
---# m_axis.tuser  | Ignore.
+--# --------+-------------------------------------------------------------------
+--# Signal  | Description
+--# --------+-------------------------------------------------------------------
+--# s_axis
+--# --------+-------------------------------------------------------------------
+--# tdata   | Input data. Signed or unsigned format is specified by G_SIGNED.
+--# tkeep   | Unused.
+--# tlast   | Unused.
+--# tuser   | Unused.
+--# --------+-------------------------------------------------------------------
+--# m_axis
+--# --------+-------------------------------------------------------------------
+--# tdata   | Averaged output data.
+--# tkeep   | Unused. Output tied high.
+--# tlast   | Unused. Output tied high.
+--# tuser   | Unused. Output tied low.
+--# --------+-------------------------------------------------------------------
 --##############################################################################
 
 library ieee;
@@ -45,13 +46,13 @@ entity block_avg is
     --
     s_axis : view s_axis_view of axis_t(
       tdata(G_DW - 1 downto 0),
-      tkeep(G_DW / 8 - 1 downto 0),
+      tkeep(0 downto 0),
       tuser(0 downto 0)
     );
     --
     m_axis : view m_axis_view of axis_t(
       tdata(G_DW - 1 downto 0),
-      tkeep(G_DW / 8 - 1 downto 0),
+      tkeep(0 downto 0),
       tuser(0 downto 0)
     );
     --

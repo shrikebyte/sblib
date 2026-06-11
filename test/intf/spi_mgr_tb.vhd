@@ -54,13 +54,13 @@ architecture tb of spi_mgr_tb is
   -- DUT Signals
   signal s_axis : axis_t (
     tdata(DW - 1 downto 0),
-    tkeep(DW / 8 - 1 downto 0),
+    tkeep(0 downto 0),
     tuser(UW - 1 downto 0)
   );
 
   signal m_axis : axis_t (
     tdata(DW - 1 downto 0),
-    tkeep(DW / 8 - 1 downto 0),
+    tkeep(0 downto 0),
     tuser(UW - 1 downto 0)
   );
 

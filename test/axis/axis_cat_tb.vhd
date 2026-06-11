@@ -231,8 +231,8 @@ begin
   -- ---------------------------------------------------------------------------
   u_axis_cat : entity work.axis_cat
   generic map (
-    G_DW => DW,
-    G_UW => UW,
+    G_DW    => DW,
+    G_UW    => UW,
     G_NUM_S => NUM_INPUTS
   )
   port map (
