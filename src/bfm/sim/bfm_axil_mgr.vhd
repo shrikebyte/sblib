@@ -20,7 +20,7 @@ library vunit_lib;
   context vunit_lib.vunit_context;
   context vunit_lib.vc_context;
 
-entity bfm_axil_man is
+entity bfm_axil_mgr is
   generic (
     G_BUS_HANDLE : bus_master_t
   );
@@ -30,7 +30,7 @@ entity bfm_axil_man is
   );
 end entity;
 
-architecture sim of bfm_axil_man is
+architecture sim of bfm_axil_mgr is
 
 begin
 

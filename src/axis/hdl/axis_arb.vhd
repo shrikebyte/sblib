@@ -13,7 +13,7 @@
 --# on every clock cycle, then it will hog all of the bandwidth,
 --# preventing the lower channels from ever sending data.
 --#
---# TODO: Add round-robin arbitration.
+--# TODO: Add round-robin arbitration option.
 --##############################################################################
 
 library ieee;
@@ -23,19 +23,32 @@ use work.util_pkg.all;
 use work.axis_pkg.all;
 
 entity axis_arb is
+  generic (
+    G_NUM_S : positive;
+    G_DW    : positive;
+    G_UW    : positive
+  );
   port (
     clk  : in    std_ulogic;
     srst : in    std_ulogic;
     --
-    s_axis : view (s_axis_view) of axis_arr_t;
+    s_axis : view (s_axis_view) of axis_arr_t(0 to G_NUM_S - 1)(
+      tdata(G_DW - 1 downto 0),
+      tkeep(G_DW / 8 - 1 downto 0),
+      tuser(G_UW - 1 downto 0)
+    );
     --
-    m_axis : view m_axis_view
+    m_axis : view m_axis_view of axis_t(
+      tdata(G_DW - 1 downto 0),
+      tkeep(G_DW / 8 - 1 downto 0),
+      tuser(G_UW - 1 downto 0)
+    )
   );
 end entity;
 
 architecture rtl of axis_arb is
 
-  signal sel : integer range s_axis'range;
+  signal sel : integer range 0 to G_NUM_S - 1;
 
 begin
 
@@ -43,10 +56,9 @@ begin
   prc_arb_sel : process (all) is begin
 
     -- Default
-    sel <= s_axis'low;
+    sel <= sel'low;
 
-    -- Override
-    for i in s_axis'range loop
+    for i in 0 to G_NUM_S - 1 loop
       if s_axis(i).tvalid then
         sel <= i;
       end if;
@@ -55,6 +67,11 @@ begin
 
   -- ---------------------------------------------------------------------------
   u_axis_mux : entity work.axis_mux
+  generic map (
+    G_NUM_S => G_NUM_S,
+    G_DW    => G_DW,
+    G_UW    => G_UW
+  )
   port map (
     clk    => clk,
     srst   => srst,

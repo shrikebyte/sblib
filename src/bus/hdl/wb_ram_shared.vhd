@@ -27,10 +27,10 @@ entity wb_ram_shared is
     -- AXIL address. Both are byte addresses aligned to increments of 4
     -- bytes. The bottom two bits of both axil address and ram address are
     -- ignored.
-    G_ADDR_WIDTH : positive                                                              := 10;
-    G_RAM_STYLE  : string                                                                := "auto";
-    G_RAM_INIT   : slv_arr_t(0 to (2 ** G_ADDR_WIDTH) - 1)(AXIL_DATA_WIDTH - 1 downto 0) := (others=> (others=> '0'));
-    G_RD_LATENCY : positive                                                              := 1
+    G_ADDR_WIDTH : positive                                                 := 10;
+    G_RAM_STYLE  : string                                                   := "auto";
+    G_RAM_INIT   : slv_arr_t(0 to (2 ** G_ADDR_WIDTH) - 1)(AXIL_DATA_RANGE) := (others=> (others=> '0'));
+    G_RD_LATENCY : positive                                                 := 1
   );
   port (
     wb_clk  : in    std_ulogic;

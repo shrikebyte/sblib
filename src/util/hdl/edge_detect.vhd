@@ -15,7 +15,7 @@ use ieee.std_logic_1164.all;
 
 entity edge_detect is
   generic (
-    G_WIDTH : positive := 1;
+    G_WIDTH : positive;
     -- This should be set the the reset value of din to avoid a false pulse
     -- after reset. Alternatively, if you want a startup pulse, this could
     -- be set to the opposite reset value of din.

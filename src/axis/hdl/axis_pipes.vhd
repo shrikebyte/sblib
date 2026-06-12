@@ -17,6 +17,9 @@ use work.axis_pkg.all;
 
 entity axis_pipes is
   generic (
+    G_DW : positive;
+    G_UW : positive;
+    --
     G_STAGES     : positive := 1;
     G_DATA_PIPE  : boolean  := true;
     G_READY_PIPE : boolean  := true
@@ -25,18 +28,26 @@ entity axis_pipes is
     clk  : in    std_ulogic;
     srst : in    std_ulogic;
     --
-    s_axis : view s_axis_view;
+    s_axis : view s_axis_view of axis_t(
+      tdata(G_DW - 1 downto 0),
+      tkeep(G_DW / 8 - 1 downto 0),
+      tuser(G_UW - 1 downto 0)
+    );
     --
-    m_axis : view m_axis_view
+    m_axis : view m_axis_view of axis_t(
+      tdata(G_DW - 1 downto 0),
+      tkeep(G_DW / 8 - 1 downto 0),
+      tuser(G_UW - 1 downto 0)
+    )
   );
 end entity;
 
 architecture rtl of axis_pipes is
 
   signal int_axis : axis_arr_t(0 to G_STAGES)(
-    tdata(s_axis.tdata'range),
-    tkeep(s_axis.tkeep'range),
-    tuser(s_axis.tuser'range)
+    tdata(G_DW - 1 downto 0),
+    tkeep(G_DW / 8 - 1 downto 0),
+    tuser(G_UW - 1 downto 0)
   );
 
 begin
@@ -48,6 +59,8 @@ begin
 
     u_axis_pipe : entity work.axis_pipe
     generic map (
+      G_DW         => G_DW,
+      G_UW         => G_UW,
       G_READY_PIPE => G_READY_PIPE,
       G_DATA_PIPE  => G_DATA_PIPE
     )

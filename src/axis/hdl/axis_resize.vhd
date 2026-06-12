@@ -33,26 +33,40 @@ use work.util_pkg.all;
 use work.axis_pkg.all;
 
 entity axis_resize is
+  generic (
+    G_S_DW : positive;
+    G_S_UW : positive;
+    G_M_DW : positive;
+    G_M_UW : positive
+  );
   port (
     clk  : in    std_ulogic;
     srst : in    std_ulogic;
     --
-    s_axis : view s_axis_view;
+    s_axis : view s_axis_view of axis_t(
+      tdata(G_S_DW - 1 downto 0),
+      tkeep(G_S_DW / 8 - 1 downto 0),
+      tuser(G_S_UW - 1 downto 0)
+    );
     --
-    m_axis : view m_axis_view
+    m_axis : view m_axis_view of axis_t(
+      tdata(G_M_DW - 1 downto 0),
+      tkeep(G_M_DW / 8 - 1 downto 0),
+      tuser(G_M_UW - 1 downto 0)
+    )
   );
 end entity;
 
 architecture rtl of axis_resize is
 
-  constant S_DW  : integer := s_axis.tdata'length;
-  constant S_KW  : integer := s_axis.tkeep'length;
-  constant S_UW  : integer := s_axis.tuser'length;
+  constant S_DW  : integer := G_S_DW;
+  constant S_KW  : integer := G_S_DW / 8;
+  constant S_UW  : integer := G_S_UW;
   constant S_DBW : integer := S_DW / S_KW;
   constant S_UBW : integer := S_UW / S_KW;
-  constant M_DW  : integer := m_axis.tdata'length;
-  constant M_KW  : integer := m_axis.tkeep'length;
-  constant M_UW  : integer := m_axis.tuser'length;
+  constant M_DW  : integer := G_M_DW;
+  constant M_KW  : integer := G_M_DW / 8;
+  constant M_UW  : integer := G_M_UW;
   constant M_DBW : integer := M_DW / M_KW;
   constant M_UBW : integer := M_UW / M_KW;
   constant DBW   : integer := S_DBW;

@@ -40,22 +40,24 @@ end entity;
 
 architecture rtl of axil_pipes is
 
-  signal aw0 : axis_t (tdata(AXIL_ADDR_RANGE), tkeep(-1 downto 0), tuser(-1 downto 0));
-  signal aw1 : axis_t (tdata(AXIL_ADDR_RANGE), tkeep(-1 downto 0), tuser(-1 downto 0));
-  signal w0  : axis_t (tdata(AXIL_DATA_RANGE), tkeep(AXIL_STRB_RANGE), tuser(-1 downto 0));
-  signal w1  : axis_t (tdata(AXIL_DATA_RANGE), tkeep(AXIL_STRB_RANGE), tuser(-1 downto 0));
-  signal b0  : axis_t (tdata(-1 downto 0), tkeep(-1 downto 0), tuser(AXIL_RSP_RANGE));
-  signal b1  : axis_t (tdata(-1 downto 0), tkeep(-1 downto 0), tuser(AXIL_RSP_RANGE));
-  signal ar0 : axis_t (tdata(AXIL_ADDR_RANGE), tkeep(-1 downto 0), tuser(-1 downto 0));
-  signal ar1 : axis_t (tdata(AXIL_ADDR_RANGE), tkeep(-1 downto 0), tuser(-1 downto 0));
-  signal r0  : axis_t (tdata(AXIL_DATA_RANGE), tkeep(-1 downto 0), tuser(AXIL_RSP_RANGE));
-  signal r1  : axis_t (tdata(AXIL_DATA_RANGE), tkeep(-1 downto 0), tuser(AXIL_RSP_RANGE));
+  signal aw0 : axis_t (tdata(AXIL_ADDR_RANGE), tkeep(AXIL_STRB_RANGE), tuser(0 downto 0));
+  signal aw1 : axis_t (tdata(AXIL_ADDR_RANGE), tkeep(AXIL_STRB_RANGE), tuser(0 downto 0));
+  signal w0  : axis_t (tdata(AXIL_DATA_RANGE), tkeep(AXIL_STRB_RANGE), tuser(0 downto 0));
+  signal w1  : axis_t (tdata(AXIL_DATA_RANGE), tkeep(AXIL_STRB_RANGE), tuser(0 downto 0));
+  signal b0  : axis_t (tdata(7 downto 0), tkeep(0 downto 0), tuser(AXIL_RSP_RANGE));
+  signal b1  : axis_t (tdata(7 downto 0), tkeep(0 downto 0), tuser(AXIL_RSP_RANGE));
+  signal ar0 : axis_t (tdata(AXIL_ADDR_RANGE), tkeep(AXIL_STRB_RANGE), tuser(0 downto 0));
+  signal ar1 : axis_t (tdata(AXIL_ADDR_RANGE), tkeep(AXIL_STRB_RANGE), tuser(0 downto 0));
+  signal r0  : axis_t (tdata(AXIL_DATA_RANGE), tkeep(AXIL_STRB_RANGE), tuser(AXIL_RSP_RANGE));
+  signal r1  : axis_t (tdata(AXIL_DATA_RANGE), tkeep(AXIL_STRB_RANGE), tuser(AXIL_RSP_RANGE));
 
 begin
 
   -- ---------------------------------------------------------------------------
   u_axis_pipes_aw : entity work.axis_pipes
   generic map (
+    G_DW         => AXIL_ADDR_WIDTH,
+    G_UW         => 1,
     G_STAGES     => G_STAGES,
     G_DATA_PIPE  => G_AW_DATA_PIPE,
     G_READY_PIPE => G_AW_READY_PIPE
@@ -78,6 +80,8 @@ begin
   -- ---------------------------------------------------------------------------
   u_axis_pipes_w : entity work.axis_pipes
   generic map (
+    G_DW         => AXIL_DATA_WIDTH,
+    G_UW         => 1,
     G_STAGES     => G_STAGES,
     G_DATA_PIPE  => G_W_DATA_PIPE,
     G_READY_PIPE => G_W_READY_PIPE
@@ -102,6 +106,8 @@ begin
   -- ---------------------------------------------------------------------------
   u_axis_pipes_b : entity work.axis_pipes
   generic map (
+    G_DW         => 8,
+    G_UW         => AXIL_RSP_WIDTH,
     G_STAGES     => G_STAGES,
     G_DATA_PIPE  => G_B_DATA_PIPE,
     G_READY_PIPE => G_B_READY_PIPE
@@ -124,6 +130,8 @@ begin
   -- ---------------------------------------------------------------------------
   u_axis_pipes_ar : entity work.axis_pipes
   generic map (
+    G_DW         => AXIL_ADDR_WIDTH,
+    G_UW         => 1,
     G_STAGES     => G_STAGES,
     G_DATA_PIPE  => G_AR_DATA_PIPE,
     G_READY_PIPE => G_AR_READY_PIPE
@@ -135,7 +143,7 @@ begin
     m_axis => ar1
   );
 
-  ar0.tvalid     <= s_axil.bvalid;
+  ar0.tvalid     <= s_axil.arvalid;
   s_axil.arready <= ar0.tready;
   ar0.tdata      <= s_axil.araddr;
   --
@@ -146,6 +154,8 @@ begin
   -- ---------------------------------------------------------------------------
   u_axis_pipes_r : entity work.axis_pipes
   generic map (
+    G_DW         => AXIL_DATA_WIDTH,
+    G_UW         => AXIL_RSP_WIDTH,
     G_STAGES     => G_STAGES,
     G_DATA_PIPE  => G_R_DATA_PIPE,
     G_READY_PIPE => G_R_READY_PIPE

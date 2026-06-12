@@ -41,6 +41,7 @@ architecture tb of axis_cat_tb is
   constant UW         : integer := 16;
   constant DBW        : integer := DW / KW;
   constant UBW        : integer := UW / KW;
+  constant NUM_INPUTS : integer := 2;
 
   -- TB Signals
   signal clk   : std_ulogic := '1';
@@ -51,16 +52,16 @@ architecture tb of axis_cat_tb is
   -- DUT Signals
   signal enable : std_ulogic := '1';
 
-  signal s_axis : axis_arr_t(0 to 1) (
-    tdata(DW downto 1),
-    tkeep(KW downto 1),
-    tuser(UW downto 1)
+  signal s_axis : axis_arr_t(0 to NUM_INPUTS - 1) (
+    tdata(DW - 1 downto 0),
+    tkeep(KW - 1 downto 0),
+    tuser(UW - 1 downto 0)
   );
 
   signal m_axis : axis_t (
-    tdata(DW downto 1),
-    tkeep(KW downto 1),
-    tuser(UW downto 1)
+    tdata(DW - 1 downto 0),
+    tkeep(KW - 1 downto 0),
+    tuser(UW - 1 downto 0)
   );
 
   -- Testbench BFMs
@@ -229,6 +230,11 @@ begin
 
   -- ---------------------------------------------------------------------------
   u_axis_cat : entity work.axis_cat
+  generic map (
+    G_DW    => DW,
+    G_UW    => UW,
+    G_NUM_S => NUM_INPUTS
+  )
   port map (
     clk    => clk,
     srst   => srst,
@@ -236,7 +242,7 @@ begin
     m_axis => m_axis
   );
 
-  u_bfm_axis_man_0 : entity work.bfm_axis_man
+  u_bfm_axis_mgr_0 : entity work.bfm_axis_mgr
   generic map (
     G_DATA_QUEUE    => S0_DATA_QUEUE,
     G_USER_QUEUE    => S0_USER_QUEUE,
@@ -248,7 +254,7 @@ begin
     m_axis => s_axis(0)
   );
 
-  u_bfm_axis_man_1 : entity work.bfm_axis_man
+  u_bfm_axis_mgr_1 : entity work.bfm_axis_mgr
   generic map (
     G_DATA_QUEUE    => S1_DATA_QUEUE,
     G_USER_QUEUE    => S1_USER_QUEUE,

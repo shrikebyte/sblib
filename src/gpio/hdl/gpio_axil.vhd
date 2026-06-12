@@ -69,6 +69,7 @@ begin
 
     u_cdc_bit : entity work.cdc_bit
     generic map (
+      G_WIDTH       => AXIL_DATA_WIDTH,
       G_USE_SRC_REG => false,
       G_EXTRA_SYNC  => 0
     )

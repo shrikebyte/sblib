@@ -37,10 +37,10 @@ architecture rtl of axil_to_reg is
   signal rresp   : std_ulogic_vector(AXIL_RSP_RANGE);
   signal bvalid  : std_ulogic;
   signal bresp   : std_ulogic_vector(AXIL_RSP_RANGE);
-  signal axil_r0 : axis_t(tdata(AXIL_DATA_RANGE), tkeep(-1 downto 0), tuser(AXIL_RSP_RANGE));
-  signal axil_r1 : axis_t(tdata(AXIL_DATA_RANGE), tkeep(-1 downto 0), tuser(AXIL_RSP_RANGE));
-  signal axil_b0 : axis_t(tdata(-1 downto 0), tkeep(-1 downto 0), tuser(AXIL_RSP_RANGE));
-  signal axil_b1 : axis_t(tdata(-1 downto 0), tkeep(-1 downto 0), tuser(AXIL_RSP_RANGE));
+  signal axil_r0 : axis_t(tdata(AXIL_DATA_RANGE), tkeep(AXIL_STRB_RANGE), tuser(AXIL_RSP_RANGE));
+  signal axil_r1 : axis_t(tdata(AXIL_DATA_RANGE), tkeep(AXIL_STRB_RANGE), tuser(AXIL_RSP_RANGE));
+  signal axil_b0 : axis_t(tdata(7 downto 0), tkeep(0 downto 0), tuser(AXIL_RSP_RANGE));
+  signal axil_b1 : axis_t(tdata(7 downto 0), tkeep(0 downto 0), tuser(AXIL_RSP_RANGE));
 
 begin
 
@@ -80,6 +80,8 @@ begin
   -- outstanding requests that the slave has not yet completed.
   u_r_buffer : entity work.axis_pipes
   generic map (
+    G_DW         => AXIL_DATA_WIDTH,
+    G_UW         => AXIL_RSP_WIDTH,
     G_STAGES     => G_RD_LATENCY,
     G_DATA_PIPE  => false,
     G_READY_PIPE => true
@@ -127,6 +129,8 @@ begin
 
   u_b_buffer : entity work.axis_pipes
   generic map (
+    G_DW         => 8,
+    G_UW         => AXIL_RSP_WIDTH,
     G_STAGES     => G_WR_LATENCY,
     G_DATA_PIPE  => false,
     G_READY_PIPE => true

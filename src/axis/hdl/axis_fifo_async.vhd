@@ -17,34 +17,50 @@ use work.axis_pkg.all;
 
 entity axis_fifo_async is
   generic (
-    G_EXTRA_SYNC : natural := 0;
+    G_DW : positive;
+    G_UW : positive;
+    --
     -- Depth of the FIFO in axis beats. Must be a power of 2.
-    G_DEPTH : positive := 1024;
+    G_DEPTH : positive;
+    --
+    G_USE_TKEEP : boolean := true;
+    G_USE_TLAST : boolean := true;
+    G_USE_TUSER : boolean := true;
+    --
     -- If true, then output will not go valid until one full packet has been
     -- stored at the input. This guarantees that output valid will never
     -- be lowered during a packet.
     G_PACKET_MODE : boolean := false;
-    -- Drop oversized packets that do not fit in the FIFO.
+    -- If true: drop oversized packets that do not fit in the FIFO.
+    -- If false: use "cut-through" mode.
     -- Only applicable in packet mode.
     G_DROP_OVERSIZE : boolean := false;
     --
-    G_USE_TLAST : boolean := true;
-    G_USE_TKEEP : boolean := true;
-    G_USE_TUSER : boolean := true
+    G_EXTRA_SYNC : natural := 0
   );
   port (
     -- Async reset
     arst : in    std_ulogic;
+    --
     -- Input interface
     s_clk            : in    std_ulogic;
-    s_axis           : view  s_axis_view;
+    s_axis           : view s_axis_view of axis_t(
+      tdata(G_DW - 1 downto 0),
+      tkeep(G_DW / 8 - 1 downto 0),
+      tuser(G_UW - 1 downto 0)
+    );
     s_ctl_drop       : in    std_ulogic := '0';
     s_sts_dropped    : out   std_ulogic;
     s_sts_depth_spec : out   u_unsigned(clog2(G_DEPTH) downto 0);
     s_sts_depth_comm : out   u_unsigned(clog2(G_DEPTH) downto 0);
+    --
     -- Output interface
     m_clk            : in    std_ulogic;
-    m_axis           : view  m_axis_view;
+    m_axis           : view m_axis_view of axis_t(
+      tdata(G_DW - 1 downto 0),
+      tkeep(G_DW / 8 - 1 downto 0),
+      tuser(G_UW - 1 downto 0)
+    );
     m_sts_dropped    : out   std_ulogic;
     m_sts_depth_spec : out   u_unsigned(clog2(G_DEPTH) downto 0);
     m_sts_depth_comm : out   u_unsigned(clog2(G_DEPTH) downto 0)
@@ -53,9 +69,9 @@ end entity;
 
 architecture rtl of axis_fifo_async is
 
-  constant DW : integer := m_axis.tdata'length;
-  constant KW : integer := if_then_else(G_USE_TKEEP, m_axis.tkeep'length, 0);
-  constant UW : integer := if_then_else(G_USE_TUSER, m_axis.tuser'length, 0);
+  constant DW : integer := G_DW;
+  constant KW : integer := if_then_else(G_USE_TKEEP, G_DW / 8, 0);
+  constant UW : integer := if_then_else(G_USE_TUSER, G_UW, 0);
   constant LW : integer := if_then_else(G_USE_TLAST, 1, 0);
   constant RW : integer := DW + UW + KW + LW; -- Ram width
   constant AW : integer := clog2(G_DEPTH);    -- Address width
@@ -179,6 +195,7 @@ begin
 
   u_cdc_gray_wr_ptr_spec : entity work.cdc_gray
   generic map (
+    G_WIDTH      => AW + 1,
     G_EXTRA_SYNC => G_EXTRA_SYNC,
     G_OUT_REG    => false
   )
@@ -191,6 +208,7 @@ begin
 
   u_cdc_gray_wr_ptr_comm : entity work.cdc_gray
   generic map (
+    G_WIDTH      => AW + 1,
     G_EXTRA_SYNC => G_EXTRA_SYNC,
     G_OUT_REG    => false
   )
@@ -203,6 +221,7 @@ begin
 
   u_cdc_gray_rd_ptr : entity work.cdc_gray
   generic map (
+    G_WIDTH      => AW + 1,
     G_EXTRA_SYNC => G_EXTRA_SYNC,
     G_OUT_REG    => false
   )

@@ -8,33 +8,35 @@
 --# ============================================================================
 --# SPI manager
 --#
---# -------+--------------------------------------------------------------------
---# Signal | Description
---# -------+--------------------------------------------------------------------
---# s_axis
---# -------+--------------------------------------------------------------------
---# tdata  | SPI MOSI data.
---# tkeep  | Unused by this module. Passed through to the output.
---# tlast  | End of transaction. CS is held low for the duration of a
---#        | transaction and toggled back high after tlast.
---# tuser  | Transaction config settings. Format (MSB to LSB):
---#        | [ CS Index (G_CS_BITS) | CPHA (1) | CPOL (1) ]
---#        | tuser from the first beat of a packet is used for the entire
---#        | packet's transaction. Therefore, tuser for subsequent beats
---#        | in a packet are not .
---# -------+--------------------------------------------------------------------
---# m_axis
---# -------+--------------------------------------------------------------------
---# tdata  | SPI MISO data.
---# tkeep  | Passed through from input.
---# tlast  | End of transaction. Passed through from input.
---# tuser  | Transaction config settings. Passed through from the input.
---# -------+--------------------------------------------------------------------
---#
 --# For multi-beat transactions to use a continuous spi_sck, s_axis.tvalid
 --# and m_axis.tready must be high for the duration of the packet. Otherwise,
 --# spi_sck may have to stretch while waiting for the FPGA to produce the next
 --# spi_mosi and or accept the last spi_miso.
+--#
+--# --------+-------------------------------------------------------------------
+--# Signal  | Description
+--# --------+-------------------------------------------------------------------
+--# s_axis
+--# --------+-------------------------------------------------------------------
+--# tdata   | SPI MOSI data.
+--# tkeep   | Unused.
+--# tlast   | End of transaction. CS is held low for the duration of a
+--#         | transaction and toggled back high after tlast.
+--# tuser   | Transaction config settings.
+--#         | tuser from the first beat of a packet is used for the entire
+--#         | packet's transaction. Therefore, tuser for subsequent beats
+--#         | in a packet are not used.
+--# tuser(0)| CPOL
+--# tuser(1)| CPHA
+--# tuser(G_CS_BITS + 2 - 1 downto 2)| Chip-select
+--# --------+-------------------------------------------------------------------
+--# m_axis
+--# --------+-------------------------------------------------------------------
+--# tdata   | SPI MISO data.
+--# tkeep   | Unused. Output tied high.
+--# tlast   | End of transaction.
+--# tuser   | Transaction config settings. Passed through from the input.
+--# --------+-------------------------------------------------------------------
 --##############################################################################
 
 library ieee;
@@ -45,6 +47,7 @@ use work.axis_pkg.all;
 
 entity spi_mgr is
   generic (
+    G_DW : positive;
     -- Defines the spi_sck clock as a ratio of the FPGA clock. For example,
     -- if the FPGA clock is 100 MHz, then G_SCK_DIV=4 results in a spi_sck
     -- of 25 MHz.
@@ -59,10 +62,21 @@ entity spi_mgr is
     G_CS_IDLE : positive := 32
   );
   port (
-    clk      : in    std_ulogic;
-    srst     : in    std_ulogic;
-    s_axis   : view  s_axis_view;
-    m_axis   : view  m_axis_view;
+    clk  : in    std_ulogic;
+    srst : in    std_ulogic;
+    --
+    s_axis : view s_axis_view of axis_t(
+      tdata(G_DW - 1 downto 0),
+      tkeep(0 downto 0),
+      tuser(G_CS_BITS + 2 - 1 downto 0)
+    );
+    --
+    m_axis : view m_axis_view of axis_t(
+      tdata(G_DW - 1 downto 0),
+      tkeep(0 downto 0),
+      tuser(G_CS_BITS + 2 - 1 downto 0)
+    );
+    --
     spi_sck  : out   std_ulogic;
     spi_csn  : out   std_ulogic_vector((2 ** G_CS_BITS) - 1 downto 0);
     spi_mosi : out   std_ulogic;
@@ -72,13 +86,10 @@ end entity;
 
 architecture rtl of spi_mgr is
 
-  constant DW   : positive := s_axis.tdata'length;
-  constant UW   : positive := s_axis.tuser'length;
-  constant KW   : positive := s_axis.tkeep'length;
-  constant ULSB : integer  := s_axis.tuser'low;
+  constant DW : positive := G_DW;
+  constant UW : positive := G_CS_BITS + 2;
 
-  constant TUSER_REQUIRED_WIDTH : positive          := 2 + G_CS_BITS;
-  constant FSM_CNT_INT_ARR      : int_arr_t(0 to 3) := (
+  constant FSM_CNT_INT_ARR : int_arr_t(0 to 3) := (
     G_CS_LEAD,
     G_CS_LAG,
     G_CS_IDLE,
@@ -100,9 +111,8 @@ architecture rtl of spi_mgr is
   signal sck_idle  : std_ulogic;                            -- Clock polarity
   signal cpha      : std_ulogic;                            -- Clock phase
   signal csdec     : natural range 0 to 2 ** G_CS_BITS - 1; -- CS Decode
-  signal tuser_reg : std_ulogic_vector(UW - 1 downto 0);
-  signal tkeep_reg : std_ulogic_vector(KW - 1 downto 0);
   signal tlast_reg : std_ulogic;
+  signal tuser_reg : std_ulogic_vector(UW - 1 downto 0);
 
 begin
 
@@ -110,27 +120,17 @@ begin
     report "ERROR: spi_man: G_SCK_DIV must be divisible by 2"
     severity error;
 
-  assert s_axis.tuser'length >= TUSER_REQUIRED_WIDTH
-    report "ERROR: spi_mgr: s_axis.tuser is too small. " &
-           "Required width: " & integer'image(TUSER_REQUIRED_WIDTH) &
-           " Provided width: " & integer'image(s_axis.tuser'length)
-    severity failure;
-
-  assert s_axis.tdata'length = m_axis.tdata'length
-    report "ERROR: spi_mgr: s_axis.tdata width does not match m_axis.tdata width " &
-           "s_axis.tdata width: " & integer'image(m_axis.tdata'length) &
-           " m_axis.tdata width: " & integer'image(s_axis.tdata'length)
-    severity warning;
-
+  m_axis.tkeep <= (others => '1');
+  --
   spi_mosi <= sr(DW - 1);
   sck_idle <= tuser_reg(0); -- CPOL
-  cpha     <= tuser_reg(1);
+  cpha     <= tuser_reg(1); -- CPHA
   sr_nxt   <= sr(sr'high - 1 downto 0) & miso_reg;
 
   gen_csdec : if G_CS_BITS = 0 generate
     csdec <= 0;
   else generate
-    csdec <= to_integer(unsigned(tuser_reg(G_CS_BITS + ULSB + 2 - 1 downto ULSB + 2)));
+    csdec <= to_integer(unsigned(tuser_reg(G_CS_BITS + 2 - 1 downto 2)));
   end generate;
 
   prc_fsm : process (clk) is begin
@@ -148,7 +148,6 @@ begin
               --
               s_axis.tready <= '1';
               sr            <= s_axis.tdata;
-              tkeep_reg     <= s_axis.tkeep;
               tlast_reg     <= s_axis.tlast;
               tuser_reg     <= s_axis.tuser;
               spi_sck       <= s_axis.tuser(0); -- Inactive
@@ -193,7 +192,6 @@ begin
                 if tlast_reg then
                   m_axis.tvalid <= '1';
                   m_axis.tdata  <= sr_nxt;
-                  m_axis.tkeep  <= tkeep_reg;
                   m_axis.tlast  <= tlast_reg;
                   m_axis.tuser  <= tuser_reg;
                   --
@@ -203,13 +201,11 @@ begin
                 elsif s_axis.tvalid then
                   m_axis.tvalid <= '1';
                   m_axis.tdata  <= sr_nxt;
-                  m_axis.tkeep  <= tkeep_reg;
                   m_axis.tlast  <= tlast_reg;
                   m_axis.tuser  <= tuser_reg;
                   --
                   s_axis.tready <= '1';
                   sr            <= s_axis.tdata;
-                  tkeep_reg     <= s_axis.tkeep;
                   tlast_reg     <= s_axis.tlast;
                   --
                   spi_sck <= sck_idle;
@@ -245,13 +241,11 @@ begin
               if s_axis.tvalid and not m_axis.tvalid then
                 m_axis.tvalid <= '1';
                 m_axis.tdata  <= sr_nxt;
-                m_axis.tkeep  <= tkeep_reg;
                 m_axis.tlast  <= tlast_reg;
                 m_axis.tuser  <= tuser_reg;
                 --
                 s_axis.tready <= '1';
                 sr            <= s_axis.tdata;
-                tkeep_reg     <= s_axis.tkeep;
                 tlast_reg     <= s_axis.tlast;
                 --
                 spi_sck <= not sck_idle;
@@ -265,7 +259,6 @@ begin
                   if not m_axis.tvalid then
                     m_axis.tvalid <= '1';
                     m_axis.tdata  <= sr_nxt;
-                    m_axis.tkeep  <= tkeep_reg;
                     m_axis.tlast  <= tlast_reg;
                     m_axis.tuser  <= tuser_reg;
                     --

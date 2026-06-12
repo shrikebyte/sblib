@@ -20,12 +20,14 @@ package bus_pkg is
   -- AXI Lite
   constant AXIL_DATA_WIDTH : positive := 32;
   constant AXIL_ADDR_WIDTH : positive := 32;
+  constant AXIL_PROT_WIDTH : positive := 3;
+  constant AXIL_RSP_WIDTH  : positive := 2;
 
   subtype axil_data_range is natural range AXIL_DATA_WIDTH - 1 downto 0;
   subtype axil_addr_range is natural range AXIL_ADDR_WIDTH - 1 downto 0;
   subtype axil_strb_range is natural range AXIL_DATA_WIDTH / 8 - 1 downto 0;
-  subtype axil_prot_range is natural range 2 downto 0;
-  subtype axil_rsp_range is natural range 1 downto 0;
+  subtype axil_prot_range is natural range AXIL_PROT_WIDTH - 1 downto 0;
+  subtype axil_rsp_range is natural range AXIL_RSP_WIDTH - 1 downto 0;
 
   constant AXI_RSP_OKAY   : std_ulogic_vector(AXIL_RSP_RANGE) := b"00";
   constant AXI_RSP_EXOKAY : std_ulogic_vector(AXIL_RSP_RANGE) := b"01";
@@ -33,23 +35,23 @@ package bus_pkg is
   constant AXI_RSP_DECERR : std_ulogic_vector(AXIL_RSP_RANGE) := b"11";
 
   type bus_axil_t is record
-    awready : std_ulogic;
     awvalid : std_ulogic;
+    awready : std_ulogic;
     awaddr  : std_ulogic_vector(AXIL_ADDR_RANGE);
-    wready  : std_ulogic;
     wvalid  : std_ulogic;
-    wstrb   : std_ulogic_vector(AXIL_STRB_RANGE);
+    wready  : std_ulogic;
     wdata   : std_ulogic_vector(AXIL_DATA_RANGE);
-    bready  : std_ulogic;
+    wstrb   : std_ulogic_vector(AXIL_STRB_RANGE);
     bvalid  : std_ulogic;
+    bready  : std_ulogic;
     bresp   : std_ulogic_vector(AXIL_RSP_RANGE);
-    arready : std_ulogic;
     arvalid : std_ulogic;
+    arready : std_ulogic;
     araddr  : std_ulogic_vector(AXIL_ADDR_RANGE);
-    rready  : std_ulogic;
     rvalid  : std_ulogic;
-    rresp   : std_ulogic_vector(AXIL_RSP_RANGE);
+    rready  : std_ulogic;
     rdata   : std_ulogic_vector(AXIL_DATA_RANGE);
+    rresp   : std_ulogic_vector(AXIL_RSP_RANGE);
   end record;
 
   type bus_axil_arr_t is array(natural range <>) of bus_axil_t;
@@ -271,23 +273,23 @@ package body bus_pkg is
     signal m_axil : view m_axil_view of bus_axil_t
   ) is
   begin
-    s_axil.awready <= m_axil.awready;
     m_axil.awvalid <= s_axil.awvalid;
+    s_axil.awready <= m_axil.awready;
     m_axil.awaddr  <= s_axil.awaddr;
-    s_axil.wready  <= m_axil.wready;
     m_axil.wvalid  <= s_axil.wvalid;
-    m_axil.wstrb   <= s_axil.wstrb;
+    s_axil.wready  <= m_axil.wready;
     m_axil.wdata   <= s_axil.wdata;
-    m_axil.bready  <= s_axil.bready;
+    m_axil.wstrb   <= s_axil.wstrb;
     s_axil.bvalid  <= m_axil.bvalid;
+    m_axil.bready  <= s_axil.bready;
     s_axil.bresp   <= m_axil.bresp;
-    s_axil.arready <= m_axil.arready;
     m_axil.arvalid <= s_axil.arvalid;
+    s_axil.arready <= m_axil.arready;
     m_axil.araddr  <= s_axil.araddr;
-    m_axil.rready  <= s_axil.rready;
     s_axil.rvalid  <= m_axil.rvalid;
-    s_axil.rresp   <= m_axil.rresp;
+    m_axil.rready  <= s_axil.rready;
     s_axil.rdata   <= m_axil.rdata;
+    s_axil.rresp   <= m_axil.rresp;
   end procedure;
 
   procedure wb_attach (

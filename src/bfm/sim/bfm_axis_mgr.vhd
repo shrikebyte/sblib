@@ -61,7 +61,7 @@ use work.util_pkg.all;
 use work.axis_pkg.all;
 use work.bfm_pkg.all;
 
-entity bfm_axis_man is
+entity bfm_axis_mgr is
   generic (
     -- Push data (integer_array_t with push_ref()) to this queue.
     -- The integer arrays will be deallocated after this BFM is done with them.
@@ -93,13 +93,13 @@ entity bfm_axis_man is
   );
 end entity;
 
-architecture sim of bfm_axis_man is
+architecture sim of bfm_axis_mgr is
 
   -- When 'valid' is zero, the associated output ports will be driven with this value.
   -- This is to avoid a DUT sampling the values in the wrong clock cycle.
   constant DRIVE_INVALID_VALUE : std_ulogic := 'X';
 
-  constant BASE_ERROR_MESSAGE : string := "bfm_axis_man - " &
+  constant BASE_ERROR_MESSAGE : string := "bfm_axis_mgr - " &
     G_LOGGER_NAME_SUFFIX & ": ";
 
   -- ---------------------------------------------------------------------------
@@ -145,7 +145,7 @@ begin
 
     -- Use salt so that parallel instances of this entity get unique random
     -- sequences.
-    get_seed(seed, salt=> bfm_axis_man'path_name);
+    get_seed(seed, salt=> bfm_axis_mgr'path_name);
     rnd.InitSeed(seed);
 
     loop
@@ -212,7 +212,7 @@ begin
   end process;
 
   -- ---------------------------------------------------------------------------
-  u_bfm_handshake_man : entity work.bfm_handshake_man
+  u_bfm_handshake_mgr : entity work.bfm_handshake_mgr
   generic map (
     G_STALL_CONFIG => G_STALL_CONFIG
   )

@@ -16,10 +16,13 @@ use work.util_pkg.all;
 use work.bus_pkg.all;
 
 entity axil_arb is
+  generic (
+    G_NUM_S : positive
+  );
   port (
     clk    : in    std_ulogic;
     srst   : in    std_ulogic;
-    s_axil : view (s_axil_view) of bus_axil_arr_t;
+    s_axil : view (s_axil_view) of bus_axil_arr_t(0 to G_NUM_S - 1);
     m_axil : view  m_axil_view
   );
 end entity;
@@ -28,11 +31,11 @@ architecture rtl of axil_arb is
 
   type   wr_state_t is (ST_WR_IDLE, ST_WR_W, ST_WR_B);
   signal wr_state : wr_state_t;
-  signal wr_sel   : natural range s_axil'range;
+  signal wr_sel   : natural range 0 to G_NUM_S - 1;
 
   type   rd_state_t is (ST_RD_IDLE, ST_RD_AR, ST_RD_R);
   signal rd_state : rd_state_t;
-  signal rd_sel   : natural range s_axil'range;
+  signal rd_sel   : natural range 0 to G_NUM_S - 1;
 
   signal aw_en : std_ulogic;
   signal w_en  : std_ulogic;
@@ -80,7 +83,7 @@ begin
       end case;
 
       if srst then
-        wr_sel   <= s_axil'low;
+        wr_sel   <= wr_sel'low;
         aw_en    <= '0';
         w_en     <= '0';
         b_en     <= '0';
@@ -120,7 +123,7 @@ begin
       end case;
 
       if srst then
-        rd_sel   <= s_axil'low;
+        rd_sel   <= rd_sel'low;
         ar_en    <= '0';
         r_en     <= '0';
         rd_state <= ST_RD_IDLE;
@@ -140,7 +143,7 @@ begin
   m_axil.rready  <= s_axil(rd_sel).rready and r_en;
 
   -- ---------------------------------------------------------------------------
-  gen_assign : for i in s_axil'range generate
+  gen_assign : for i in 0 to G_NUM_S - 1 generate
     s_axil(i).awready <= m_axil.awready and aw_en and to_sl(i = wr_sel);
     s_axil(i).wready  <= m_axil.wready and w_en and to_sl(i = wr_sel);
     s_axil(i).bvalid  <= m_axil.bvalid and b_en and to_sl(i = wr_sel);

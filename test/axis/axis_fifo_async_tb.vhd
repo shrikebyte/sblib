@@ -61,15 +61,15 @@ architecture tb of axis_fifo_async_tb is
 
   -- DUT Signals
   signal s_axis : axis_t (
-    tdata(DW downto 1),
-    tkeep(KW downto 1),
-    tuser(UW downto 1)
+    tdata(DW - 1 downto 0),
+    tkeep(KW - 1 downto 0),
+    tuser(UW - 1 downto 0)
   );
 
   signal m_axis : axis_t (
-    tdata(DW downto 1),
-    tkeep(KW downto 1),
-    tuser(UW downto 1)
+    tdata(DW - 1 downto 0),
+    tkeep(KW - 1 downto 0),
+    tuser(UW - 1 downto 0)
   );
 
   signal s_ctl_drop       : std_ulogic := '0';
@@ -332,6 +332,8 @@ begin
   -- ---------------------------------------------------------------------------
   u_axis_fifo_async : entity work.axis_fifo_async
   generic map (
+    G_DW            => DW,
+    G_UW            => UW,
     G_EXTRA_SYNC    => 0,
     G_DEPTH         => G_DEPTH,
     G_PACKET_MODE   => G_PACKET_MODE,
@@ -363,7 +365,7 @@ begin
     m_sts_depth_comm => m_sts_depth_comm
   );
 
-  u_bfm_axis_man : entity work.bfm_axis_man
+  u_bfm_axis_mgr : entity work.bfm_axis_mgr
   generic map (
     G_DATA_QUEUE   => DATA_QUEUE,
     G_USER_QUEUE   => USER_QUEUE,

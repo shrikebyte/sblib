@@ -48,17 +48,22 @@ entity axil_init_mgr is
     clk    : in    std_ulogic;
     srst   : in    std_ulogic;
     m_axil : view  m_axil_view;
-    m_axis : view  m_axis_view
+    --
+    m_axis : view m_axis_view of axis_t(
+      tdata(AXIL_DATA_RANGE),
+      tkeep(AXIL_STRB_RANGE),
+      tuser(3 downto 0)
+    )
   );
 end entity;
 
 architecture rtl of axil_init_mgr is
 
   constant NUM_XACTIONS : integer := G_XACTIONS'length;
-  constant STS_WRITE    : integer := m_axis.tuser'low + 0;
-  constant STS_SLVERR   : integer := m_axis.tuser'low + 1;
-  constant STS_DECERR   : integer := m_axis.tuser'low + 2;
-  constant STS_CHKERR   : integer := m_axis.tuser'low + 3;
+  constant STS_WRITE    : integer := 0;
+  constant STS_SLVERR   : integer := 1;
+  constant STS_DECERR   : integer := 2;
+  constant STS_CHKERR   : integer := 3;
 
   type state_t is (
     ST_RESET, ST_STS_WAIT, ST_START, ST_DONE, ST_WRITE_WAIT, ST_WRITE_RSP_WAIT,

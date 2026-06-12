@@ -217,7 +217,7 @@ begin
   );
 
   -- ---------------------------------------------------------------------------
-  u_axil_bfm : entity work.bfm_axil_man
+  u_bfm_axil_mgr : entity work.bfm_axil_mgr
   generic map (
     G_BUS_HANDLE => AXIM
   )

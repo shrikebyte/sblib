@@ -7,7 +7,7 @@
 --# Licensed under the Apache 2.0 license, see LICENSE for details.
 --# ============================================================================
 --# AXI Lite 1:N decoder
---# Heavily inspired by: https://github.com/hdl-modules/hdl-modules/blob/main/modules/axi_lite/src/axi_lite_mux.vhd
+--# Inspired by: https://github.com/hdl-modules/hdl-modules/blob/main/modules/axi_lite/src/axi_lite_mux.vhd
 --##############################################################################
 
 library ieee;
@@ -18,20 +18,21 @@ use work.bus_pkg.all;
 
 entity axil_dec is
   generic (
-    G_BASEADDRS : slv_arr_t(open)(AXIL_ADDR_RANGE)
+    G_NUM_M     : positive;
+    G_BASEADDRS : slv_arr_t(0 to G_NUM_M - 1)(AXIL_ADDR_RANGE)
   );
   port (
     clk    : in    std_ulogic;
     srst   : in    std_ulogic;
     s_axil : view  s_axil_view;
-    m_axil : view (m_axil_view) of bus_axil_arr_t
+    m_axil : view (m_axil_view) of bus_axil_arr_t(0 to G_NUM_M - 1)
   );
 end entity;
 
 architecture rtl of axil_dec is
 
   -- ---------------------------------------------------------------------------
-  constant DECODE_ERR : natural := m_axil'high + 1;
+  constant DECODE_ERR : natural := G_NUM_M;
 
   -- ---------------------------------------------------------------------------
   type addr_decode_range_t is record
@@ -128,7 +129,7 @@ architecture rtl of axil_dec is
   signal ar_en : std_ulogic;
   signal r_en  : std_ulogic;
 
-  signal i0_axil : bus_axil_arr_t(m_axil'low to DECODE_ERR);
+  signal i0_axil : bus_axil_arr_t(0 to DECODE_ERR);
 
 begin
 
@@ -170,7 +171,7 @@ begin
         aw_en    <= '0';
         w_en     <= '0';
         b_en     <= '0';
-        wr_sel   <= m_axil'low;
+        wr_sel   <= wr_sel'low;
         wr_state <= ST_WR_IDLE;
       end if;
     end if;
@@ -206,7 +207,7 @@ begin
       if srst then
         ar_en    <= '0';
         r_en     <= '0';
-        rd_sel   <= m_axil'low;
+        rd_sel   <= rd_sel'low;
         rd_state <= ST_RD_IDLE;
       end if;
     end if;
@@ -223,7 +224,7 @@ begin
   s_axil.rresp   <= i0_axil(rd_sel).rresp;
 
   -- ---------------------------------------------------------------------------
-  gen_assign : for i in m_axil'range generate
+  gen_assign : for i in 0 to G_NUM_M - 1 generate
     i0_axil(i).awvalid <= s_axil.awvalid and aw_en and to_sl(i = wr_sel);
     i0_axil(i).awaddr  <= s_axil.awaddr;
     i0_axil(i).wvalid  <= s_axil.wvalid and w_en and to_sl(i = wr_sel);

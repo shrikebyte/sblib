@@ -161,6 +161,7 @@ begin
   -- DUT
   u_dut : entity work.cdc_vector
   generic map (
+    G_WIDTH      => G_WIDTH,
     G_EXTRA_SYNC => G_EXTRA_SYNC
   )
   port map (

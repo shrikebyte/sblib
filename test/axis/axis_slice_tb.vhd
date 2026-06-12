@@ -38,9 +38,9 @@ architecture tb of axis_slice_tb is
   constant RESET_TIME   : time    := 50 ns;
   constant CLK_PERIOD   : time    := 5 ns;
   constant NUM_OUTPUTS  : integer := 2;
-  constant KW           : integer := 4;
+  constant KW           : integer := 8;
   constant DW           : integer := 64;
-  constant UW           : integer := 32;
+  constant UW           : integer := 64;
   constant DBW          : integer := DW / KW;
   constant UBW          : integer := UW / KW;
   constant MAX_M0_BYTES : integer := 2048;
@@ -53,15 +53,15 @@ architecture tb of axis_slice_tb is
 
   -- DUT Signal
   signal s_axis : axis_t (
-    tdata(DW downto 1),
-    tkeep(KW downto 1),
-    tuser(UW downto 1)
+    tdata(DW - 1 downto 0),
+    tkeep(KW - 1 downto 0),
+    tuser(UW - 1 downto 0)
   );
 
   signal m_axis : axis_arr_t(0 to NUM_OUTPUTS - 1)(
-    tdata(DW downto 1),
-    tkeep(KW downto 1),
-    tuser(UW downto 1)
+    tdata(DW - 1 downto 0),
+    tkeep(KW - 1 downto 0),
+    tuser(UW - 1 downto 0)
   );
 
   signal num_bytes : natural range 0 to MAX_M0_BYTES;
@@ -253,6 +253,8 @@ begin
   -- ---------------------------------------------------------------------------
   u_axis_slice : entity work.axis_slice
   generic map (
+    G_DW           => DW,
+    G_UW           => UW,
     G_MAX_M0_BYTES => MAX_M0_BYTES
   )
   port map (
@@ -265,7 +267,7 @@ begin
     sts_short => sts_short
   );
 
-  u_bfm_axis_man : entity work.bfm_axis_man
+  u_bfm_axis_mgr : entity work.bfm_axis_mgr
   generic map (
     G_DATA_QUEUE    => DATA_QUEUE,
     G_USER_QUEUE    => USER_QUEUE,

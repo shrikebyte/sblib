@@ -19,6 +19,7 @@ use ieee.std_logic_1164.all;
 
 entity cdc_bit is
   generic (
+    G_WIDTH : positive;
     -- True: Register the input; False: Don't register the input; If set to
     -- false then src_clk is unused.
     G_USE_SRC_REG : boolean := false;
@@ -27,21 +28,20 @@ entity cdc_bit is
   );
   port (
     src_clk : in    std_ulogic := 'U';
-    src_bit : in    std_ulogic_vector;
+    src_bit : in    std_ulogic_vector(G_WIDTH - 1 downto 0);
     dst_clk : in    std_ulogic;
-    dst_bit : out   std_ulogic_vector
+    dst_bit : out   std_ulogic_vector(G_WIDTH - 1 downto 0)
   );
 end entity;
 
 architecture rtl of cdc_bit is
 
   constant SYNC_LEN : positive := 2 + G_EXTRA_SYNC;
-  constant DW       : natural  := src_bit'length;
 
   type cdc_regs_t is array(natural range 0 to SYNC_LEN - 1) of
-    std_ulogic_vector(DW - 1 downto 0);
+    std_ulogic_vector(G_WIDTH - 1 downto 0);
 
-  signal src_reg  : std_ulogic_vector(DW - 1 downto 0);
+  signal src_reg  : std_ulogic_vector(G_WIDTH - 1 downto 0);
   signal cdc_regs : cdc_regs_t;
 
   attribute async_reg                 : string;

@@ -3,24 +3,25 @@
 --# Author   : David Gussler
 --# Language : VHDL '08
 --# ============================================================================
---# Block averager & decimator (not a moving average filter)
+--# Block average & decimator (not a moving average filter)
 --#
---# AXI4-Stream Table
---# ----------------------------------------------------------------------------
---# Signal        | Description
---# --------------|-------------------------------------------------------------
---# s_axis.tready | Used.
---# s_axis.tvalid | Used.
---# s_axis.tdata  | Used.
---# s_axis.tlast  | Ignore.
---# s_axis.tkeep  | Ignore.
---# s_axis.tuser  | Ignore.
---# m_axis.tready | Used.
---# m_axis.tvalid | Used.
---# m_axis.tdata  | Used.
---# m_axis.tlast  | Ignore.
---# m_axis.tkeep  | Ignore.
---# m_axis.tuser  | Ignore.
+--# --------+-------------------------------------------------------------------
+--# Signal  | Description
+--# --------+-------------------------------------------------------------------
+--# s_axis
+--# --------+-------------------------------------------------------------------
+--# tdata   | Input data. Signed or unsigned format is specified by G_SIGNED.
+--# tkeep   | Unused.
+--# tlast   | Unused.
+--# tuser   | Unused.
+--# --------+-------------------------------------------------------------------
+--# m_axis
+--# --------+-------------------------------------------------------------------
+--# tdata   | Averaged output data.
+--# tkeep   | Unused. Output tied high.
+--# tlast   | Unused. Output tied high.
+--# tuser   | Unused. Output tied low.
+--# --------+-------------------------------------------------------------------
 --##############################################################################
 
 library ieee;
@@ -31,6 +32,7 @@ use work.axis_pkg.all;
 
 entity block_avg is
   generic (
+    G_DW : positive;
     -- True = signed format; False = unsigned format
     G_SIGNED : boolean := false;
     -- The default value of 15 for G_MAX_AVGSEL allows for up to 32k samples
@@ -41,8 +43,18 @@ entity block_avg is
     clk  : in    std_ulogic;
     srst : in    std_ulogic;
     --
-    s_axis : view s_axis_view;
-    m_axis : view m_axis_view;
+    --
+    s_axis : view s_axis_view of axis_t(
+      tdata(G_DW - 1 downto 0),
+      tkeep(0 downto 0),
+      tuser(0 downto 0)
+    );
+    --
+    m_axis : view m_axis_view of axis_t(
+      tdata(G_DW - 1 downto 0),
+      tkeep(0 downto 0),
+      tuser(0 downto 0)
+    );
     --
     -- Defines the number of samples to average together. Can be updated at
     -- run-time, but new values will not become effective until the current
@@ -66,7 +78,7 @@ architecture rtl of block_avg is
   -- width, the number of bits required to hold the result is given by the
   -- original number of bits plus the log, base two, of the number of elements
   -- added together.
-  signal accum : signed(s_axis.tdata'length + G_MAX_AVGSEL - 1 downto 0);
+  signal accum : signed(G_DW + G_MAX_AVGSEL - 1 downto 0);
   signal cnt   : unsigned(G_MAX_AVGSEL downto 0);
   signal sel   : natural range 0 to G_MAX_AVGSEL;
 
@@ -82,18 +94,12 @@ architecture rtl of block_avg is
 
 begin
 
-  assert s_axis.tdata'length = m_axis.tdata'length
-    report "ERROR: block_avg: s_axis.tdata width does not match m_axis.tdata. " &
-           "s_axis.tdata width: " & integer'image(s_axis.tdata'length) &
-           " m_axis.tdata width: " & integer'image(m_axis.tdata'length)
-    severity failure;
-
   m_axis.tlast <= '1';
   m_axis.tkeep <= (others => '1');
   m_axis.tuser <= (others => '0');
   --
   s_axis.tready <= m_axis.tready or not m_axis.tvalid;
-  m_axis.tdata  <= std_ulogic_vector(resize(shift_right(unsigned(accum), sel), m_axis.tdata'length));
+  m_axis.tdata  <= std_ulogic_vector(resize(shift_right(unsigned(accum), sel), G_DW));
 
   prc_avg : process (clk) is begin
     if rising_edge(clk) then

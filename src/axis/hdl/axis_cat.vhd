@@ -22,19 +22,32 @@ use work.util_pkg.all;
 use work.axis_pkg.all;
 
 entity axis_cat is
+  generic (
+    G_NUM_S : positive;
+    G_DW    : positive;
+    G_UW    : positive
+  );
   port (
     clk  : in    std_ulogic;
     srst : in    std_ulogic;
     --
-    s_axis : view (s_axis_view) of axis_arr_t;
+    s_axis : view (s_axis_view) of axis_arr_t(0 to G_NUM_S - 1)(
+      tdata(G_DW - 1 downto 0),
+      tkeep(G_DW / 8 - 1 downto 0),
+      tuser(G_UW - 1 downto 0)
+    );
     --
-    m_axis : view m_axis_view
+    m_axis : view m_axis_view of axis_t(
+      tdata(G_DW - 1 downto 0),
+      tkeep(G_DW / 8 - 1 downto 0),
+      tuser(G_UW - 1 downto 0)
+    )
   );
 end entity;
 
 architecture rtl of axis_cat is
 
-  signal sel : integer range s_axis'range;
+  signal sel : integer range 0 to G_NUM_S - 1;
   signal oe  : std_ulogic;
 
 begin
@@ -43,15 +56,15 @@ begin
   prc_switch_on_tlast : process (clk) is begin
     if rising_edge(clk) then
       if s_axis(sel).tvalid and s_axis(sel).tready and s_axis(sel).tlast then
-        if sel = s_axis'high then
-          sel <= s_axis'low;
+        if sel = sel'high then
+          sel <= sel'low;
         else
           sel <= sel + 1;
         end if;
       end if;
 
       if srst then
-        sel <= s_axis'low;
+        sel <= sel'low;
       end if;
     end if;
   end process;
@@ -59,7 +72,7 @@ begin
   -- ---------------------------------------------------------------------------
   oe <= m_axis.tready or not m_axis.tvalid;
 
-  gen_assign_s_axis_tready : for i in s_axis'range generate
+  gen_assign_s_axis_tready : for i in 0 to G_NUM_S - 1 generate
     s_axis(i).tready <= oe and to_sl((sel = i));
   end generate;
 
@@ -67,9 +80,9 @@ begin
     if rising_edge(clk) then
       if s_axis(sel).tvalid and oe then
         m_axis.tvalid <= '1';
-        m_axis.tlast  <= s_axis(sel).tlast and to_sl(sel = s_axis'high);
         m_axis.tdata  <= s_axis(sel).tdata;
         m_axis.tkeep  <= s_axis(sel).tkeep;
+        m_axis.tlast  <= s_axis(sel).tlast and to_sl(sel = sel'high);
         m_axis.tuser  <= s_axis(sel).tuser;
       elsif m_axis.tready then
         m_axis.tvalid <= '0';
