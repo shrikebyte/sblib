@@ -18,8 +18,9 @@ use work.bus_pkg.all;
 
 entity axil_dec is
   generic (
-    G_NUM_M     : positive;
-    G_BASEADDRS : slv_arr_t(0 to G_NUM_M - 1)(AXIL_ADDR_RANGE)
+    G_NUM_M      : positive;
+    G_ADDR_WIDTH : positive range 4 to AXIL_ADDR_WIDTH;
+    G_BASEADDRS  : bus_baseaddr_arr_t(0 to G_NUM_M - 1)
   );
   port (
     clk    : in    std_ulogic;
@@ -35,84 +36,82 @@ architecture rtl of axil_dec is
   constant DECODE_ERR : natural := G_NUM_M;
 
   -- ---------------------------------------------------------------------------
-  type addr_decode_range_t is record
-    hi : natural;
-    lo : natural;
-  end record;
+  impure function check_baseaddrs return boolean is begin
+    for i in G_BASEADDRS'range loop
 
-  -- ---------------------------------------------------------------------------
-  function check_baseaddrs (
-    baseaddrs : slv_arr_t
-  ) return boolean is
-  begin
-    for addr_idx in baseaddrs'range loop
-      for bit_idx in baseaddrs(0)'range loop
-        if baseaddrs(addr_idx)(bit_idx) /= '0' and baseaddrs(addr_idx)(bit_idx) /= '1' then
+      -- Test valid address characters
+      for bit_idx in G_BASEADDRS(0).addr'range loop
+        if G_BASEADDRS(i).addr(bit_idx) /= '0' and G_BASEADDRS(i).addr(bit_idx) /= '1' then
           report "Invalid character at address index "
-                 & integer'image(addr_idx)
+                 & integer'image(i)
                  & ", bit index "
                  & integer'image(bit_idx)
                  & ": "
-                 & std_logic'image(baseaddrs(addr_idx)(bit_idx))
+                 & std_logic'image(G_BASEADDRS(i).addr(bit_idx))
             severity warning;
-
           return false;
         end if;
       end loop;
 
-      for addr_test_idx in baseaddrs'range loop
-        if addr_idx /= addr_test_idx and baseaddrs(addr_idx) = baseaddrs(addr_test_idx) then
-          report "Duplicate address found at indexes "
-                 & integer'image(addr_idx)
-                 & " and "
-                 & integer'image(addr_test_idx)
-                 & ": "
-                 & natural'image(to_integer(unsigned(baseaddrs(addr_idx))))
-            severity warning;
+      -- Test address widths
+      if G_BASEADDRS(i).width >= G_ADDR_WIDTH then
+        report "Subordinate address width must be less than decoder address width "
+               & integer'image(i)
+               & ": "
+               & natural'image(to_integer(unsigned(G_BASEADDRS(i).addr)))
+          severity warning;
+        return false;
+      end if;
 
-          return false;
+      for addr_test_idx in G_BASEADDRS'range loop
+        if i /= addr_test_idx then -- Skip checking against self
+          -- Test for dupe addresses
+          if G_BASEADDRS(i).addr = G_BASEADDRS(addr_test_idx).addr then
+            report "Duplicate address found at indexes "
+                   & integer'image(i)
+                   & " and "
+                   & integer'image(addr_test_idx)
+                   & ": "
+                   & natural'image(to_integer(unsigned(G_BASEADDRS(i).addr)))
+              severity warning;
+            return false;
+          end if;
+
+          -- Test for address overlap.
+          -- For example, consider:
+          --   0 => addr = 0x10000, width = 16
+          --   1 => addr = 0x15000, width = 12
+          -- This endpoint module is ambiguous because device 1 is specified as
+          -- residing withing device 0's reserved address allocation.
+          -- If any masked address A is equal to another address B masked with A's
+          -- address mask, that is an error.
+          if G_BASEADDRS(i).addr(G_ADDR_WIDTH - 1 downto G_BASEADDRS(i).width) =
+             G_BASEADDRS(addr_test_idx).addr(G_ADDR_WIDTH - 1 downto G_BASEADDRS(i).width) then
+            report "Address overlap for indexes "
+                   & integer'image(i)
+                   & " and "
+                   & integer'image(addr_test_idx)
+              severity warning;
+            return false;
+          end if;
         end if;
       end loop;
     end loop;
-
     return true;
   end function;
 
-  function find_addr_decode_range (
-    baseaddrs : slv_arr_t
-  ) return addr_decode_range_t is
-    variable mask : std_logic_vector(baseaddrs(0)'range) := (others => '0');
-    variable rtn  : addr_decode_range_t;
-  begin
-    assert check_baseaddrs(baseaddrs)
-      report "The supplied address set is invalid. See messages above."
-      severity failure;
-
-    for i in baseaddrs'range loop
-      mask := mask or baseaddrs(i);
-    end loop;
-
-    rtn.hi := find_hi_idx(mask);
-    rtn.lo := find_lo_idx(mask);
-    return rtn;
-  end function;
-
-  function decode (
-    addr : std_logic_vector;
-    decode_range : addr_decode_range_t;
-    baseaddrs : slv_arr_t
+  impure function decode (
+    addr : std_logic_vector(AXIL_ADDR_RANGE)
   ) return natural is
   begin
-    for i in baseaddrs'range loop
-      if addr(decode_range.hi downto decode_range.lo) = baseaddrs(i)(decode_range.hi downto decode_range.lo) then
+    for i in G_BASEADDRS'range loop
+      if addr(G_ADDR_WIDTH - 1 downto G_BASEADDRS(i).width) =
+         G_BASEADDRS(i).addr(G_ADDR_WIDTH - 1 downto G_BASEADDRS(i).width) then
         return i;
       end if;
     end loop;
     return DECODE_ERR;
   end function;
-
-  -- ---------------------------------------------------------------------------
-  constant DECODE_RANGE : addr_decode_range_t := find_addr_decode_range(G_BASEADDRS);
 
   -- ---------------------------------------------------------------------------
   type   wr_state_t is (ST_WR_IDLE, ST_WR_W, ST_WR_B);
@@ -134,12 +133,17 @@ architecture rtl of axil_dec is
 begin
 
   -- ---------------------------------------------------------------------------
+  assert check_baseaddrs
+    report "The supplied address set is invalid. See messages above."
+    severity failure;
+
+  -- ---------------------------------------------------------------------------
   prc_wr_select : process (clk) is begin
     if rising_edge(clk) then
       case wr_state is
         when ST_WR_IDLE =>
           if s_axil.awvalid then
-            wr_sel   <= decode(s_axil.awaddr, DECODE_RANGE, G_BASEADDRS);
+            wr_sel   <= decode(s_axil.awaddr);
             aw_en    <= '1';
             w_en     <= '1';
             wr_state <= ST_WR_W;
@@ -183,7 +187,7 @@ begin
       case rd_state is
         when ST_RD_IDLE =>
           if s_axil.arvalid then
-            rd_sel   <= decode(s_axil.araddr, DECODE_RANGE, G_BASEADDRS);
+            rd_sel   <= decode(s_axil.araddr);
             ar_en    <= '1';
             r_en     <= '0';
             rd_state <= ST_RD_AR;

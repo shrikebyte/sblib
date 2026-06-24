@@ -251,7 +251,7 @@ package bus_pkg is
   );
 
   -- ---------------------------------------------------------------------------
-  -- Transaction type
+  -- Transaction type for axil_init_mgr instruction ROM
   type bus_cmd_t is (BUS_WRITE, BUS_CHECK);
 
   type bus_xact_t is record
@@ -263,6 +263,13 @@ package bus_pkg is
   end record;
 
   type bus_xact_arr_t is array(natural range <>) of bus_xact_t;
+
+  type bus_baseaddr_t is record
+    addr  : std_ulogic_vector(AXIL_ADDR_RANGE);
+    width : positive range 2 to AXIL_ADDR_WIDTH;
+  end record;
+
+  type bus_baseaddr_arr_t is array(natural range <>) of bus_baseaddr_t;
 
 end package;
 

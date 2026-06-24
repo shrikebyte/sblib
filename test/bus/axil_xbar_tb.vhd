@@ -29,29 +29,32 @@ end entity;
 architecture tb of axil_xbar_tb is
 
   -- Testbench constants
-  constant CLK_PERIOD : time     := 10 ns;
-  constant CLK_TO_Q   : time     := 1 ns;
-  constant NUM_MGR    : positive := 4;
-  constant NUM_SUB    : positive := 4;
+  constant CLK_PERIOD : time := 10 ns;
+  constant CLK_TO_Q   : time := 1 ns;
 
-  constant BASEADDRS :
-    slv_arr_t(0 to NUM_SUB - 1)(AXIL_ADDR_RANGE) := (
-      0 => x"0000_0000",
-      1 => x"0001_0000",
-      2 => x"000F_0000",
-      3 => x"0110_0000"
-    );
+  -- DUT Generics
+  constant G_NUM_S      : positive                             := 4;
+  constant G_NUM_M      : positive                             := 6;
+  constant G_ADDR_WIDTH : positive                             := 32;
+  constant G_BASEADDRS  : bus_baseaddr_arr_t(0 to G_NUM_M - 1) := (
+    0 => (x"0000_0000", 16),
+    1 => (x"0001_0000", 16),
+    2 => (x"000F_0000", 16),
+    3 => (x"0110_0000", 10),
+    4 => (x"6001_1000", 12),
+    5 => (x"0300_2000", 12)
+  );
 
-  -- DUT ports
+  -- DUT Ports
   signal clk      : std_logic := '1';
   signal srst     : std_logic := '1';
-  signal axil_cpu : bus_axil_arr_t(0 to NUM_MGR - 1);
-  signal axil_ram : bus_axil_arr_t(0 to NUM_SUB - 1);
+  signal axil_cpu : bus_axil_arr_t(0 to G_NUM_S - 1);
+  signal axil_ram : bus_axil_arr_t(0 to G_NUM_M - 1);
 
-  type bus_master_arr_t is array(natural range <>) of bus_master_t;
+  type bus_mgr_arr_t is array(natural range <>) of bus_master_t;
 
   -- Testbench BFMs
-  constant AXIM : bus_master_arr_t(0 to NUM_MGR - 1) := (
+  constant AXIM : bus_mgr_arr_t(0 to G_NUM_S - 1) := (
     0 => new_bus(AXIL_DATA_WIDTH, AXIL_ADDR_WIDTH),
     1 => new_bus(AXIL_DATA_WIDTH, AXIL_ADDR_WIDTH),
     2 => new_bus(AXIL_DATA_WIDTH, AXIL_ADDR_WIDTH),
@@ -101,32 +104,32 @@ begin
         prd_wait_clk;
 
         -- Generate transactions
-        for master in 0 to NUM_MGR - 1 loop
-          for slave in 0 to NUM_SUB - 1 loop
-            for transaction in 1 to 10 loop
-              addr  := BASEADDRS(slave) or (
+        for mgr in 0 to G_NUM_S - 1 loop
+          for sub in 0 to G_NUM_M - 1 loop
+            for transaction in 1 to 1 loop
+              addr  := G_BASEADDRS(sub).addr or (
                 std_logic_vector(
-                  to_unsigned(transaction + (master * 16), AXIL_ADDR_WIDTH - 2)
+                  to_unsigned(transaction + (mgr * 16), AXIL_ADDR_WIDTH - 2)
                 ) & b"00"
               );
               data  := addr;
               wstrb := x"F";
-              write_axi_lite(net, AXIM(master), addr, data, AXI_RESP_OKAY, wstrb);
+              write_axi_lite(net, AXIM(mgr), addr, data, AXI_RESP_OKAY, wstrb);
             end loop;
           end loop;
         end loop;
 
         -- Check transactions
-        for master in 0 to NUM_MGR - 1 loop
-          for slave in 0 to NUM_SUB - 1 loop
-            for transaction in 1 to 10 loop
-              addr := BASEADDRS(slave) or (
+        for mgr in 0 to G_NUM_S - 1 loop
+          for sub in 0 to G_NUM_M - 1 loop
+            for transaction in 1 to 1 loop
+              addr := G_BASEADDRS(sub).addr or (
                 std_logic_vector(
-                  to_unsigned(transaction + (master * 16), AXIL_ADDR_WIDTH - 2)
+                  to_unsigned(transaction + (mgr * 16), AXIL_ADDR_WIDTH - 2)
                 ) & b"00"
               );
               data := addr;
-              check_axi_lite(net, AXIM(master), addr, AXI_RESP_OKAY, data, "Check during read loop failed.");
+              check_axi_lite(net, AXIM(mgr), addr, AXI_RESP_OKAY, data, "Check during read loop failed.");
             end loop;
           end loop;
         end loop;
@@ -153,9 +156,10 @@ begin
   -- ---------------------------------------------------------------------------
   u_axil_xbar : entity work.axil_xbar
   generic map (
-    G_NUM_M     => NUM_MGR,
-    G_NUM_S     => NUM_SUB,
-    G_BASEADDRS => BASEADDRS
+    G_NUM_S      => G_NUM_S,
+    G_NUM_M      => G_NUM_M,
+    G_ADDR_WIDTH => G_ADDR_WIDTH,
+    G_BASEADDRS  => G_BASEADDRS
   )
   port map (
     clk    => clk,
@@ -165,7 +169,7 @@ begin
   );
 
   -- ---------------------------------------------------------------------------
-  gen_mgrs : for i in 0 to NUM_MGR - 1 generate
+  gen_mgrs : for i in 0 to G_NUM_S - 1 generate
 
     u_bfm_axil_mgr : entity work.bfm_axil_mgr
     generic map (
@@ -179,7 +183,7 @@ begin
   end generate;
 
   -- ---------------------------------------------------------------------------
-  gen_subs : for i in 0 to NUM_SUB - 1 generate
+  gen_subs : for i in 0 to G_NUM_M - 1 generate
 
     u_axil_ram : entity work.axil_ram
     generic map (

@@ -18,9 +18,10 @@ use work.bus_pkg.all;
 
 entity axil_xbar is
   generic (
-    G_NUM_M     : positive;
-    G_NUM_S     : positive;
-    G_BASEADDRS : slv_arr_t(0 to G_NUM_S - 1)(AXIL_ADDR_RANGE)
+    G_NUM_S      : positive;
+    G_NUM_M      : positive;
+    G_ADDR_WIDTH : positive range 4 to AXIL_ADDR_WIDTH;
+    G_BASEADDRS  : bus_baseaddr_arr_t(0 to G_NUM_M - 1)
   );
   port (
     clk    : in    std_ulogic;
@@ -49,8 +50,9 @@ begin
 
   u_axil_decoder : entity work.axil_dec
   generic map (
-    G_NUM_M     => G_NUM_M,
-    G_BASEADDRS => G_BASEADDRS
+    G_NUM_M      => G_NUM_M,
+    G_ADDR_WIDTH => G_ADDR_WIDTH,
+    G_BASEADDRS  => G_BASEADDRS
   )
   port map (
     clk    => clk,
