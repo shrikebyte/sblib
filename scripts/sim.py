@@ -73,9 +73,6 @@ lib.add_source_files(ROOT_DIR / "lib" / "**" / "src" / "**" / "sim" / "*.vhd", a
 lib.add_source_files(ROOT_DIR / "test" / "**" / "*.vhd", allow_empty=True)
 lib.add_source_files(ROOT_DIR / "build" / "regs_out" / "**" / "hdl" / "*.vhd", allow_empty=True)
 
-if GENERATE_VHDL_LS_TOML:
-    lib.add_source_files(ROOT_DIR / "platforms" / "**" / "hdl" / "*.vhd", allow_empty=True)
-
 
 ################################################################################
 # Test bench configurations

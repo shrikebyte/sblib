@@ -1,0 +1,7 @@
+# Local machine-specific configuration overrides.
+# Copy this file to 'local.mk' and change the variables to match your
+# configuraiton
+
+# VIVADO := /opt/Xilinx/2025.2/Vivado/bin/vivado
+# VIVADO := /mnt/drive/apps/Xilinx/2025.2/Vivado/bin/vivado
+# VIVADO := C:/Xilinx/2025.2/Vivado/bin/vivado

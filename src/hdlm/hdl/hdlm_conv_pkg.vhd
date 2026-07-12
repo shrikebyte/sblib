@@ -44,14 +44,14 @@ package body hdlm_conv_pkg is
     m_axil_m2s.write.w.strb(axil_strb_range)  <= s_axil.wstrb;
     m_axil_m2s.write.b.ready                  <= s_axil.bready;
     --
-    s_axil.arready  <= m_axil_s2m.read.ar.ready;
-    s_axil.rvalid   <= m_axil_s2m.read.r.valid;
-    s_axil.rdata    <= m_axil_s2m.read.r.data(axil_data_range);
-    s_axil.rresp    <= m_axil_s2m.read.r.resp;
-    s_axil.awready  <= m_axil_s2m.write.aw.ready;
-    s_axil.wready   <= m_axil_s2m.write.w.ready;
-    s_axil.bvalid   <= m_axil_s2m.write.b.valid;
-    s_axil.bresp    <= m_axil_s2m.write.b.resp;
+    s_axil.arready <= m_axil_s2m.read.ar.ready;
+    s_axil.rvalid  <= m_axil_s2m.read.r.valid;
+    s_axil.rdata   <= m_axil_s2m.read.r.data(axil_data_range);
+    s_axil.rresp   <= m_axil_s2m.read.r.resp;
+    s_axil.awready <= m_axil_s2m.write.aw.ready;
+    s_axil.wready  <= m_axil_s2m.write.w.ready;
+    s_axil.bvalid  <= m_axil_s2m.write.b.valid;
+    s_axil.bresp   <= m_axil_s2m.write.b.resp;
   end procedure;
 
 end package body;

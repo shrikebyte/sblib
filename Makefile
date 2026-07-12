@@ -1,101 +1,87 @@
 ################################################################################
 # File     : Makefile
 # Author   : David Gussler
-# Language : gnu make
 # ==============================================================================
-# Project maintenance commands
-# ..Windows users: Run from git bash, MSYS2, or WSL2 prompt.
+# Project maintenance
 ################################################################################
+-include local.mk
 
 ################################################################################
-# Configuration Settings
+# Project Settings
 ################################################################################
-
-PROJ_NAME := sblib
-
-# Library Version
-# Use semantic versioning with respect to the module HDL interfaces.
-# Update the version and add appropriate notes to the `CHANGELOG.md` each time
-# a new library version is tagged and released.
-VER_MAJOR := 0
-VER_MINOR := 1
-VER_PATCH := 0
-
-# Required project build tool versions
-REQUIRE_REGS_VER   := 8.1.0
-REQUIRE_VSG_VER    := 3.35.0
-REQUIRE_VUNIT_VER  := 5.0.0.dev8
+PROJECT_VERSION := 0.2.0
 
 
 ################################################################################
 # Rules
 ################################################################################
 
-# Check Python package version
-define check_python_pkg_ver
-	@v=$$(python -m pip show $(1) 2>/dev/null | awk '/Version:/ {print $$2}'); \
-	if [ "$$v" != "$($(2))" ]; then \
-		echo "ERROR: Requires $(1) version $($(2)) (found $$v)"; \
-		exit 1; \
-	fi
-endef
+# Defaults (can be overridden by local.mk)
+VIVADO ?= $(shell which vivado 2>/dev/null)
 
-MAKEFILE_DIR := $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
-SRC_DIR := $(MAKEFILE_DIR)src
-TEST_DIR := $(MAKEFILE_DIR)test
-BUILD_DIR := $(MAKEFILE_DIR)build
-BUILD_NAME := $(PROJ_NAME)_v$(VER_MAJOR)_$(VER_MINOR)_$(VER_PATCH)
-RELEASE_DIR := $(BUILD_DIR)/$(BUILD_NAME)
-REGS_SRC := $(SRC_DIR)/**/regs/*.toml
+# Paths & tools
+THIS_DIR := $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
+SRC_DIR := $(THIS_DIR)src
+TEST_DIR := $(THIS_DIR)test
+BUILD_DIR := $(THIS_DIR)build
+VENV_DIR = $(THIS_DIR).build_venv
+VER_STRING := v$(PROJECT_VERSION)
+REGS_SRC := $(SRC_DIR)/*/regs/*.toml
 STYLE_SRC := $(shell find $(SRC_DIR) $(TEST_DIR) -type f -name "*.vhd" -not -path "$(SRC_DIR)/hdlm/hdl/*")
-NEW_TAG := v$(VER_MAJOR).$(VER_MINOR).$(VER_PATCH)
+PYTHON := $(VENV_DIR)/bin/python
+PIP := $(VENV_DIR)/bin/pip
+VSG := $(VENV_DIR)/bin/vsg
 
-.PHONY: package build release sim regs style style-fix tool-check clean
+# Phony rules
+.PHONY: release sim regs style style-fix clean
 
-# Check versions of required build tools
-tool-check:
-	@echo "INFO: Checking tools..."
-	$(call check_python_pkg_ver,hdl_registers,REQUIRE_REGS_VER)
-	$(call check_python_pkg_ver,vsg,REQUIRE_VSG_VER)
-	$(call check_python_pkg_ver,vunit_hdl,REQUIRE_VUNIT_VER)
-	nvc --version &> /dev/null || echo "ERROR: Requires NVC!"
-	@echo "INFO: Tool check passed."
-
-# Create a release package with all of the built output products
-package: regs
-	mkdir -p $(RELEASE_DIR)
-	cp $(BUILD_DIR)/regs_out/*/*.h* $(RELEASE_DIR)
-	cd $(BUILD_DIR) && tar -czvf $(BUILD_NAME).tar.gz $(RELEASE_DIR)
 
 # Run the VUnit simulation
-sim: regs
-	cd scripts && python sim.py --xunit-xml $(BUILD_DIR)/sim_report.xml
+sim: $(BUILD_DIR)/regs_out/.stamp
+	cd scripts && $(PYTHON) sim.py --vhdl_ls
+	cd scripts && $(PYTHON) sim.py --xunit-xml $(BUILD_DIR)/sim_report.xml
 
-# Check the coding style of the src files
-style:
+# Check the coding style of the VHDL src files
+style: $(VENV_DIR)/.stamp $(STYLE_SRC)
 	mkdir -p $(BUILD_DIR)
-	vsg -f $(STYLE_SRC) -c ./scripts/vsg_rules.yaml -of vsg --all_phases --quality_report $(BUILD_DIR)/style_report.json
+	$(VSG) -f $(STYLE_SRC) \
+	-c vsg_rules.yaml \
+	-of vsg \
+	--all_phases \
+	--quality_report $(BUILD_DIR)/style_report.json
 
-# Check AND FIX the coding style of the src files
-style-fix:
+# Check AND FIX the coding style of the VHDL src files
+style-fix: $(VENV_DIR)/.stamp $(STYLE_SRC)
 	mkdir -p $(BUILD_DIR)
-	vsg -f $(STYLE_SRC) -c ./scripts/vsg_rules.yaml -of vsg --fix
+	$(VSG) -f $(STYLE_SRC) \
+	-c vsg_rules.yaml \
+	-of vsg \
+	--fix
 
-# Generate the register output products
-regs:
-	cd scripts && python regs.py $(REGS_SRC)
+# Generate register output products
+$(BUILD_DIR)/regs_out/.stamp: $(VENV_DIR)/.stamp $(REGS_SRC)
+	cd scripts && $(PYTHON) regs.py $(REGS_SRC)
+	touch $(BUILD_DIR)/regs_out/.stamp
 
-# Create a new git tag and Github release for this version of the code.
+# Install venv and python packages
+$(VENV_DIR)/.stamp: build-requirements.txt
+	test -d $(VENV_DIR) || python3 -m venv $(VENV_DIR)
+	$(PIP) install --upgrade pip
+	$(PIP) install -r build-requirements.txt
+	touch $(VENV_DIR)/.stamp
+
+# Create a new git tag and Github release for this version of the code. A Github
+# action will generate the release from source.
 release:
 	@if ! git diff-index --quiet HEAD --; then \
 		echo "ERROR: Uncommitted changes detected. Commit them before proceeding." >&2; \
 		exit 1; \
 	fi
 	@echo "Last tag: $(shell git describe --tags --abbrev=0 2>/dev/null || echo "NA")"
-	@echo "New tag : $(NEW_TAG)"
+	@echo "New tag : $(VER_STRING)"
 	@echo
 	@echo "NOTICE: If the value for the new tag is unacceptable, then the tag"
-	@echo "may be changed by modifying the VER_* Makefile variables."
+	@echo "may be changed by modifying the PROJECT_VERSION Makefile variable."
 	@echo
 	@echo "NOTICE: Before proceeding, don't forget to update CHANGELOG.md with the"
 	@echo "details of this release."
@@ -105,8 +91,8 @@ release:
 		echo "Aborting..."; \
 		exit 1; \
 	fi
-	git tag -a $(NEW_TAG) -m "Release $(NEW_TAG)"
-	git push origin $(NEW_TAG)
+	git tag -a $(VER_STRING) -m "Release $(VER_STRING)"
+	git push origin $(VER_STRING)
 
 clean:
-	rm -rf build scripts/__pycache__ scripts/vunit_out
+	rm -rf $(BUILD_DIR) scripts/__pycache__ scripts/vunit_out

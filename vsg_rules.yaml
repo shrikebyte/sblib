@@ -141,9 +141,9 @@ rule:
     disable: true
   instantiation_036:
     action: remove
-  instantiation_601:
-    disable: false
-    prefixes: u_
+  # instantiation_601:
+  #   disable: false
+  #   prefixes: u_
   length_001:
     length: 120
     severity: Error

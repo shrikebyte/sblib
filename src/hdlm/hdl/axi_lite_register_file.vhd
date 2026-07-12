@@ -47,72 +47,73 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-
 use work.axi_lite_pkg.all;
 use work.register_file_pkg.all;
 
 entity axi_lite_register_file is
   generic (
-    registers : register_definition_vec_t;
-    default_values : register_vec_t(registers'range) := (others => (others => '0'))
+    REGISTERS      : register_definition_vec_t;
+    DEFAULT_VALUES : register_vec_t(registers'range) := (others => (others => '0'))
   );
   port (
-    clk : in std_ulogic;
+    clk : in    std_ulogic;
     -- Active-high synchronous reset.
     -- The code in this entity uses initial values so an initial reset is NOT necessary.
     -- This port can safely be left unconnected and tied to zero.
     -- If asserted, it will reset the AXI-Lite handshaking state as well as all register values.
-    reset : in std_ulogic := '0';
+    reset : in    std_ulogic := '0';
     --# {{}}
     --# Register control bus
-    axi_lite_m2s : in axi_lite_m2s_t;
-    axi_lite_s2m : out axi_lite_s2m_t := axi_lite_s2m_init;
+    axi_lite_m2s : in    axi_lite_m2s_t;
+    axi_lite_s2m : out   axi_lite_s2m_t := axi_lite_s2m_init;
     --# {{}}
     -- Register values
-    regs_up : in register_vec_t(registers'range) := default_values;
-    regs_down : out register_vec_t(registers'range) := default_values;
+    regs_up   : in    register_vec_t(REGISTERS'range) := DEFAULT_VALUES;
+    regs_down : out   register_vec_t(REGISTERS'range) := DEFAULT_VALUES;
     --# {{}}
     -- Each bit is pulsed for one cycle when the corresponding register is read/written.
     -- For read, the bit is asserted the exact same cycle as the AXI-Lite R transaction occurs.
     -- For write, the bit is asserted the cycle after the AXI-Lite W transaction occurs, so that
     -- 'regs_down' is updated with the new value.
-    reg_was_read : out std_ulogic_vector(registers'range) := (others => '0');
-    reg_was_written : out std_ulogic_vector(registers'range) := (others => '0')
+    reg_was_read    : out   std_ulogic_vector(REGISTERS'range) := (others => '0');
+    reg_was_written : out   std_ulogic_vector(REGISTERS'range) := (others => '0')
   );
 end entity;
 
 architecture a of axi_lite_register_file is
 
-  constant num_address_bits : positive := num_address_bits_needed(registers=>registers);
-  subtype address_range is natural range num_address_bits + 2 - 1 downto 2;
+  constant NUM_ADDRESS_BITS : positive := num_address_bits_needed(REGISTERS=> REGISTERS);
+  subtype  address_range is natural range NUM_ADDRESS_BITS + 2 - 1 downto 2;
 
-  signal reg_values : register_vec_t(registers'range) := default_values;
+  signal reg_values : register_vec_t(REGISTERS'range) := DEFAULT_VALUES;
 
 begin
 
   ------------------------------------------------------------------------------
-  assign_down : process(all)
+  assign_down : process (all) is
   begin
     -- Assign only the bits that are marked as utilized, so there is no risk of confusion/misuse.
-    for reg_idx in registers'range loop
-      if is_write_mode(registers(reg_idx).mode) then
-        regs_down(reg_idx)(registers(reg_idx).utilized_width - 1 downto 0) <= reg_values(reg_idx)(
-          registers(reg_idx).utilized_width - 1 downto 0
-        );
+    for reg_idx in REGISTERS'range loop
+      if is_write_mode(REGISTERS(reg_idx).mode) then
+        regs_down(reg_idx)(REGISTERS(reg_idx).utilized_width - 1 downto 0) <= reg_values(reg_idx)(
+            REGISTERS(reg_idx).utilized_width - 1 downto 0
+          );
       end if;
     end loop;
   end process;
 
-
   ------------------------------------------------------------------------------
-  read_block : block
-    type read_state_t is (ar, r);
-    signal read_state : read_state_t := ar;
-    signal read_index : u_unsigned(num_address_bits - 1 downto 0) := (others => '0');
+
+  read_block : block is
+
+    type   read_state_t is (AR, R);
+    signal read_state : read_state_t                              := AR;
+    signal read_index : u_unsigned(NUM_ADDRESS_BITS - 1 downto 0) := (others => '0');
+
   begin
 
     ------------------------------------------------------------------------------
-    set_status : process(all)
+    set_status : process (all) is
     begin
       reg_was_read <= (others => '0');
 
@@ -125,15 +126,15 @@ begin
       -- Does not impact netlist build size.
       axi_lite_s2m.read.r.data(reg_values(0)'range) <= (others => '0');
 
-      for list_idx in registers'range loop
-        if is_read_mode(registers(list_idx).mode) then
+      for list_idx in REGISTERS'range loop
+        if is_read_mode(REGISTERS(list_idx).mode) then
           if read_index = list_idx then
             axi_lite_s2m.read.r.resp <= axi_lite_resp_okay;
-            reg_was_read(list_idx) <= axi_lite_m2s.read.r.ready and axi_lite_s2m.read.r.valid;
+            reg_was_read(list_idx)   <= axi_lite_m2s.read.r.ready and axi_lite_s2m.read.r.valid;
           end if;
 
-          for bit_idx in 0 to registers(list_idx).utilized_width - 1 loop
-            if is_application_gives_value_mode(registers(list_idx).mode) then
+          for bit_idx in 0 to REGISTERS(list_idx).utilized_width - 1 loop
+            if is_application_gives_value_mode(REGISTERS(list_idx).mode) then
               if read_index = list_idx then
                 axi_lite_s2m.read.r.data(bit_idx) <= regs_up(list_idx)(bit_idx);
               end if;
@@ -147,18 +148,17 @@ begin
       end loop;
     end process;
 
-
     ------------------------------------------------------------------------------
-    read_process : process
+    read_process : process is
     begin
       wait until rising_edge(clk);
 
       -- Default assignments.
       axi_lite_s2m.read.ar.ready <= '0';
-      axi_lite_s2m.read.r.valid <= '0';
+      axi_lite_s2m.read.r.valid  <= '0';
 
       case read_state is
-        when ar =>
+        when AR =>
           -- Sample always, will only be used if we change state.
           read_index <= axi_lite_m2s.read.ar.addr(address_range);
 
@@ -170,40 +170,41 @@ begin
           axi_lite_s2m.read.ar.ready <= '1';
 
           if axi_lite_m2s.read.ar.valid then
-            read_state <= r;
+            read_state <= R;
           end if;
 
-        when r =>
+        when R =>
           axi_lite_s2m.read.r.valid <= '1';
 
           if axi_lite_m2s.read.r.ready and axi_lite_s2m.read.r.valid then
             axi_lite_s2m.read.r.valid <= '0';
 
-            read_state <= ar;
+            read_state <= AR;
           end if;
       end case;
 
       if reset then
-        read_state <= ar;
+        read_state <= AR;
 
         axi_lite_s2m.read.ar.ready <= '0';
-        axi_lite_s2m.read.r.valid <= '0';
+        axi_lite_s2m.read.r.valid  <= '0';
       end if;
     end process;
 
   end block;
 
-
   ------------------------------------------------------------------------------
-  write_block : block
-    type write_state_t is (aw, w, b);
-    signal write_state : write_state_t := aw;
-    signal write_index : u_unsigned(num_address_bits - 1 downto 0) := (others => '0');
+
+  write_block : block is
+
+    type   write_state_t is (AW, W, B);
+    signal write_state : write_state_t                             := AW;
+    signal write_index : u_unsigned(NUM_ADDRESS_BITS - 1 downto 0) := (others => '0');
+
   begin
 
-
     ------------------------------------------------------------------------------
-    set_status : process
+    set_status : process is
     begin
       wait until rising_edge(clk);
 
@@ -211,24 +212,24 @@ begin
 
       axi_lite_s2m.write.b.resp <= axi_lite_resp_slverr;
 
-      for list_idx in registers'range loop
-        if is_write_pulse_mode(registers(list_idx).mode) then
-          for bit_idx in 0 to registers(list_idx).utilized_width - 1 loop
+      for list_idx in REGISTERS'range loop
+        if is_write_pulse_mode(REGISTERS(list_idx).mode) then
+          for bit_idx in 0 to REGISTERS(list_idx).utilized_width - 1 loop
             -- Set initial default value.
             -- If a write occurs to this register, the value will be asserted for one cycle below.
-            reg_values(list_idx)(bit_idx) <= default_values(list_idx)(bit_idx);
+            reg_values(list_idx)(bit_idx) <= DEFAULT_VALUES(list_idx)(bit_idx);
           end loop;
         end if;
       end loop;
 
-      for list_idx in registers'range loop
-        if is_write_mode(registers(list_idx).mode) then
+      for list_idx in REGISTERS'range loop
+        if is_write_mode(REGISTERS(list_idx).mode) then
           if write_index = list_idx then
             axi_lite_s2m.write.b.resp <= axi_lite_resp_okay;
             reg_was_written(list_idx) <= axi_lite_s2m.write.w.ready and axi_lite_m2s.write.w.valid;
           end if;
 
-          for bit_idx in 0 to registers(list_idx).utilized_width - 1 loop
+          for bit_idx in 0 to REGISTERS(list_idx).utilized_width - 1 loop
             if write_index = list_idx then
               if axi_lite_s2m.write.w.ready and axi_lite_m2s.write.w.valid then
                 reg_values(list_idx)(bit_idx) <= axi_lite_m2s.write.w.data(bit_idx);
@@ -239,21 +240,20 @@ begin
       end loop;
 
       if reset then
-        reg_values <= default_values;
+        reg_values <= DEFAULT_VALUES;
       end if;
     end process;
-
 
     ------------------------------------------------------------------------------
     -- The handshaking is not really optimal, but if it is "optimized" the LUT usage increases
     -- by 100% for some reason.
     -- Leave as it is for now, might be worth investigating at some point in the future.
-    write_process : process
+    write_process : process is
     begin
       wait until rising_edge(clk);
 
       case write_state is
-        when aw =>
+        when AW =>
           -- Sample always, will only be used if we change state.
           write_index <= axi_lite_m2s.write.aw.addr(address_range);
 
@@ -261,34 +261,34 @@ begin
 
           if axi_lite_m2s.write.aw.valid and axi_lite_s2m.write.aw.ready then
             axi_lite_s2m.write.aw.ready <= '0';
-            axi_lite_s2m.write.w.ready <= '1';
+            axi_lite_s2m.write.w.ready  <= '1';
 
-            write_state <= w;
+            write_state <= W;
           end if;
 
-        when w =>
+        when W =>
           if axi_lite_m2s.write.w.valid and axi_lite_s2m.write.w.ready then
             axi_lite_s2m.write.w.ready <= '0';
             axi_lite_s2m.write.b.valid <= '1';
 
-            write_state <= b;
+            write_state <= B;
           end if;
 
-        when b =>
+        when B =>
           if axi_lite_m2s.write.b.ready and axi_lite_s2m.write.b.valid then
             axi_lite_s2m.write.aw.ready <= '1';
-            axi_lite_s2m.write.b.valid <= '0';
+            axi_lite_s2m.write.b.valid  <= '0';
 
-            write_state <= aw;
+            write_state <= AW;
           end if;
       end case;
 
       if reset then
-        write_state <= aw;
+        write_state <= AW;
 
         axi_lite_s2m.write.aw.ready <= '0';
-        axi_lite_s2m.write.w.ready <= '0';
-        axi_lite_s2m.write.b.valid <= '0';
+        axi_lite_s2m.write.w.ready  <= '0';
+        axi_lite_s2m.write.b.valid  <= '0';
       end if;
     end process;
 

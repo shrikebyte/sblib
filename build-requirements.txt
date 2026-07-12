@@ -1,0 +1,3 @@
+hdl_registers==8.1.0
+vsg==3.35.0
+vunit_hdl==5.0.0.dev8

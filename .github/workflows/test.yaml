@@ -36,13 +36,6 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Python packages
-        run: |
-          python3 -m pip install \
-            vsg==3.35.0 \
-            vunit_hdl==5.0.0.dev8 \
-            hdl_registers==8.1.0
-
       - name: Setup NVC
         uses: nickg/setup-nvc@v1
         with:
@@ -54,7 +47,6 @@ jobs:
 
       - name: Run simulation
         run: |
-          make tool-check
           make sim
 
       - name: Archive simulation results
@@ -77,16 +69,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Python packages
-        run: |
-          python3 -m pip install \
-            vsg==3.35.0 \
-            vunit_hdl==5.0.0.dev8 \
-            hdl_registers==8.1.0
-
       - name: Run style check
         run: |
-          make tool-check
           make style
 
       - name: Archive simulation results
