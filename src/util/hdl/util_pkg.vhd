@@ -145,6 +145,9 @@ package util_pkg is
     if_false : integer
   ) return integer;
 
+  function to_ascii(c : character) return unsigned;
+  function to_ascii(c : character) return std_logic_vector;
+
 end package;
 
 package body util_pkg is
@@ -534,6 +537,20 @@ package body util_pkg is
     else
       return if_false;
     end if;
+  end function;
+
+  function to_ascii (
+    c : character
+  ) return unsigned is
+  begin
+    return to_unsigned(character'pos(c), 8);
+  end function;
+
+  function to_ascii (
+    c : character
+  ) return std_logic_vector is
+  begin
+    return std_logic_vector(to_unsigned(character'pos(c), 8));
   end function;
 
 end package body;

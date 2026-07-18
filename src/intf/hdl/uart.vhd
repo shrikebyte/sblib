@@ -28,7 +28,7 @@
 --# tuser(0)| OVERRUN_ERROR - 1 = At least one frame prior to this one was dropped
 --# tuser(1)| FRAMING_ERROR - 1 = This frame had a framing error
 --# tuser(2)| PARITY_ERROR  - 1 = This frame had a parity error
---# -------+--------------------------------------------------------------------
+--# --------+--------------------------------------------------------------------
 --#
 --##############################################################################
 
@@ -49,8 +49,19 @@ entity uart is
   port (
     clk      : in    std_ulogic;
     srst     : in    std_ulogic;
-    s_axis   : view  s_axis_view;
-    m_axis   : view  m_axis_view;
+    --
+    s_axis : view s_axis_view of axis_t(
+      tdata(7 downto 0),
+      tkeep(0 downto 0),
+      tuser(0 downto 0)
+    );
+    --
+    m_axis : view m_axis_view of axis_t(
+      tdata(7 downto 0),
+      tkeep(0 downto 0),
+      tuser(2 downto 0)
+    );
+    --
     uart_txd : out   std_ulogic;
     uart_rxd : in    std_ulogic
   );
@@ -62,10 +73,6 @@ begin
 
   assert (G_FPGA_CLK_HZ / G_UART_BAUD_BPS) >= 8
     report "ERROR: uart: Baud rate should be at least 8x slower than the fpga clock"
-    severity error;
-
-  assert s_axis.tdata'length /= m_axis.tdata'length
-    report "ERROR: uart: Tx and Rx data widths do not match."
     severity error;
 
   -- ---------------------------------------------------------------------------
@@ -134,7 +141,7 @@ begin
       end if;
     end process;
 
-    u_tick : entity work.tick
+    u_tx_tick : entity work.tick
     generic map (
       G_CLK_HZ    => G_FPGA_CLK_HZ,
       G_TICK_HZ   => G_UART_BAUD_BPS,
@@ -152,13 +159,13 @@ begin
   blk_rx : block
 
     type state_t is (ST_IDLE, ST_START, ST_DATA, ST_PARITY, ST_STOP);
-    signal state     : state_t;
-    signal cnt       : natural range 0 to m_axis.tdata'length - 1;
-    signal sr        : std_ulogic_vector(m_axis.tdata'length - 1 downto 0);
-    signal tick_2x   : std_ulogic;
-    signal tick_1x   : std_ulogic;
+    signal state      : state_t;
+    signal cnt        : natural range 0 to m_axis.tdata'length - 1;
+    signal sr         : std_ulogic_vector(m_axis.tdata'length - 1 downto 0);
+    signal tick_2x    : std_ulogic;
+    signal tick_1x    : std_ulogic;
     signal tick_1x_en : std_ulogic;
-    signal tick_clr  : std_ulogic;
+    signal tick_clr   : std_ulogic;
     signal uart_rxd_sync : std_ulogic;
     signal parity_err : std_ulogic;
     signal overrun_err : std_ulogic;
@@ -178,7 +185,7 @@ begin
       if rising_edge(clk) then
 
         tick_1x_en <= not tick_1x_en when tick_2x;
-        tick_clr <= '0';
+        tick_clr   <= '0';
 
         if m_axis.tready then
           m_axis.tvalid <= '0';
@@ -226,7 +233,7 @@ begin
               m_axis.tuser(OVERRUN_ERROR) <= overrun_err;
               m_axis.tuser(FRAMING_ERROR) <= not uart_rxd_sync;
               m_axis.tuser(PARITY_ERROR)  <= parity_err;
-              overrun_err <= '0';
+              overrun_err                 <= '0';
             else
               overrun_err <= '1';
             end if;
@@ -237,17 +244,17 @@ begin
 
         if srst then
           m_axis.tvalid <= '0';
-          tick_clr <= '0';
-          tick_1x_en <= '0';
-          overrun_err <= '0';
-          parity_err <= '0';
-          cnt      <= 0;
-          state    <= ST_IDLE;
+          tick_clr      <= '0';
+          tick_1x_en    <= '0';
+          overrun_err   <= '0';
+          parity_err    <= '0';
+          cnt           <= 0;
+          state         <= ST_IDLE;
         end if;
       end if;
     end process;
 
-    u_tick : entity work.tick
+    u_rx_tick_2x : entity work.tick
     generic map (
       G_CLK_HZ    => G_FPGA_CLK_HZ,
       G_TICK_HZ   => G_UART_BAUD_BPS * 2,
@@ -261,6 +268,7 @@ begin
 
     cdc_bit : entity work.cdc_bit
     generic map (
+      G_WIDTH       => 1,
       G_USE_SRC_REG => false,
       G_EXTRA_SYNC  => 0
     )

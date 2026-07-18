@@ -15,7 +15,8 @@
 --# For example, a UDP-based ethernet interface could be an alternative
 --# to UART.
 --#
---# The simple user protocol supports two commands: read and write.
+--# The simple user protocol supports two commands: read and write, with
+--# a few additional variants for shorthand convenience.
 --#
 --# | Command         | Command Format      | Success Resp  | Fail Resp |
 --# |-----------------|---------------------|---------------|-----------|
@@ -64,23 +65,33 @@ library ieee;
 use ieee.std_logic_1164.all;
 use work.util_pkg.all;
 use work.bus_pkg.all;
+use work.axis_pkg.all;
 
-entity axil_dbg_mgr is
+entity axil_ascii_mgr is
   port (
     clk    : in    std_ulogic;
     srst   : in    std_ulogic;
     --
-    s_axis : view  s_axis_view;
-    m_axis : view  m_axis_view;
+    s_axis : view s_axis_view of axis_t(
+      tdata(7 downto 0),
+      tkeep(0 downto 0),
+      tuser(0 downto 0)
+    );
+    --
+    m_axis : view m_axis_view of axis_t(
+      tdata(7 downto 0),
+      tkeep(0 downto 0),
+      tuser(0 downto 0)
+    );
     --
     m_axil : view  m_axil_view
   );
 end entity;
 
-architecture rtl of axil_dbg_mgr is
+architecture rtl of axil_ascii_mgr is
 
 begin
 
-  -- TODO:
+
 
 end architecture;

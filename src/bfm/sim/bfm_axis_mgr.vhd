@@ -5,6 +5,7 @@
 -- peer-reviewed VHDL building blocks.
 -- https://hdl-modules.com
 -- https://github.com/hdl-modules/hdl-modules
+--
 -- -------------------------------------------------------------------------------------------------
 -- BFM for sending data on an AXI-Stream interface.
 --
@@ -67,6 +68,8 @@ entity bfm_axis_mgr is
     -- The integer arrays will be deallocated after this BFM is done with them.
     -- Each entry to this array is one "byte" of data in a packet.
     G_DATA_QUEUE : queue_t;
+    -- Optionally enable user data
+    G_ENABLE_TUSER : boolean := true;
     -- Push auxiliary user data (integer_array_t with push_ref()) to this queue.
     -- Must be the same length as data queue.
     -- The integer arrays will be deallocated after this BFM is done with them.
@@ -95,10 +98,6 @@ end entity;
 
 architecture sim of bfm_axis_mgr is
 
-  -- When 'valid' is zero, the associated output ports will be driven with this value.
-  -- This is to avoid a DUT sampling the values in the wrong clock cycle.
-  constant DRIVE_INVALID_VALUE : std_ulogic := 'X';
-
   constant BASE_ERROR_MESSAGE : string := "bfm_axis_mgr - " &
     G_LOGGER_NAME_SUFFIX & ": ";
 
@@ -110,13 +109,10 @@ architecture sim of bfm_axis_mgr is
   constant DBW : integer := DW / KW;
   constant UBW : integer := UW / KW;
 
-  signal int_axis_tdata : std_ulogic_vector(DW - 1 downto 0) :=
-  (others => DRIVE_INVALID_VALUE);
-  signal int_axis_tkeep : std_ulogic_vector(KW - 1 downto 0) :=
-  (others => '0');
-  signal int_axis_tlast : std_ulogic                         := DRIVE_INVALID_VALUE;
-  signal int_axis_tuser : std_ulogic_vector(UW - 1 downto 0) :=
-  (others => DRIVE_INVALID_VALUE);
+  signal int_axis_tdata : std_ulogic_vector(DW - 1 downto 0) := (others => 'X');
+  signal int_axis_tkeep : std_ulogic_vector(KW - 1 downto 0) := (others => '0');
+  signal int_axis_tlast : std_ulogic                         := 'X';
+  signal int_axis_tuser : std_ulogic_vector(UW - 1 downto 0) := (others => 'X');
   signal data_is_valid  : std_ulogic                         := '0';
 
 begin
@@ -124,10 +120,6 @@ begin
   assert DW mod KW = 0
     report BASE_ERROR_MESSAGE &
            "Data width must be an integer multiple of keep width.";
-
-  assert UW mod KW = 0
-    report BASE_ERROR_MESSAGE &
-           "User width must be an integer multiple of keep width.";
 
   -- ---------------------------------------------------------------------------
   prc_tdata_main : process is
@@ -156,13 +148,21 @@ begin
 
       i                        := 0;
       data_packet              := pop_ref(G_DATA_QUEUE);
-      user_packet              := pop_ref(G_USER_QUEUE);
       packet_length_bytes      := length(data_packet);
-      user_packet_length_bytes := length(user_packet);
 
-      assert packet_length_bytes = user_packet_length_bytes
-        report BASE_ERROR_MESSAGE &
-               "Length mismatch between data packet and user packet.";
+      if G_ENABLE_TUSER then
+
+        user_packet              := pop_ref(G_USER_QUEUE);
+        user_packet_length_bytes := length(user_packet);
+
+        assert UW mod KW = 0
+          report BASE_ERROR_MESSAGE &
+                "User width must be an integer multiple of keep width.";
+
+        assert packet_length_bytes = user_packet_length_bytes
+          report BASE_ERROR_MESSAGE &
+                "Length mismatch between data packet and user packet.";
+      end if;
 
       data_is_valid <= '1';
 
@@ -180,8 +180,10 @@ begin
           data_value                                       := get(data_packet, i + k);
           int_axis_tdata((k + 1) * DBW - 1 downto k * DBW) <= std_ulogic_vector(to_unsigned(data_value, DBW));
 
-          user_value                                       := get(user_packet, i + k);
-          int_axis_tuser((k + 1) * UBW - 1 downto k * UBW) <= std_ulogic_vector(to_unsigned(user_value, UBW));
+          if G_ENABLE_TUSER then
+            user_value                                       := get(user_packet, i + k);
+            int_axis_tuser((k + 1) * UBW - 1 downto k * UBW) <= std_ulogic_vector(to_unsigned(user_value, UBW));
+          end if;
         end loop;
 
         i := i + num_bytes_in_this_beat;
@@ -193,14 +195,17 @@ begin
         -- Default for next beat. We will fill in the byte lanes that are used.
         int_axis_tlast <= '0';
         int_axis_tkeep <= (others => '0');
-        int_axis_tdata <= (others => DRIVE_INVALID_VALUE);
-        int_axis_tuser <= (others => DRIVE_INVALID_VALUE);
+        int_axis_tdata <= (others => 'X');
+        int_axis_tuser <= (others => 'X');
 
       end loop;
 
       -- Deallocate after we are done with the data.
       deallocate(data_packet);
-      deallocate(user_packet);
+
+      if G_ENABLE_TUSER then
+        deallocate(user_packet);
+      end if;
 
       -- Default: Signal "not valid" to handshake BFM before next packet.
       -- If queue is not empty, it will instantly be raised again (no bubble cycle).
@@ -233,10 +238,10 @@ begin
       m_axis.tuser <= int_axis_tuser;
       m_axis.tkeep <= int_axis_tkeep;
     else
-      m_axis.tlast <= DRIVE_INVALID_VALUE;
-      m_axis.tdata <= (others => DRIVE_INVALID_VALUE);
-      m_axis.tuser <= (others => DRIVE_INVALID_VALUE);
-      m_axis.tkeep <= (others => DRIVE_INVALID_VALUE);
+      m_axis.tlast <= 'X';
+      m_axis.tdata <= (others => 'X');
+      m_axis.tuser <= (others => 'X');
+      m_axis.tkeep <= (others => 'X');
     end if;
   end process;
 

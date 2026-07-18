@@ -75,7 +75,7 @@ entity bfm_axis_sub is
     G_STALL_CONFIG : stall_configuration_t := zero_stall_configuration;
     -- Suffix for error log messages. Can be used to differentiate between multiple instances.
     G_LOGGER_NAME_SUFFIX : string := "";
-    -- Optionally, disable the checking of 'tkeep' bits.
+    -- Optionally, enable the checking of 'tkeep' bits.
     G_ENABLE_TKEEP : boolean := true;
     -- If true - Check for a continuous packet stream, where every beat has all
     -- tkeep bits asserted, expect for tlast, which will pack tkeep bits from
@@ -91,6 +91,8 @@ entity bfm_axis_sub is
     -- time (regardless of 'valid').
     -- However, many modules are developed with this well-behavedness as a way of saving resources.
     G_WELL_BEHAVED_STALL : boolean := false;
+    -- Enable checking of tuser
+    G_ENABLE_TUSER : boolean := true;
     -- For buses that do not have the 'last' indicator, the check for 'last' on the last beat of
     -- data can be disabled.
     G_ENABLE_TLAST : boolean := true
@@ -161,15 +163,20 @@ begin
       wait until rising_edge(clk);
     end loop;
 
-    i                        := 0;
-    data_packet              := pop_ref(G_REF_DATA_QUEUE);
-    user_packet              := pop_ref(G_REF_USER_QUEUE);
-    packet_length_bytes      := length(data_packet);
-    user_packet_length_bytes := length(user_packet);
+    i                   := 0;
+    data_packet         := pop_ref(G_REF_DATA_QUEUE);
+    packet_length_bytes := length(data_packet);
 
-    assert packet_length_bytes = user_packet_length_bytes
-      report BASE_ERROR_MESSAGE &
-             "Length mismatch between data packet and user packet.";
+    if G_ENABLE_TUSER then
+
+      user_packet              := pop_ref(G_REF_USER_QUEUE);
+      user_packet_length_bytes := length(user_packet);
+
+      assert packet_length_bytes = user_packet_length_bytes
+        report BASE_ERROR_MESSAGE &
+               "Length mismatch between data packet and user packet.";
+
+    end if;
 
     checker_is_ready <= '1';
 
@@ -215,17 +222,6 @@ begin
 
       for k in 0 to num_bytes_in_this_beat - 1 loop
         check_equal(
-          u_unsigned(int_axis_tuser((k + 1) * UBW - 1 downto k * UBW)),
-          get(user_packet, i + k),
-          (
-            BASE_ERROR_MESSAGE &
-            "'tuser' check at packet_idx=" &
-            to_string(num_packets_checked) &
-            ", byte_idx=" &
-            to_string(i)
-          )
-        );
-        check_equal(
           u_unsigned(int_axis_tdata((k + 1) * DBW - 1 downto k * DBW)),
           get(data_packet, i + k),
           (
@@ -236,6 +232,21 @@ begin
             to_string(i)
           )
         );
+
+        if G_ENABLE_TUSER then
+          check_equal(
+            u_unsigned(int_axis_tuser((k + 1) * UBW - 1 downto k * UBW)),
+            get(user_packet, i + k),
+            (
+              BASE_ERROR_MESSAGE &
+              "'tuser' check at packet_idx=" &
+              to_string(num_packets_checked) &
+              ", byte_idx=" &
+              to_string(i)
+            )
+          );
+        end if;
+
       end loop;
 
       i := i + num_bytes_in_this_beat;
@@ -244,7 +255,10 @@ begin
 
     -- Deallocate after we are done with the data.
     deallocate(data_packet);
-    deallocate(user_packet);
+
+    if G_ENABLE_TUSER then
+      deallocate(user_packet);
+    end if;
 
     -- Default: Signal "not ready" to handshake BFM before next packet.
     -- If queue is not empty, it will instantly be raised again (no bubble cycle).
