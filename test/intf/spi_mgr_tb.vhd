@@ -51,6 +51,11 @@ architecture tb of spi_mgr_tb is
   signal srst  : std_ulogic := '1';
   signal srstn : std_ulogic := '0';
 
+  -- DUT Generics
+  constant G_SYS_CLK_HZ    : positive := 100_000_000;
+  constant G_SPI_CLK_HZ    : positive := 100_000_000 / 4;
+  constant G_CLK_TOLERANCE : real     := 2.5;
+
   -- DUT Signals
   signal s_axis : axis_t (
     tdata(DW - 1 downto 0),
@@ -185,12 +190,14 @@ begin
   -- ---------------------------------------------------------------------------
   u_spi_mgr : entity work.spi_mgr
   generic map (
-    G_DW      => DW,
-    G_SCK_DIV => G_SCK_DIV,
-    G_CS_BITS => G_CS_BITS,
-    G_CS_LEAD => G_CS_LEAD,
-    G_CS_LAG  => G_CS_LAG,
-    G_CS_IDLE => G_CS_IDLE
+    G_DW            => DW,
+    G_SYS_CLK_HZ    => G_SYS_CLK_HZ,
+    G_SPI_CLK_HZ    => G_SPI_CLK_HZ,
+    G_CLK_TOLERANCE => G_CLK_TOLERANCE,
+    G_CS_BITS       => G_CS_BITS,
+    G_CS_LEAD       => G_CS_LEAD,
+    G_CS_LAG        => G_CS_LAG,
+    G_CS_IDLE       => G_CS_IDLE
   )
   port map (
     clk      => clk,

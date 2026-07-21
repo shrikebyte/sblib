@@ -45,8 +45,8 @@ architecture tb of uart_tb is
   signal srst  : std_ulogic := '1';
   signal srstn : std_ulogic := '0';
 
-  -- DUT Constants
-  constant G_FPGA_CLK_HZ    : positive := 100_000_000;
+  -- DUT Generics
+  constant G_SYS_CLK_HZ     : positive := 100_000_000;
   constant G_UART_BAUD_BPS  : positive := 100_000_000 / 8;
   constant G_BAUD_TOLERANCE : real     := 2.5;
 
@@ -70,7 +70,7 @@ architecture tb of uart_tb is
   constant STALL_CFG : stall_configuration_t := (
     stall_probability => 0.9 * to_real(G_ENABLE_JITTER),
     min_stall_cycles  => 8,
-    max_stall_cycles  => G_FPGA_CLK_HZ / G_UART_BAUD_BPS * 7
+    max_stall_cycles  => G_SYS_CLK_HZ / G_UART_BAUD_BPS * 7
   );
 
   constant DATA_QUEUE     : queue_t := new_queue;
@@ -153,7 +153,7 @@ begin
   -- ---------------------------------------------------------------------------
   u_uart : entity work.uart
   generic map (
-    G_FPGA_CLK_HZ    => G_FPGA_CLK_HZ,
+    G_SYS_CLK_HZ     => G_SYS_CLK_HZ,
     G_UART_BAUD_BPS  => G_UART_BAUD_BPS,
     G_BAUD_TOLERANCE => G_BAUD_TOLERANCE,
     G_USE_PARITY     => G_USE_PARITY,

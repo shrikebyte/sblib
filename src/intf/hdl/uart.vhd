@@ -8,20 +8,21 @@
 --# ============================================================================
 --# UART
 --#
---# There is no limit on the number of data bits. They are defined by the user
---# by setting the interface width of tdata. Recommended value is 8.
---# -------+--------------------------------------------------------------------
---# Signal | Description
---# -------+--------------------------------------------------------------------
+--# Simple compile-time configurable uart. Only supports 8 data bits and 1
+--# stop bit. Parity is configurable via generics.
+--#
+--# --------+--------------------------------------------------------------------
+--# Signal  | Description
+--# --------+--------------------------------------------------------------------
 --# s_axis
---# -------+--------------------------------------------------------------------
---# tdata  | UART Tx data.
---# tkeep  | Unused.
---# tlast  | Unused.
---# tuser  | Unused.
---# -------+--------------------------------------------------------------------
+--# --------+--------------------------------------------------------------------
+--# tdata   | UART Tx data.
+--# tkeep   | Unused.
+--# tlast   | Unused.
+--# tuser   | Unused.
+--# --------+--------------------------------------------------------------------
 --# m_axis
---# -------+--------------------------------------------------------------------
+--# --------+--------------------------------------------------------------------
 --# tdata   | UART Rx data.
 --# tkeep   | Unused.
 --# tlast   | Unused.
@@ -40,11 +41,16 @@ use work.axis_pkg.all;
 
 entity uart is
   generic (
-    G_FPGA_CLK_HZ    : positive := 100_000_000;
-    G_UART_BAUD_BPS  : positive := 115_200;
-    G_BAUD_TOLERANCE : real     := 2.5; -- Percent error allowed in baud rate
-    G_USE_PARITY     : boolean  := false;
-    G_EVEN_PARITY    : boolean  := true -- true for even false for odd
+    -- Actual internal system clock
+    G_SYS_CLK_HZ : positive := 100_000_000;
+    -- Requested UART baud rate
+    G_UART_BAUD_BPS : positive := 115_200;
+    -- Percent error allowed in requested vs actual baud rate
+    G_BAUD_TOLERANCE : real := 2.5;
+    -- True: use parity; False: do not use parity
+    G_USE_PARITY : boolean := false;
+    -- True: use even parity; False: use odd parity; Only relevant if G_USE_PARITY is true
+    G_EVEN_PARITY : boolean := true
   );
   port (
     clk  : in    std_ulogic;
@@ -70,12 +76,6 @@ end entity;
 architecture rtl of uart is
 
 begin
-
-  assert (G_FPGA_CLK_HZ / G_UART_BAUD_BPS) >= 8
-    report "ERROR: uart: Baud rate should be at least 8x slower than the fpga clock"
-    severity error;
-
-  -- ---------------------------------------------------------------------------
 
   blk_tx : block is
 
@@ -143,7 +143,7 @@ begin
 
     u_tx_tick : entity work.tick
     generic map (
-      G_CLK_HZ    => G_FPGA_CLK_HZ,
+      G_CLK_HZ    => G_SYS_CLK_HZ,
       G_TICK_HZ   => G_UART_BAUD_BPS,
       G_TOLERANCE => G_BAUD_TOLERANCE
     )
@@ -197,6 +197,7 @@ begin
 
           when ST_START =>
             if tick_2x then
+              -- Simple de-glitch filter
               state <= ST_IDLE when uart_rxd_sync else ST_DATA;
             end if;
 
@@ -251,7 +252,7 @@ begin
 
     u_rx_tick_2x : entity work.tick
     generic map (
-      G_CLK_HZ    => G_FPGA_CLK_HZ,
+      G_CLK_HZ    => G_SYS_CLK_HZ,
       G_TICK_HZ   => G_UART_BAUD_BPS * 2,
       G_TOLERANCE => G_BAUD_TOLERANCE
     )
@@ -261,7 +262,7 @@ begin
       tick => tick_2x
     );
 
-    cdc_bit : entity work.cdc_bit
+    u_cdc_bit : entity work.cdc_bit
     generic map (
       G_WIDTH       => 1,
       G_USE_SRC_REG => false,
