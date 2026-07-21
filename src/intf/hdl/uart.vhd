@@ -180,22 +180,18 @@ begin
     m_axis.tkeep <= (others => '1');
     m_axis.tlast <= '1';
 
-    tick_1x <= tick_2x and tick_1x_en;
+    tick_1x  <= tick_2x and tick_1x_en;
+    tick_clr <= to_sl(state = ST_IDLE) and uart_rxd_sync;
 
     prc_rx : process (clk) is begin
       if rising_edge(clk) then
-        tick_1x_en <= not tick_1x_en when tick_2x;
-        tick_clr   <= '0';
-
-        if m_axis.tready then
-          m_axis.tvalid <= '0';
-        end if;
+        tick_1x_en    <= not tick_1x_en when tick_2x;
+        m_axis.tvalid <= '0' when m_axis.tready;
 
         case state is
           when ST_IDLE =>
             if not uart_rxd_sync then
-              tick_1x_en <= '0';
-              tick_clr   <= '1';
+              tick_1x_en <= '1';
               state      <= ST_START;
             end if;
 
@@ -237,15 +233,14 @@ begin
               else
                 overrun_err <= '1';
               end if;
-              state <= ST_START;
+              state <= ST_IDLE;
             end if;
 
         end case;
 
         if srst then
           m_axis.tvalid <= '0';
-          tick_clr      <= '0';
-          tick_1x_en    <= '0';
+          tick_1x_en    <= '1';
           overrun_err   <= '0';
           parity_err    <= '0';
           cnt           <= 0;

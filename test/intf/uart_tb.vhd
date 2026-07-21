@@ -47,7 +47,7 @@ architecture tb of uart_tb is
 
   -- DUT Constants
   constant G_FPGA_CLK_HZ    : positive := 100_000_000;
-  constant G_UART_BAUD_BPS  : positive := 100_000_000 / 10;
+  constant G_UART_BAUD_BPS  : positive := 100_000_000 / 8;
   constant G_BAUD_TOLERANCE : real     := 2.5;
 
   -- DUT Signals
@@ -68,9 +68,9 @@ architecture tb of uart_tb is
 
   -- Testbench BFMs
   constant STALL_CFG : stall_configuration_t := (
-    stall_probability => 0.95 * to_real(G_ENABLE_JITTER),
+    stall_probability => 0.9 * to_real(G_ENABLE_JITTER),
     min_stall_cycles  => 8,
-    max_stall_cycles  => G_FPGA_CLK_HZ / G_UART_BAUD_BPS
+    max_stall_cycles  => G_FPGA_CLK_HZ / G_UART_BAUD_BPS * 7
   );
 
   constant DATA_QUEUE     : queue_t := new_queue;
