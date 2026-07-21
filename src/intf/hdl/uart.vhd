@@ -47,8 +47,8 @@ entity uart is
     G_EVEN_PARITY    : boolean  := true -- true for even false for odd
   );
   port (
-    clk      : in    std_ulogic;
-    srst     : in    std_ulogic;
+    clk  : in    std_ulogic;
+    srst : in    std_ulogic;
     --
     s_axis : view s_axis_view of axis_t(
       tdata(7 downto 0),
@@ -76,7 +76,8 @@ begin
     severity error;
 
   -- ---------------------------------------------------------------------------
-  blk_tx : block
+
+  blk_tx : block is
 
     type state_t is (ST_IDLE, ST_DATA, ST_PARITY, ST_STOP);
 
@@ -88,9 +89,8 @@ begin
 
   begin
 
-    prc_tx : process (clk) begin
+    prc_tx : process (clk) is begin
       if rising_edge(clk) then
-
         if s_axis.tvalid and s_axis.tready then
           s_axis.tready <= '0';
           sr            <= s_axis.tdata;
@@ -103,30 +103,30 @@ begin
 
         if tick then
           case state is
-          when ST_IDLE =>
-            if not s_axis.tready then
-              uart_txd <= '0';
-              state    <= ST_DATA;
-            end if;
+            when ST_IDLE =>
+              if not s_axis.tready then
+                uart_txd <= '0';
+                state    <= ST_DATA;
+              end if;
 
-          when ST_DATA =>
-            uart_txd <= sr(0);
-            sr       <= '0' & sr(sr'high downto 1);
-            if cnt = cnt'high then
-              cnt   <= 0;
-              state <= ST_PARITY when G_USE_PARITY else ST_STOP;
-            else
-              cnt <= cnt + 1;
-            end if;
+            when ST_DATA =>
+              uart_txd <= sr(0);
+              sr       <= '0' & sr(sr'high downto 1);
+              if cnt = cnt'high then
+                cnt   <= 0;
+                state <= ST_PARITY when G_USE_PARITY else ST_STOP;
+              else
+                cnt <= cnt + 1;
+              end if;
 
-          when ST_PARITY =>
-            uart_txd <= parity;
-            state    <= ST_STOP;
+            when ST_PARITY =>
+              uart_txd <= parity;
+              state    <= ST_STOP;
 
-          when ST_STOP =>
-            s_axis.tready <= '1';
-            uart_txd      <= '1';
-            state         <= ST_IDLE;
+            when ST_STOP =>
+              s_axis.tready <= '1';
+              uart_txd      <= '1';
+              state         <= ST_IDLE;
 
           end case;
 
@@ -156,19 +156,20 @@ begin
   end block;
 
   -- ---------------------------------------------------------------------------
-  blk_rx : block
 
-    type state_t is (ST_IDLE, ST_START, ST_DATA, ST_PARITY, ST_STOP);
-    signal state      : state_t;
-    signal cnt        : natural range 0 to m_axis.tdata'length - 1;
-    signal sr         : std_ulogic_vector(m_axis.tdata'length - 1 downto 0);
-    signal tick_2x    : std_ulogic;
-    signal tick_1x    : std_ulogic;
-    signal tick_1x_en : std_ulogic;
-    signal tick_clr   : std_ulogic;
+  blk_rx : block is
+
+    type   state_t is (ST_IDLE, ST_START, ST_DATA, ST_PARITY, ST_STOP);
+    signal state         : state_t;
+    signal cnt           : natural range 0 to m_axis.tdata'length - 1;
+    signal sr            : std_ulogic_vector(m_axis.tdata'length - 1 downto 0);
+    signal tick_2x       : std_ulogic;
+    signal tick_1x       : std_ulogic;
+    signal tick_1x_en    : std_ulogic;
+    signal tick_clr      : std_ulogic;
     signal uart_rxd_sync : std_ulogic;
-    signal parity_err : std_ulogic;
-    signal overrun_err : std_ulogic;
+    signal parity_err    : std_ulogic;
+    signal overrun_err   : std_ulogic;
 
     constant OVERRUN_ERROR : integer := 0;
     constant FRAMING_ERROR : integer := 1;
@@ -181,9 +182,8 @@ begin
 
     tick_1x <= tick_2x and tick_1x_en;
 
-    prc_rx : process (clk) begin
+    prc_rx : process (clk) is begin
       if rising_edge(clk) then
-
         tick_1x_en <= not tick_1x_en when tick_2x;
         tick_clr   <= '0';
 
@@ -192,53 +192,53 @@ begin
         end if;
 
         case state is
-        when ST_IDLE =>
-          if not uart_rxd_sync then
-            tick_1x_en <= '0';
-            tick_clr   <= '1';
-            state      <= ST_START;
-          end if;
-
-        when ST_START =>
-          if tick_2x then
-            state <= ST_IDLE when uart_rxd_sync else ST_DATA;
-          end if;
-
-        when ST_DATA =>
-          if tick_1x then
-            sr <= uart_rxd_sync & sr(sr'high downto 1);
-            if cnt = cnt'high then
-              cnt   <= 0;
-              state <= ST_PARITY when G_USE_PARITY else ST_STOP;
-            else
-              cnt <= cnt + 1;
+          when ST_IDLE =>
+            if not uart_rxd_sync then
+              tick_1x_en <= '0';
+              tick_clr   <= '1';
+              state      <= ST_START;
             end if;
-          end if;
 
-        when ST_PARITY =>
-          if tick_1x then
-            if G_EVEN_PARITY then
-              parity_err <= uart_rxd_sync xor (xor sr);
-            else
-              parity_err <= uart_rxd_sync xor (xnor sr);
+          when ST_START =>
+            if tick_2x then
+              state <= ST_IDLE when uart_rxd_sync else ST_DATA;
             end if;
-            state <= ST_STOP;
-          end if;
 
-        when ST_STOP =>
-          if tick_1x then
-            if m_axis.tready or not m_axis.tvalid then
-              m_axis.tvalid               <= '1';
-              m_axis.tdata                <= sr;
-              m_axis.tuser(OVERRUN_ERROR) <= overrun_err;
-              m_axis.tuser(FRAMING_ERROR) <= not uart_rxd_sync;
-              m_axis.tuser(PARITY_ERROR)  <= parity_err;
-              overrun_err                 <= '0';
-            else
-              overrun_err <= '1';
+          when ST_DATA =>
+            if tick_1x then
+              sr <= uart_rxd_sync & sr(sr'high downto 1);
+              if cnt = cnt'high then
+                cnt   <= 0;
+                state <= ST_PARITY when G_USE_PARITY else ST_STOP;
+              else
+                cnt <= cnt + 1;
+              end if;
             end if;
-            state <= ST_START;
-          end if;
+
+          when ST_PARITY =>
+            if tick_1x then
+              if G_EVEN_PARITY then
+                parity_err <= uart_rxd_sync xor (xor sr);
+              else
+                parity_err <= uart_rxd_sync xor (xnor sr);
+              end if;
+              state <= ST_STOP;
+            end if;
+
+          when ST_STOP =>
+            if tick_1x then
+              if m_axis.tready or not m_axis.tvalid then
+                m_axis.tvalid               <= '1';
+                m_axis.tdata                <= sr;
+                m_axis.tuser(OVERRUN_ERROR) <= overrun_err;
+                m_axis.tuser(FRAMING_ERROR) <= not uart_rxd_sync;
+                m_axis.tuser(PARITY_ERROR)  <= parity_err;
+                overrun_err                 <= '0';
+              else
+                overrun_err <= '1';
+              end if;
+              state <= ST_START;
+            end if;
 
         end case;
 
@@ -272,7 +272,7 @@ begin
       G_USE_SRC_REG => false,
       G_EXTRA_SYNC  => 0
     )
-    port map(
+    port map (
       src_bit(0) => uart_rxd,
       dst_clk    => clk,
       dst_bit(0) => uart_rxd_sync

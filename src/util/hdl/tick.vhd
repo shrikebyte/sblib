@@ -17,9 +17,9 @@ use work.util_pkg.all;
 entity tick is
   generic (
     -- Input clock frequency
-    G_CLK_HZ    : positive := 100_000_000;
+    G_CLK_HZ : positive := 100_000_000;
     -- Desired output pulse frequency
-    G_TICK_HZ   : positive range 1 to G_CLK_HZ := 1_000_000;
+    G_TICK_HZ : positive range 1 to G_CLK_HZ := 1_000_000;
     -- Allowed output error tolerance, as a percentage from 0.0 to 100.0
     -- This is the allowed difference between the requested output frequency and
     -- the actual output frequency.
@@ -35,10 +35,10 @@ end entity;
 
 architecture rtl of tick is
 
-  constant DIV : natural := ((G_CLK_HZ + (G_TICK_HZ / 2)) / G_TICK_HZ);
-  constant ACTUAL : real := real(G_CLK_HZ) / real(DIV);
-  constant TOL : real := abs(ACTUAL - real(G_TICK_HZ)) / real(G_TICK_HZ) * 100.0;
-  signal cnt : natural range 0 to DIV - 1;
+  constant DIV    : natural := ((G_CLK_HZ + (G_TICK_HZ / 2)) / G_TICK_HZ);
+  constant ACTUAL : real    := real(G_CLK_HZ) / real(DIV);
+  constant TOL    : real    := abs(ACTUAL - real(G_TICK_HZ)) / real(G_TICK_HZ) * 100.0;
+  signal   cnt    : natural range 0 to DIV - 1;
 
 begin
 
@@ -48,12 +48,12 @@ begin
 
   assert false
     report "NOTE: tick: Requested freq: " & real'image(real(G_TICK_HZ)) &
-      " Actual freq: " & real'image(ACTUAL) &
-      " Requested tolerance (%): " & real'image(G_TOLERANCE) &
-      " Actual difference (%): " & real'image(TOL)
+           " Actual freq: " & real'image(ACTUAL) &
+           " Requested tolerance (%): " & real'image(G_TOLERANCE) &
+           " Actual difference (%): " & real'image(TOL)
     severity note;
 
-  prc_tick : process (clk) begin
+  prc_tick : process (clk) is begin
     if rising_edge(clk) then
       if en then
         if cnt = (DIV - 1) then

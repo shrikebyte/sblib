@@ -145,8 +145,13 @@ package util_pkg is
     if_false : integer
   ) return integer;
 
-  function to_ascii(c : character) return unsigned;
-  function to_ascii(c : character) return std_logic_vector;
+  function to_ascii (
+    c : character
+  ) return unsigned;
+
+  function to_ascii (
+    c : character
+  ) return std_logic_vector;
 
 end package;
 

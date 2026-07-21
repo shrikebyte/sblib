@@ -168,7 +168,6 @@ begin
     packet_length_bytes := length(data_packet);
 
     if G_ENABLE_TUSER then
-
       user_packet              := pop_ref(G_REF_USER_QUEUE);
       user_packet_length_bytes := length(user_packet);
 

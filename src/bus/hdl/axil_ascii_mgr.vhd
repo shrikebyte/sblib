@@ -69,8 +69,8 @@ use work.axis_pkg.all;
 
 entity axil_ascii_mgr is
   port (
-    clk    : in    std_ulogic;
-    srst   : in    std_ulogic;
+    clk  : in    std_ulogic;
+    srst : in    std_ulogic;
     --
     s_axis : view s_axis_view of axis_t(
       tdata(7 downto 0),
@@ -91,7 +91,5 @@ end entity;
 architecture rtl of axil_ascii_mgr is
 
 begin
-
-
 
 end architecture;

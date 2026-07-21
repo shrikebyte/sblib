@@ -26,18 +26,18 @@ use work.bfm_pkg.all;
 
 entity uart_tb is
   generic (
-    RUNNER_CFG       : string;
-    G_ENABLE_JITTER  : boolean  := true;
-    G_USE_PARITY     : boolean  := true;
-    G_EVEN_PARITY    : boolean  := true
+    RUNNER_CFG      : string;
+    G_ENABLE_JITTER : boolean := true;
+    G_USE_PARITY    : boolean := true;
+    G_EVEN_PARITY   : boolean := true
   );
 end entity;
 
 architecture tb of uart_tb is
 
   -- TB Constants
-  constant RESET_TIME : time    := 100 ns;
-  constant CLK_PERIOD : time    := 10 ns;
+  constant RESET_TIME : time := 100 ns;
+  constant CLK_PERIOD : time := 10 ns;
 
   -- TB Signals
   signal clk   : std_ulogic := '1';
@@ -76,8 +76,8 @@ architecture tb of uart_tb is
   constant DATA_QUEUE     : queue_t := new_queue;
   constant REF_DATA_QUEUE : queue_t := new_queue;
 
-  signal num_packets_checked : natural    := 0;
-  signal num_packets_sent    : natural    := 0;
+  signal num_packets_checked : natural := 0;
+  signal num_packets_sent    : natural := 0;
 
 begin
 
@@ -92,8 +92,6 @@ begin
 
     procedure send_random is
 
-      constant PACKET_LENGTH_BEATS : natural := rnd.Uniform(1, 5);
-
       variable data      : integer_array_t := null_integer_array;
       variable data_copy : integer_array_t := null_integer_array;
 
@@ -103,7 +101,7 @@ begin
       random_integer_array (
         rnd           => rnd,
         integer_array => data,
-        width         => PACKET_LENGTH_BEATS,
+        width         => 250,
         bits_per_word => 8,
         is_signed     => false
       );
@@ -134,11 +132,7 @@ begin
     wait until rising_edge(clk);
 
     if run("test_random_data") then
-
-      for test_idx in 0 to 100 loop
-        send_random;
-      end loop;
-
+      send_random;
     end if;
 
     wait_until_done;
@@ -158,20 +152,20 @@ begin
 
   -- ---------------------------------------------------------------------------
   u_uart : entity work.uart
-   generic map(
-      G_FPGA_CLK_HZ => G_FPGA_CLK_HZ,
-      G_UART_BAUD_BPS => G_UART_BAUD_BPS,
-      G_BAUD_TOLERANCE => G_BAUD_TOLERANCE,
-      G_USE_PARITY => G_USE_PARITY,
-      G_EVEN_PARITY => G_EVEN_PARITY
+  generic map (
+    G_FPGA_CLK_HZ    => G_FPGA_CLK_HZ,
+    G_UART_BAUD_BPS  => G_UART_BAUD_BPS,
+    G_BAUD_TOLERANCE => G_BAUD_TOLERANCE,
+    G_USE_PARITY     => G_USE_PARITY,
+    G_EVEN_PARITY    => G_EVEN_PARITY
   )
-   port map(
-      clk => clk,
-      srst => srst,
-      s_axis => s_axis,
-      m_axis => m_axis,
-      uart_txd => uart_txd,
-      uart_rxd => uart_rxd
+  port map (
+    clk      => clk,
+    srst     => srst,
+    s_axis   => s_axis,
+    m_axis   => m_axis,
+    uart_txd => uart_txd,
+    uart_rxd => uart_rxd
   );
 
   -- Loopback
@@ -202,5 +196,12 @@ begin
     s_axis              => m_axis,
     num_packets_checked => num_packets_checked
   );
+
+  prc_monitor_tuser : process is begin
+    wait until m_axis.tvalid = '1' and m_axis.tready = '1' and rising_edge(clk);
+    assert or m_axis.tuser = '0'
+      report "UART tuser indicated an error"
+      severity failure;
+  end process;
 
 end architecture;

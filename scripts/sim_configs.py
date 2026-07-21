@@ -298,3 +298,22 @@ def add_configs(lib):
                     "G_DROP_OVERSIZE": drop_oversize,
                 },
             )
+
+    ############################################################################
+    tb = lib.test_bench("uart_tb")
+
+    enable_jitter = [True, False]
+    use_parity = [True, False]
+    even_parity = [True, False]
+
+    for enable_jitter, use_parity, even_parity in product(
+        enable_jitter, use_parity, even_parity
+    ):
+        sim_utils.named_config(
+            tb,
+            {
+                "G_ENABLE_JITTER": enable_jitter,
+                "G_USE_PARITY": use_parity,
+                "G_EVEN_PARITY": even_parity,
+            },
+        )

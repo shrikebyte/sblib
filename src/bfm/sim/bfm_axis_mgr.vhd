@@ -146,22 +146,21 @@ begin
         wait until rising_edge(clk);
       end loop;
 
-      i                        := 0;
-      data_packet              := pop_ref(G_DATA_QUEUE);
-      packet_length_bytes      := length(data_packet);
+      i                   := 0;
+      data_packet         := pop_ref(G_DATA_QUEUE);
+      packet_length_bytes := length(data_packet);
 
       if G_ENABLE_TUSER then
-
         user_packet              := pop_ref(G_USER_QUEUE);
         user_packet_length_bytes := length(user_packet);
 
         assert UW mod KW = 0
           report BASE_ERROR_MESSAGE &
-                "User width must be an integer multiple of keep width.";
+                 "User width must be an integer multiple of keep width.";
 
         assert packet_length_bytes = user_packet_length_bytes
           report BASE_ERROR_MESSAGE &
-                "Length mismatch between data packet and user packet.";
+                 "Length mismatch between data packet and user packet.";
       end if;
 
       data_is_valid <= '1';
