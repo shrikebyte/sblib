@@ -26,14 +26,24 @@ entity axis_fifo is
     G_USE_TKEEP : boolean := true;
     G_USE_TLAST : boolean := true;
     G_USE_TUSER : boolean := true;
-    -- If true, then output will not go valid until one full packet has been
-    -- stored at the input. This guarantees that output valid will never
-    -- be lowered during a packet.
+    -- True: output will not go valid until one full packet has been
+    --   received at the input. This guarantees that output valid will never
+    --   be lowered during a packet (as long as the max packet length is
+    --   lower than the fifo depth or G_DROP_OVERSIZE is True).
+    -- Requires G_USE_TLAST.
     G_PACKET_MODE : boolean := false;
-    -- If true: drop oversized packets that do not fit in the FIFO.
-    -- If false: use "cut-through" mode.
-    -- Only applicable in packet mode.
-    G_DROP_OVERSIZE : boolean := false
+    -- True: drop oversized packets that do not fit into the FIFO.
+    --   Guarantees that output valid stays high for the duration of every
+    --   packet.
+    -- If false: use "cut-through" mode where the fifo output becomes valid
+    --   when the fifo becomes full, even if the input packet is larger than
+    --   the fifo depth. Guarantees that oversized data packets are not dropped.
+    -- Requires G_PACKET_MODE.
+    G_DROP_OVERSIZE : boolean := false;
+    -- If true: Drop input packet if trying to write to a full fifo.
+    --   Guarantees that input ready is always high.
+    -- Requires G_DROP_OVERSIZE.
+    G_DROP_WHEN_FULL : boolean := false
   );
   port (
     clk  : in    std_ulogic;
@@ -92,8 +102,9 @@ architecture rtl of axis_fifo is
   signal full        : std_ulogic;
   signal full_wr     : std_ulogic;
 
-  signal drop_reg : std_ulogic;
-  signal send_reg : std_ulogic;
+  signal drop_reg   : std_ulogic;
+  signal send_reg   : std_ulogic;
+  signal reset_done : std_ulogic;
 
 begin
 
@@ -108,6 +119,10 @@ begin
 
   assert not (G_PACKET_MODE = false and G_DROP_OVERSIZE = true)
     report "axis_fifo: G_DROP_OVERSIZE requires G_PACKET_MODE to be enabled."
+    severity failure;
+
+  assert not (G_DROP_OVERSIZE = false and G_DROP_WHEN_FULL = true)
+    report "axis_fifo: G_DROP_WHEN_FULL requires G_DROP_OVERSIZE to be enabled."
     severity failure;
 
   -- ---------------------------------------------------------------------------
@@ -144,7 +159,11 @@ begin
   -- the packet would be oversized. The FIFO must speculatively store beats
   -- and later roll them back because there is no way to know a packet's size
   -- in advance. The packet size isn't known until tlast.
-  s_axis.tready <= not full or (to_sl(G_DROP_OVERSIZE) and full_wr);
+  s_axis.tready <= reset_done and (
+      not full or
+      (to_sl(G_DROP_OVERSIZE) and full_wr) or
+      to_sl(G_DROP_WHEN_FULL)
+    ) when G_PACKET_MODE else reset_done and not full;
 
   -- FIFO is full. Updates with the speculative write pointer.
   full <= to_sl(
@@ -183,7 +202,10 @@ begin
         if s_axis.tvalid and s_axis.tready then
           -- New input beat.
 
-          if (to_sl(G_DROP_OVERSIZE) and full_wr) or ctl_drop or drop_reg then
+          if (to_sl(G_DROP_WHEN_FULL) and full) or
+             (to_sl(G_DROP_OVERSIZE) and full_wr) or
+             ctl_drop or drop_reg
+          then
             -- Discard the rest of the packet.
 
             if s_axis.tlast then
@@ -203,9 +225,10 @@ begin
             wr_ptr_spec                                   <= wr_ptr_spec + 1;
 
             if s_axis.tlast or (not to_sl(G_DROP_OVERSIZE) and (full_wr or send_reg)) then
-              -- Commit the write pointer so that the read side sees the new fill
-              -- level. Do this upon getting tlast OR detecting an oversized
-              -- packet when using the mode where they are not dropped.
+              -- Commit the write pointer so that the read side sees the new
+              -- fill level. Do this upon getting tlast OR detecting an
+              -- oversized packet when using the mode where they are not
+              -- dropped.
               wr_ptr_comm <= wr_ptr_spec + 1;
               send_reg    <= not s_axis.tlast;
             end if;
@@ -216,8 +239,8 @@ begin
           -- fifo is already full with beats from that same packet. Input ready
           -- is low at this point and the FIFO cannot accept new beats yet.
           -- Commit the write
-          -- pointer early to let rest of the packet through, despite not fitting
-          -- the whole packet in the FIFO. When this happens, the
+          -- pointer early to let rest of the packet through, despite not
+          -- fitting the whole packet in the FIFO. When this happens, the
           -- output is not guaranteed to always be valid for the duration of the
           -- packet if the input contains holes during the later part of the
           -- packet. BUT, this mode does guarantee that data is never lost.
@@ -254,6 +277,17 @@ begin
     sts_dropped <= '0';
 
   end generate;
+
+  -- ---------------------------------------------------------------------------
+  prc_reset_done : process (clk) is begin
+    if rising_edge(clk) then
+      if srst then
+        reset_done <= '0';
+      else
+        reset_done <= '1';
+      end if;
+    end if;
+  end process;
 
   -- ---------------------------------------------------------------------------
   prc_read : process (clk) is begin

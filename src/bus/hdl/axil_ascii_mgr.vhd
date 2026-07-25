@@ -112,7 +112,7 @@ end entity;
 architecture rtl of axil_ascii_mgr is
 
   type state_t is (
-    ST_IDLE, ST_DELIM0, ST_ADDR, ST_DELIM1, ST_DATA, ST_BUS_START,
+    ST_IDLE, ST_DELIM0, ST_ADDR, ST_DELIM1, ST_DATA, ST_ENTER, ST_BUS_START,
     ST_BUS_RSP_WAIT, ST_END
   );
   signal state : state_t;
@@ -124,16 +124,17 @@ architecture rtl of axil_ascii_mgr is
   signal addr_prev : std_ulogic_vector(AXIL_ADDR_RANGE);
   signal wdat_prev : std_ulogic_vector(AXIL_DATA_RANGE);
 
-  signal cnt : integer range 0 to AXIL_STRB_WIDTH * 2; -- Character count
+  signal cnt : integer range 0 to (AXIL_STRB_WIDTH * 2) - 1; -- Character count
 
 begin
 
-  rx_char <= to_char(s_axis.tdata);
+  rx_char   <= to_char(s_axis.tdata);
   addr_incr <= std_logic_vector(unsigned(addr_prev) + AXIL_STRB_WIDTH);
 
   prc_fsm : process (clk) is begin
     if rising_edge(clk) then
       case state is
+        -- ---------------------------------------------------------------------
         when ST_IDLE =>
           if s_axis.tvalid then
             case rx_char is
@@ -144,7 +145,7 @@ begin
                 state   <= ST_DELIM0;
                 wb.wen  <= '1';
               when 'n' | 'N' =>
-                state   <= ST_BUS_START;
+                state   <= ST_ENTER;
                 wb.wen  <= '0';
                 wb.addr <= addr_incr;
               when 'm' | 'M' =>
@@ -152,7 +153,7 @@ begin
                 wb.wen  <= '1';
                 wb.addr <= addr_incr;
               when 'p' | 'P' =>
-                state   <= ST_BUS_START;
+                state   <= ST_ENTER;
                 wb.wen  <= wen_prev;
                 wb.addr <= addr_prev;
                 wb.wdat <= wdat_prev;
@@ -165,11 +166,14 @@ begin
             end case;
           end if;
 
+        -- ---------------------------------------------------------------------
         when ST_DELIM0 =>
           if s_axis.tvalid then
             case rx_char is
               when ' ' | HT =>
-                state <= ST_ADDR;
+                wb.addr <= (others => '0');
+                cnt     <= 0;
+                state   <= ST_ADDR;
               when others =>
                 state         <= ST_END;
                 m_axis.tvalid <= '1';
@@ -177,19 +181,53 @@ begin
             end case;
           end if;
 
+        -- ---------------------------------------------------------------------
         when ST_ADDR =>
           if s_axis.tvalid then
-            if (rx_char = ' ' or rx_char = HT) then
-              if cnt = 0 then
 
-              else
-
-              end if;
-            else
-
+            if cnt = cnt'high then
+              state         <= ST_END;
+              m_axis.tvalid <= '1';
+              m_axis.tdata  <= to_ascii('?');
             end if;
+
+            case rx_char is
+              when '0'       => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"0"; cnt <= cnt + 1;
+              when '1'       => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"1"; cnt <= cnt + 1;
+              when '2'       => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"2"; cnt <= cnt + 1;
+              when '3'       => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"3"; cnt <= cnt + 1;
+              when '4'       => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"4"; cnt <= cnt + 1;
+              when '5'       => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"5"; cnt <= cnt + 1;
+              when '6'       => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"6"; cnt <= cnt + 1;
+              when '7'       => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"7"; cnt <= cnt + 1;
+              when '8'       => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"8"; cnt <= cnt + 1;
+              when '9'       => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"9"; cnt <= cnt + 1;
+              when 'a' | 'A' => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"A"; cnt <= cnt + 1;
+              when 'b' | 'B' => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"B"; cnt <= cnt + 1;
+              when 'c' | 'C' => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"C"; cnt <= cnt + 1;
+              when 'd' | 'D' => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"D"; cnt <= cnt + 1;
+              when 'e' | 'E' => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"E"; cnt <= cnt + 1;
+              when 'f' | 'F' => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"F"; cnt <= cnt + 1;
+              when ' ' | HT  =>
+                if cnt /= 0 then
+                  m_axis.tvalid <= '0';
+                  if wb.wen then
+                    state <= ST_DELIM1;
+                  else
+                    state <= ST_ENTER;
+                  end if;
+                end if;
+
+              when others =>
+                state         <= ST_END;
+                m_axis.tvalid <= '1';
+                m_axis.tdata  <= to_ascii('?');
+
+            end case;
+
           end if;
 
+        -- ---------------------------------------------------------------------
         when ST_END =>
           m_axis.tvalid <= '1';
           m_axis.tdata  <= to_ascii(LF);
@@ -202,6 +240,7 @@ begin
         addr_prev <= (others=>'0');
         wdat_prev <= (others=>'0');
         wb.stb    <= '0';
+        cnt       <= 0;
         state     <= ST_IDLE;
       end if;
 

@@ -39,7 +39,7 @@ VSG := $(VENV_DIR)/bin/vsg
 # Run the VUnit simulation
 sim: $(BUILD_DIR)/regs_out/.stamp
 	cd scripts && $(PYTHON) sim.py --vhdl_ls
-	cd scripts && $(PYTHON) sim.py --xunit-xml $(BUILD_DIR)/sim_report.xml
+	cd scripts && $(PYTHON) sim.py --xunit-xml $(BUILD_DIR)/sim_report.xml -p 0
 
 # Check the coding style of the VHDL src files
 style: $(VENV_DIR)/.stamp $(STYLE_SRC)

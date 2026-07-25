@@ -26,11 +26,12 @@ use work.bfm_pkg.all;
 
 entity axis_fifo_tb is
   generic (
-    RUNNER_CFG      : string;
-    G_ENABLE_JITTER : boolean  := true;
-    G_DEPTH         : positive := 64;
-    G_PACKET_MODE   : boolean  := false;
-    G_DROP_OVERSIZE : boolean  := false
+    RUNNER_CFG       : string;
+    G_ENABLE_JITTER  : boolean  := true;
+    G_DEPTH          : positive := 64;
+    G_PACKET_MODE    : boolean  := false;
+    G_DROP_OVERSIZE  : boolean  := false;
+    G_DROP_WHEN_FULL : boolean  := false
   );
 end entity;
 
@@ -192,6 +193,7 @@ begin
 
       -- Drain the fifo
       bfm_sub_enable <= '1';
+
     elsif run("test_oversized") then
       bfm_sub_enable <= '1';
 
@@ -203,7 +205,15 @@ begin
       send_packet(G_DEPTH);
       send_packet(G_DEPTH + 2, G_DROP_OVERSIZE);
       send_packet(G_DEPTH * 1 / 4);
-    elsif run("test_drop") then
+
+    elsif run("test_drop_when_full") then
+      bfm_sub_enable <= '1';
+      send_packet(G_DEPTH * 3 / 4);
+      send_packet(G_DEPTH * 3 / 4, G_DROP_WHEN_FULL);
+      wait_until_done;
+      send_packet(1);
+
+    elsif run("test_manual_drop") then
       bfm_sub_enable <= '1';
       ctl_drop       <= '0';
 
@@ -306,6 +316,7 @@ begin
     G_DEPTH         => G_DEPTH,
     G_PACKET_MODE   => G_PACKET_MODE,
     G_DROP_OVERSIZE => G_DROP_OVERSIZE,
+    G_DROP_WHEN_FULL => G_DROP_WHEN_FULL,
     G_USE_TLAST     => true,
     G_USE_TKEEP     => true,
     G_USE_TUSER     => true
@@ -349,7 +360,8 @@ begin
 
   -- ---------------------------------------------------------------------------
   gen_check_no_bubbles : if G_PACKET_MODE and G_DROP_OVERSIZE generate
-    signal end_event, en : std_ulogic := '0';
+    signal end_event : std_ulogic := '0';
+    signal en        : std_ulogic := '0';
   begin
     -- These inputs must be signals (not constants), so assign them here
     -- instead of the port map directly.
@@ -359,13 +371,34 @@ begin
     check_stable(
       clock => clk,
       en    => en,
-    -- Start check when valid arrives
+      -- Start check when valid arrives
       start_event => m_axis.tvalid,
-    -- End check when last arrives
+      -- End check when last arrives
       end_event => end_event,
-    -- Assert that valid is always asserted until last arrives
+      -- Assert that valid is always asserted until last arrives
       expr => m_axis.tvalid,
-      msg  => "There was a bubble in m_axis.tvalid!"
+      msg  => "There was an unexpected bubble in m_axis.tvalid!"
+    );
+  end generate;
+
+   ---------------------------------------------------------------------------
+  gen_check_no_stalls : if G_PACKET_MODE and G_DROP_WHEN_FULL generate
+    signal end_event   : std_ulogic := '0';
+    signal start_event : std_ulogic := '0';
+    signal en          : std_ulogic := '0';
+  begin
+
+    en <= srstn;
+    start_event <= '0', srstn after CLK_PERIOD * 1.5;
+
+    check_stable (
+      clock       => clk,
+      en          => en,
+      start_event => start_event,
+      end_event   => end_event,
+      -- Assert that ready is always asserted
+      expr => s_axis.tready,
+      msg  => "There was an unexpected stall in s_axis.tready!"
     );
   end generate;
 
