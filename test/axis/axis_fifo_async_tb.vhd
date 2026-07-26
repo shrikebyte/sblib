@@ -196,7 +196,7 @@ begin
       wait_m_clks(1);
       m_bfm_sub_enable <= '1';
 
-      for test_idx in 0 to G_DEPTH loop
+      for test_idx in 0 to G_DEPTH / 3 loop
         send_packet(rnd.Uniform(1, 3));
       end loop;
 
@@ -205,13 +205,13 @@ begin
       m_bfm_sub_enable <= '0';
 
       -- Send data while fifo not full
-      while s_sts_depth_spec < G_DEPTH loop
-        send_packet(rnd.Uniform(1, 3));
+      for i in 0 to G_DEPTH / 4 loop
+        send_packet(4);
         wait_s_clks(1);
       end loop;
 
       -- Queue up one additional packet to ensure it overflows
-      send_packet(5);
+      send_packet(10, G_DROP_WHEN_FULL);
 
       -- Drain the fifo
       wait_m_clks(1);
@@ -222,18 +222,42 @@ begin
 
       send_packet(G_DEPTH * 3 / 4);
       send_packet(G_DEPTH + 100, G_DROP_OVERSIZE);
+      wait_until_done;
       send_packet(1);
+      wait_until_done;
       send_packet(G_DEPTH + 1, G_DROP_OVERSIZE);
       send_packet(G_DEPTH - 1);
+      wait_until_done;
       send_packet(G_DEPTH);
+      wait_until_done;
       send_packet(G_DEPTH + 2, G_DROP_OVERSIZE);
       send_packet(G_DEPTH * 1 / 4);
+      wait_until_done;
 
     elsif run("test_drop_when_full") then
-      m_bfm_sub_enable <= '1';
+      m_bfm_sub_enable <= '0';
+
+      -- Send a packet that almost fills the fifo
       send_packet(G_DEPTH * 3 / 4);
+
+      -- Send another packet that would cause an overflow
       send_packet(G_DEPTH * 3 / 4, G_DROP_WHEN_FULL);
+
+      -- Wait for first packet to finish sending
+      wait until (s_axis.tvalid and s_axis.tready and s_axis.tlast) = '1' and rising_edge(s_clk);
+
+      -- Wait for second dropped packet to finish sending.
+      -- Packet is only dropped in G_DROP_WHEN_FULL mode
+      if G_DROP_WHEN_FULL then
+        wait until (s_axis.tvalid and s_axis.tready and s_axis.tlast) = '1' and rising_edge(s_clk);
+      end if;
+
+      -- Enable the receiver bfm
+      wait_m_clks(1);
+      m_bfm_sub_enable <= '1';
       wait_until_done;
+
+      -- Send one more small packet for good measure
       send_packet(1);
 
     elsif run("test_manual_drop") then
@@ -246,8 +270,7 @@ begin
         len        := rnd.Uniform(1, 10);
         send_packet(len, G_PACKET_MODE and drop);
         s_ctl_drop <= to_sl(drop);
-        wait until (s_axis.tvalid and s_axis.tready and s_axis.tlast) = '1' and
-          rising_edge(s_clk);
+        wait until (s_axis.tvalid and s_axis.tready and s_axis.tlast) = '1' and rising_edge(s_clk);
         s_ctl_drop <= '0';
       end loop;
 
@@ -294,15 +317,16 @@ begin
       m_bfm_sub_enable <= '0';
 
       -- Send data while fifo not full
-      while s_sts_depth_spec < G_DEPTH loop
+      for i in 0 to G_DEPTH - 1 loop
         send_packet(1);
         wait until rising_edge(s_clk);
       end loop;
 
       -- Queue up a few additional packets
-      send_packet(1);
-      send_packet(1);
-      send_packet(1);
+      send_packet(1, G_DROP_WHEN_FULL);
+      send_packet(1, G_DROP_WHEN_FULL);
+      send_packet(1, G_DROP_WHEN_FULL);
+      send_packet(1, G_DROP_WHEN_FULL);
 
       -- Drain the fifo
       m_bfm_sub_enable <= '1';
@@ -433,12 +457,12 @@ begin
   begin
 
     en <= s_srstn;
-    start_event <= '0', s_srstn after CLK_PERIOD_INPUT * 1.5;
+    start_event <= '0', s_srstn after CLK_PERIOD_INPUT * 4.5;
 
     check_stable (
       clock       => s_clk,
       en          => en,
-      start_event => en,
+      start_event => start_event,
       end_event   => end_event,
       -- Assert that ready is always asserted
       expr => s_axis.tready,

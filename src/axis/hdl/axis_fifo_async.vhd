@@ -124,7 +124,7 @@ begin
     severity failure;
 
   assert not (G_DROP_OVERSIZE = false and G_DROP_WHEN_FULL = true)
-    report "axis_fifo: G_DROP_WHEN_FULL requires G_DROP_OVERSIZE to be enabled."
+    report "axis_fifo_async: G_DROP_WHEN_FULL requires G_DROP_OVERSIZE to be enabled."
     severity failure;
 
   -- ---------------------------------------------------------------------------

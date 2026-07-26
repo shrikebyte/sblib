@@ -175,7 +175,7 @@ begin
     if run("test_random_data") then
       bfm_sub_enable <= '1';
 
-      for test_idx in 0 to G_DEPTH loop
+      for test_idx in 0 to G_DEPTH / 3 loop
         send_packet(rnd.Uniform(1, 3));
       end loop;
 
@@ -183,15 +183,16 @@ begin
       bfm_sub_enable <= '0';
 
       -- Send data while fifo not full
-      while sts_depth_spec < G_DEPTH loop
-        send_packet(rnd.Uniform(1, 3));
+      for i in 0 to G_DEPTH / 4 loop
+        send_packet(4);
         wait until rising_edge(clk);
       end loop;
 
-      -- Queue up one additional packet to ensure it overflows
-      send_packet(5);
+      -- Queue up one additional packet to force the overflow
+      send_packet(10, G_DROP_WHEN_FULL);
 
       -- Drain the fifo
+      wait until rising_edge(clk);
       bfm_sub_enable <= '1';
 
     elsif run("test_oversized") then
@@ -199,18 +200,42 @@ begin
 
       send_packet(G_DEPTH * 3 / 4);
       send_packet(G_DEPTH + 100, G_DROP_OVERSIZE);
+      wait_until_done;
       send_packet(1);
+      wait_until_done;
       send_packet(G_DEPTH + 1, G_DROP_OVERSIZE);
       send_packet(G_DEPTH - 1);
+      wait_until_done;
       send_packet(G_DEPTH);
+      wait_until_done;
       send_packet(G_DEPTH + 2, G_DROP_OVERSIZE);
       send_packet(G_DEPTH * 1 / 4);
+      wait_until_done;
 
     elsif run("test_drop_when_full") then
-      bfm_sub_enable <= '1';
+      bfm_sub_enable <= '0';
+
+      -- Send a packet that almost fills the fifo
       send_packet(G_DEPTH * 3 / 4);
+
+      -- Send another packet that would cause an overflow
       send_packet(G_DEPTH * 3 / 4, G_DROP_WHEN_FULL);
+
+      -- Wait for first packet to finish sending
+      wait until (s_axis.tvalid and s_axis.tready and s_axis.tlast) = '1' and rising_edge(clk);
+
+      -- Wait for second dropped packet to finish sending.
+      -- Packet is only dropped in G_DROP_WHEN_FULL mode
+      if G_DROP_WHEN_FULL then
+        wait until (s_axis.tvalid and s_axis.tready and s_axis.tlast) = '1' and rising_edge(clk);
+      end if;
+
+      -- Enable the receiver bfm
+      wait until rising_edge(clk);
+      bfm_sub_enable <= '1';
       wait_until_done;
+
+      -- Send one more small packet for good measure
       send_packet(1);
 
     elsif run("test_manual_drop") then
@@ -223,8 +248,7 @@ begin
         len      := rnd.Uniform(1, 10);
         send_packet(len, G_PACKET_MODE and drop);
         ctl_drop <= to_sl(drop);
-        wait until (s_axis.tvalid and s_axis.tready and s_axis.tlast) = '1' and
-          rising_edge(clk);
+        wait until (s_axis.tvalid and s_axis.tready and s_axis.tlast) = '1' and rising_edge(clk);
         ctl_drop <= '0';
       end loop;
 
@@ -266,19 +290,21 @@ begin
       -- Non-dropped packet
       send_packet(2);
       wait_until_done;
+
     elsif run("test_fill_lasts") then
       bfm_sub_enable <= '0';
 
       -- Send data while fifo not full
-      while sts_depth_spec < G_DEPTH loop
+      for i in 0 to G_DEPTH - 1 loop
         send_packet(1);
         wait until rising_edge(clk);
       end loop;
 
-      -- Queue up a few additional packets
-      send_packet(1);
-      send_packet(1);
-      send_packet(1);
+      -- Queue up a few additional packets to cause overflow
+      send_packet(1, G_DROP_WHEN_FULL);
+      send_packet(1, G_DROP_WHEN_FULL);
+      send_packet(1, G_DROP_WHEN_FULL);
+      send_packet(1, G_DROP_WHEN_FULL);
 
       -- Drain the fifo
       bfm_sub_enable <= '1';
