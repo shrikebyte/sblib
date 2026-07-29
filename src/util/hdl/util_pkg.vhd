@@ -151,14 +151,14 @@ package util_pkg is
 
   function to_ascii (
     char : character
-  ) return std_logic_vector;
+  ) return std_ulogic_vector;
 
   function to_char (
     data : unsigned(7 downto 0)
   ) return character;
 
   function to_char (
-    data : std_logic_vector(7 downto 0)
+    data : std_ulogic_vector(7 downto 0)
   ) return character;
 
 end package;
@@ -561,9 +561,9 @@ package body util_pkg is
 
   function to_ascii (
     char : character
-  ) return std_logic_vector is
+  ) return std_ulogic_vector is
   begin
-    return std_logic_vector(to_unsigned(character'pos(char), 8));
+    return std_ulogic_vector(to_unsigned(character'pos(char), 8));
   end function;
 
   function to_char (
@@ -574,7 +574,7 @@ package body util_pkg is
   end function;
 
   function to_char (
-    data : std_logic_vector(7 downto 0)
+    data : std_ulogic_vector(7 downto 0)
   ) return character is
   begin
     return character'val(to_integer(unsigned(data)));

@@ -356,3 +356,22 @@ def add_configs(lib):
                 "G_EVEN_PARITY": even_parity,
             },
         )
+
+    ############################################################################
+    tb = lib.test_bench("axil_ascii_mgr_tb")
+
+    enable_jitter = [True, False]
+
+    sim_utils.named_config(
+        tb,
+        {
+            "G_ENABLE_JITTER": True,
+        },
+    )
+
+    sim_utils.named_config(
+        tb,
+        {
+            "G_ENABLE_JITTER": False,
+        },
+    )

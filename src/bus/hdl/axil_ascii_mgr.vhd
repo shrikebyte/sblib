@@ -6,79 +6,8 @@
 --# Copyright (C) Shrikebyte, LLC
 --# Licensed under the Apache 2.0 license, see LICENSE for details.
 --# ============================================================================
---# AXI Lite ASCII-based bus manager. This is a state machine with a human-
---# friendly character-based streaming interface on one end and an AXI Lite
---# manager interface on the other end. This module is primarily intended to be
---# connected to a UART to enable processor-less terminal-based register access,
---# but since this uses a set of generic axi streams,
---# any other stream-based interface could be used to manage the bus.
---# For example, a UDP-based ethernet interface could be an alternative
---# to UART.
---#
---# The simple user protocol supports two commands: read and write, with
---# a few additional variants for shorthand convenience.
---#
---# | Command         | Command Format      | Success Resp  | Fail Resp |
---# |-----------------|---------------------|---------------|-----------|
---# | Read            | r aaaaaaaa          | dddddddd      | ! or ?    |
---# | Write           | w aaaaaaaa dddddddd | +             | ! or ?    |
---# | Read Increment  | n                   | dddddddd      | ! or ?    |
---# | Write Increment | m dddddddd          | +             | ! or ?    |
---# | Previous        | p                   | + or dddddddd | ! or ?    |
---#
---# The protocol was designed to work equally well with an interactive terminal
---# or a scripted software parser. An interactive terminal could be used
---# for short-term experiments and edits, while a software parser could be used
---# to programmatically interface with the device, for example, as a layer
---# between the hardware and a GUI.
---#
---# * Read (r) - Read data from an address
---# * Write (w) - Write data to an address
---# * Read Increment (n) - Read from the last command's address + 4
---# * Write Increment (m) - Write to the last command's address + 4
---# * Previous (p) - Re-run the previous command. If the last command was an
---#     increment command, then the address is incremented again.
---# * Previous and increment commands default to using address and data of 0x0
---#   if no previous read or write commands have been issued.
---# * 'aaaaaaaa' is a 32-bit hex formatted address. It can be anywhere
---#    from 1 to 8 characters.
---# * 'dddddddd' is a 32-bit hex formatted data value. It can be anywhere
---#    from 1 to 8 characters.
---# * '+' is a write success response, returned by the FPGA.
---# * '!' is a bus error response, returned by the FPGA.
---# * '?' is a unknown command or parsing error, returned by the FPGA.
---# * '<LF>' is a line feed character
---#   (the enter key). This marks the end of every command or response (not
---#   shown in command table).
---# * Some terminal emulators use <CR><LF> for enter (carriage return followed
---#   by line feed). This protocol is only sensitive to <LF>. <CR> is ignored.
---# * Only supports 32-bit aligned access.
---# * Does not support write byte strobes.
---# * Does not support backspaces. To cancel a command use <ESC>.
---# * Protocol is case insensitive.
---# * Leading zeros are optional in addresses and data.
---# * Only hex format is supported for address and data.
---# * No leading `0x` for the address and data.
---# * Tabs and/or spaces can be used as a delimiter between command words
---# * Extraneous tabs and spaces are trimmed.
---#
---# --------+-------------------------------------------------------------------
---# Signal  | Description
---# --------+-------------------------------------------------------------------
---# s_axis    ASCII command received by this module and sent by the user port
---# --------+-------------------------------------------------------------------
---# tdata   | ASCII response.
---# tkeep   | Unused.
---# tlast   | Unused.
---# tuser   | Unused.
---# --------+-------------------------------------------------------------------
---# m_axis    ASCII response sent by this module and received by the user port
---# --------+-------------------------------------------------------------------
---# tdata   | ASCII response.
---# tkeep   | Unused. Output tied to 1.
---# tlast   | Unused. Output tied to 1.
---# tuser   | Unused. Output tied to 0.
---# --------+-------------------------------------------------------------------
+--# AXI Lite wrapper around wb_ascii_mgr.
+--# See wb_ascii_mgr for description.
 --##############################################################################
 
 library ieee;
@@ -111,144 +40,21 @@ end entity;
 
 architecture rtl of axil_ascii_mgr is
 
-  type state_t is (
-    ST_IDLE, ST_DELIM0, ST_ADDR, ST_DELIM1, ST_DATA, ST_ENTER, ST_BUS_START,
-    ST_BUS_RSP_WAIT, ST_END
-  );
-  signal state : state_t;
   signal wb : bus_wb_t;
-
-  signal rx_char   : character;
-  signal addr_incr : std_ulogic_vector(AXIL_ADDR_RANGE);
-  signal wen_prev  : std_ulogic;
-  signal addr_prev : std_ulogic_vector(AXIL_ADDR_RANGE);
-  signal wdat_prev : std_ulogic_vector(AXIL_DATA_RANGE);
-
-  signal cnt : integer range 0 to (AXIL_STRB_WIDTH * 2) - 1; -- Character count
 
 begin
 
-  rx_char   <= to_char(s_axis.tdata);
-  addr_incr <= std_logic_vector(unsigned(addr_prev) + AXIL_STRB_WIDTH);
-
-  prc_fsm : process (clk) is begin
-    if rising_edge(clk) then
-      case state is
-        -- ---------------------------------------------------------------------
-        when ST_IDLE =>
-          if s_axis.tvalid then
-            case rx_char is
-              when 'r' | 'R' =>
-                state   <= ST_DELIM0;
-                wb.wen  <= '0';
-              when 'w' | 'W' =>
-                state   <= ST_DELIM0;
-                wb.wen  <= '1';
-              when 'n' | 'N' =>
-                state   <= ST_ENTER;
-                wb.wen  <= '0';
-                wb.addr <= addr_incr;
-              when 'm' | 'M' =>
-                state   <= ST_DELIM1;
-                wb.wen  <= '1';
-                wb.addr <= addr_incr;
-              when 'p' | 'P' =>
-                state   <= ST_ENTER;
-                wb.wen  <= wen_prev;
-                wb.addr <= addr_prev;
-                wb.wdat <= wdat_prev;
-              when ' ' | HT | CR =>
-                state   <= ST_IDLE;
-              when others =>
-                state         <= ST_END;
-                m_axis.tvalid <= '1';
-                m_axis.tdata  <= to_ascii('?');
-            end case;
-          end if;
-
-        -- ---------------------------------------------------------------------
-        when ST_DELIM0 =>
-          if s_axis.tvalid then
-            case rx_char is
-              when ' ' | HT =>
-                wb.addr <= (others => '0');
-                cnt     <= 0;
-                state   <= ST_ADDR;
-              when others =>
-                state         <= ST_END;
-                m_axis.tvalid <= '1';
-                m_axis.tdata  <= to_ascii('?');
-            end case;
-          end if;
-
-        -- ---------------------------------------------------------------------
-        when ST_ADDR =>
-          if s_axis.tvalid then
-
-            if cnt = cnt'high then
-              state         <= ST_END;
-              m_axis.tvalid <= '1';
-              m_axis.tdata  <= to_ascii('?');
-            end if;
-
-            case rx_char is
-              when '0'       => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"0"; cnt <= cnt + 1;
-              when '1'       => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"1"; cnt <= cnt + 1;
-              when '2'       => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"2"; cnt <= cnt + 1;
-              when '3'       => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"3"; cnt <= cnt + 1;
-              when '4'       => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"4"; cnt <= cnt + 1;
-              when '5'       => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"5"; cnt <= cnt + 1;
-              when '6'       => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"6"; cnt <= cnt + 1;
-              when '7'       => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"7"; cnt <= cnt + 1;
-              when '8'       => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"8"; cnt <= cnt + 1;
-              when '9'       => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"9"; cnt <= cnt + 1;
-              when 'a' | 'A' => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"A"; cnt <= cnt + 1;
-              when 'b' | 'B' => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"B"; cnt <= cnt + 1;
-              when 'c' | 'C' => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"C"; cnt <= cnt + 1;
-              when 'd' | 'D' => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"D"; cnt <= cnt + 1;
-              when 'e' | 'E' => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"E"; cnt <= cnt + 1;
-              when 'f' | 'F' => wb.addr <= wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"F"; cnt <= cnt + 1;
-              when ' ' | HT  =>
-                if cnt /= 0 then
-                  m_axis.tvalid <= '0';
-                  if wb.wen then
-                    state <= ST_DELIM1;
-                  else
-                    state <= ST_ENTER;
-                  end if;
-                end if;
-
-              when others =>
-                state         <= ST_END;
-                m_axis.tvalid <= '1';
-                m_axis.tdata  <= to_ascii('?');
-
-            end case;
-
-          end if;
-
-        -- ---------------------------------------------------------------------
-        when ST_END =>
-          m_axis.tvalid <= '1';
-          m_axis.tdata  <= to_ascii(LF);
-          state         <= ST_IDLE;
-
-      end case;
-
-      if srst then
-        wen_prev  <= '0';
-        addr_prev <= (others=>'0');
-        wdat_prev <= (others=>'0');
-        wb.stb    <= '0';
-        cnt       <= 0;
-        state     <= ST_IDLE;
-      end if;
-
-    end if;
-  end process;
+  u_wb_ascii_mgr : entity work.wb_ascii_mgr
+  port map (
+    clk    => clk,
+    srst   => srst,
+    s_axis => s_axis,
+    m_axis => m_axis,
+    m_wb   => wb
+  );
 
   u_wb_to_axil : entity work.wb_to_axil
-  port map(
+  port map (
     clk    => clk,
     srst   => srst,
     s_wb   => wb,

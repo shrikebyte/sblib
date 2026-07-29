@@ -35,7 +35,7 @@ entity axis_fifo_async is
     -- True: drop oversized packets that do not fit into the FIFO.
     --   Guarantees that output valid stays high for the duration of every
     --   packet.
-    -- If false: use "cut-through" mode where the fifo output becomes valid
+    -- False: use "cut-through" mode where the fifo output becomes valid
     --   when the fifo becomes full, even if the input packet is larger than
     --   the fifo depth. Guarantees that oversized data packets are not dropped.
     -- Requires G_PACKET_MODE.
@@ -158,7 +158,8 @@ begin
       not s_full or
       (to_sl(G_DROP_OVERSIZE) and s_full_wr) or
       to_sl(G_DROP_WHEN_FULL)
-    ) when G_PACKET_MODE else s_reset_done and not s_full;
+    ) when G_PACKET_MODE else
+ s_reset_done and not s_full;
 
   s_full <= to_sl(
       s_wr_ptr_spec(AW) /= s_rd_ptr_cdc(AW) and
@@ -274,8 +275,7 @@ begin
         if s_axis.tvalid and s_axis.tready then
           if (to_sl(G_DROP_WHEN_FULL) and s_full) or
              (to_sl(G_DROP_OVERSIZE) and s_full_wr) or
-             s_ctl_drop or s_drop_reg
-          then
+             s_ctl_drop or s_drop_reg then
             if s_axis.tlast then
               s_drop_reg    <= '0';
               s_sts_dropped <= '1';

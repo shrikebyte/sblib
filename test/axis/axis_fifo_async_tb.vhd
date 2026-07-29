@@ -30,10 +30,10 @@ entity axis_fifo_async_tb is
     G_ENABLE_JITTER : boolean := true;
     -- Ratio of input to output clock. When < 100, the input clock
     -- is slower. When > 100, the input clock is faster.
-    G_CLK_RATIO     : integer  := 35;
-    G_DEPTH         : positive := 64;
-    G_PACKET_MODE   : boolean  := false;
-    G_DROP_OVERSIZE : boolean  := false;
+    G_CLK_RATIO      : integer  := 35;
+    G_DEPTH          : positive := 64;
+    G_PACKET_MODE    : boolean  := false;
+    G_DROP_OVERSIZE  : boolean  := false;
     G_DROP_WHEN_FULL : boolean  := false
   );
 end entity;
@@ -205,18 +205,18 @@ begin
       m_bfm_sub_enable <= '0';
 
       -- Send data while fifo not full
-      for i in 0 to G_DEPTH / 4 loop
+      for i in 0 to (G_DEPTH / 4) - 1 loop
         send_packet(4);
         wait_s_clks(1);
       end loop;
 
       -- Queue up one additional packet to ensure it overflows
-      send_packet(10, G_DROP_WHEN_FULL);
+      send_packet(12, G_DROP_WHEN_FULL);
 
-      -- Drain the fifo
+      -- Drain the fifo after it fills
+      wait until m_sts_depth_spec >= G_DEPTH;
       wait_m_clks(1);
       m_bfm_sub_enable <= '1';
-
     elsif run("test_oversized") then
       m_bfm_sub_enable <= '1';
 
@@ -233,7 +233,6 @@ begin
       send_packet(G_DEPTH + 2, G_DROP_OVERSIZE);
       send_packet(G_DEPTH * 1 / 4);
       wait_until_done;
-
     elsif run("test_drop_when_full") then
       m_bfm_sub_enable <= '0';
 
@@ -259,7 +258,6 @@ begin
 
       -- Send one more small packet for good measure
       send_packet(1);
-
     elsif run("test_manual_drop") then
       m_bfm_sub_enable <= '1';
       s_ctl_drop       <= '0';
@@ -312,7 +310,6 @@ begin
       -- Non-dropped packet
       send_packet(2);
       wait_until_done;
-
     elsif run("test_fill_lasts") then
       m_bfm_sub_enable <= '0';
 
@@ -367,16 +364,16 @@ begin
   -- ---------------------------------------------------------------------------
   u_axis_fifo_async : entity work.axis_fifo_async
   generic map (
-    G_DW            => DW,
-    G_UW            => UW,
-    G_EXTRA_SYNC    => 0,
-    G_DEPTH         => G_DEPTH,
-    G_PACKET_MODE   => G_PACKET_MODE,
-    G_DROP_OVERSIZE => G_DROP_OVERSIZE,
+    G_DW             => DW,
+    G_UW             => UW,
+    G_EXTRA_SYNC     => 0,
+    G_DEPTH          => G_DEPTH,
+    G_PACKET_MODE    => G_PACKET_MODE,
+    G_DROP_OVERSIZE  => G_DROP_OVERSIZE,
     G_DROP_WHEN_FULL => G_DROP_WHEN_FULL,
-    G_USE_TLAST     => true,
-    G_USE_TKEEP     => true,
-    G_USE_TUSER     => true
+    G_USE_TLAST      => true,
+    G_USE_TKEEP      => true,
+    G_USE_TUSER      => true
   )
   port map (
     arst => arst,
@@ -439,11 +436,11 @@ begin
     check_stable(
       clock => m_clk,
       en    => en,
-      -- Start check when valid arrives
+    -- Start check when valid arrives
       start_event => m_axis.tvalid,
-      -- End check when last arrives
+    -- End check when last arrives
       end_event => end_event,
-      -- Assert that valid is always asserted until last arrives
+    -- Assert that valid is always asserted until last arrives
       expr => m_axis.tvalid,
       msg  => "There was an unexpected bubble in m_axis.tvalid!"
     );
@@ -456,7 +453,7 @@ begin
     signal en          : std_ulogic := '0';
   begin
 
-    en <= s_srstn;
+    en          <= s_srstn;
     start_event <= '0', s_srstn after CLK_PERIOD_INPUT * 4.5;
 
     check_stable (
@@ -464,7 +461,7 @@ begin
       en          => en,
       start_event => start_event,
       end_event   => end_event,
-      -- Assert that ready is always asserted
+    -- Assert that ready is always asserted
       expr => s_axis.tready,
       msg  => "There was an unexpected stall in s_axis.tready!"
     );
