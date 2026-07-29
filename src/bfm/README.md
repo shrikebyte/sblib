@@ -11,4 +11,4 @@ These files have been changed as outlined below:
 5. The axi-stream BFM tuser functionality has been changed so that it is now byte oriented, rather than beat oriented.
 6. New tkeep randomization options have been added for generating and checking sparse packets.
 7. Added support for arbitrary-size bytes. The hdl-modules variant only supports 8-bit fixed-size bytes.
-8. Combined necessary functions into a single bfm package.
+8. Combined dependency functions into a single bfm package.

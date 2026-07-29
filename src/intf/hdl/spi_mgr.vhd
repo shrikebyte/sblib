@@ -47,11 +47,14 @@ use work.axis_pkg.all;
 
 entity spi_mgr is
   generic (
+    -- Data width
     G_DW : positive;
-    -- Defines the spi_sck clock as a ratio of the FPGA clock. For example,
-    -- if the FPGA clock is 100 MHz, then G_SCK_DIV=4 results in a spi_sck
-    -- of 25 MHz.
-    G_SCK_DIV : positive := 4;
+    -- Actual internal system clock
+    G_SYS_CLK_HZ : positive := 100_000_000;
+    -- Requested external SPI clock
+    G_SPI_CLK_HZ : positive := 5_000_000;
+    -- Percent error allowed in requested vs actual spi clk rate
+    G_CLK_TOLERANCE : real := 2.5;
     -- Number of bits used to describe the number of spi_csn signals
     G_CS_BITS : natural := 0;
     -- Number of 1/2 spi_sck periods from spi_csn falling edge to first spi_sck active edge
@@ -89,7 +92,7 @@ architecture rtl of spi_mgr is
   constant DW : positive := G_DW;
   constant UW : positive := G_CS_BITS + 2;
 
-  constant FSM_CNT_INT_ARR : int_arr_t(0 to 3) := (
+  constant CNT_INT_ARR : int_arr_t(0 to 3) := (
     G_CS_LEAD,
     G_CS_LAG,
     G_CS_IDLE,
@@ -102,9 +105,8 @@ architecture rtl of spi_mgr is
   );
   signal state : state_t;
 
-  signal sck_cnt   : natural range 0 to G_SCK_DIV - 1;
-  signal fsm_cnt   : natural range 0 to find_max(FSM_CNT_INT_ARR) - 1;
-  signal fsm_en    : std_ulogic;
+  signal cnt       : natural range 0 to find_max(CNT_INT_ARR) - 1;
+  signal tick      : std_ulogic;
   signal miso_reg  : std_ulogic;
   signal sr        : std_ulogic_vector(DW - 1 downto 0);    -- Shift register
   signal sr_nxt    : std_ulogic_vector(DW - 1 downto 0);
@@ -115,10 +117,6 @@ architecture rtl of spi_mgr is
   signal tuser_reg : std_ulogic_vector(UW - 1 downto 0);
 
 begin
-
-  assert (G_SCK_DIV mod 2) = 0
-    report "ERROR: spi_man: G_SCK_DIV must be divisible by 2"
-    severity error;
 
   m_axis.tkeep <= (others => '1');
   --
@@ -133,15 +131,12 @@ begin
     csdec <= to_integer(unsigned(tuser_reg(G_CS_BITS + 2 - 1 downto 2)));
   end generate;
 
-  prc_fsm : process (clk) is begin
+  prc_spi : process (clk) is begin
     if rising_edge(clk) then
       s_axis.tready <= '0';
+      m_axis.tvalid <= '0' when m_axis.tready;
 
-      if m_axis.tready then
-        m_axis.tvalid <= '0';
-      end if;
-
-      if fsm_en then
+      if tick then
         case state is
           when ST_IDLE =>
             if s_axis.tvalid and not m_axis.tvalid then
@@ -152,40 +147,40 @@ begin
               tuser_reg     <= s_axis.tuser;
               spi_sck       <= s_axis.tuser(0); -- Inactive
               --
-              fsm_cnt <= 0;
-              state   <= ST_CS_IDLE;
+              cnt   <= 0;
+              state <= ST_CS_IDLE;
             end if;
 
           when ST_CS_IDLE =>
             -- Ensures that the subordinate's csn min pulse width time is met
-            if fsm_cnt = (G_CS_IDLE - 1) then
+            if cnt = (G_CS_IDLE - 1) then
               spi_csn(csdec) <= '0';
-              fsm_cnt        <= 0;
+              cnt            <= 0;
               state          <= ST_CS_LEAD;
             else
-              fsm_cnt <= fsm_cnt + 1;
+              cnt <= cnt + 1;
             end if;
 
           when ST_CS_LEAD =>
             -- Ensures that the subordinate's csn to sck setup time is met
-            if fsm_cnt = (G_CS_LEAD - 1) then
+            if cnt = (G_CS_LEAD - 1) then
               if not cpha then
                 miso_reg <= spi_miso;
               end if;
 
-              fsm_cnt <= 0;
+              cnt     <= 0;
               spi_sck <= not sck_idle;
               state   <= ST_SCK_ON;
             else
-              fsm_cnt <= fsm_cnt + 1;
+              cnt <= cnt + 1;
             end if;
 
           when ST_SCK_ON =>
-            if fsm_cnt = (DW - 1) then
+            if cnt = (DW - 1) then
               if cpha then
                 miso_reg <= spi_miso;
                 spi_sck  <= sck_idle;
-                fsm_cnt  <= 0;
+                cnt      <= 0;
                 state    <= ST_CS_LAG;
               elsif not m_axis.tvalid then
                 -- spi_sck might be need to be stretched here
@@ -196,7 +191,7 @@ begin
                   m_axis.tuser  <= tuser_reg;
                   --
                   spi_sck <= sck_idle;
-                  fsm_cnt <= 0;
+                  cnt     <= 0;
                   state   <= ST_CS_LAG;
                 elsif s_axis.tvalid then
                   m_axis.tvalid <= '1';
@@ -209,7 +204,7 @@ begin
                   tlast_reg     <= s_axis.tlast;
                   --
                   spi_sck <= sck_idle;
-                  fsm_cnt <= 0;
+                  cnt     <= 0;
                   state   <= ST_SCK_OFF;
                 end if;
               end if;
@@ -221,7 +216,7 @@ begin
               end if;
 
               spi_sck <= sck_idle;
-              fsm_cnt <= fsm_cnt + 1;
+              cnt     <= cnt + 1;
               state   <= ST_SCK_OFF;
             end if;
 
@@ -249,12 +244,12 @@ begin
                 tlast_reg     <= s_axis.tlast;
                 --
                 spi_sck <= not sck_idle;
-                fsm_cnt <= 0;
+                cnt     <= 0;
                 state   <= ST_SCK_ON;
               end if;
             else
               -- Ensures that the subordinate's sck to csn hold time is met
-              if fsm_cnt = (G_CS_LAG - 1) then
+              if cnt = (G_CS_LAG - 1) then
                 if cpha then
                   if not m_axis.tvalid then
                     m_axis.tvalid <= '1';
@@ -262,17 +257,17 @@ begin
                     m_axis.tlast  <= tlast_reg;
                     m_axis.tuser  <= tuser_reg;
                     --
-                    fsm_cnt <= 0;
+                    cnt     <= 0;
                     spi_csn <= (others => '1');
                     state   <= ST_IDLE;
                   end if;
                 else
-                  fsm_cnt <= 0;
+                  cnt     <= 0;
                   spi_csn <= (others => '1');
                   state   <= ST_IDLE;
                 end if;
               else
-                fsm_cnt <= fsm_cnt + 1;
+                cnt <= cnt + 1;
               end if;
             end if;
 
@@ -293,21 +288,16 @@ begin
     end if;
   end process;
 
-  prc_fsm_en : process (clk) is begin
-    if rising_edge(clk) then
-      if sck_cnt = ((G_SCK_DIV / 2) - 1) then
-        sck_cnt <= 0;
-        fsm_en  <= '1';
-      else
-        sck_cnt <= sck_cnt + 1;
-        fsm_en  <= '0';
-      end if;
-
-      if srst then
-        sck_cnt <= 0;
-        fsm_en  <= '0';
-      end if;
-    end if;
-  end process;
+  u_tick : entity work.tick
+  generic map (
+    G_CLK_HZ    => G_SYS_CLK_HZ,
+    G_TICK_HZ   => G_SPI_CLK_HZ * 2,
+    G_TOLERANCE => G_CLK_TOLERANCE
+  )
+  port map (
+    clk  => clk,
+    srst => srst,
+    tick => tick
+  );
 
 end architecture;

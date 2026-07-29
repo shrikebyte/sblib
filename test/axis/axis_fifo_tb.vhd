@@ -26,11 +26,12 @@ use work.bfm_pkg.all;
 
 entity axis_fifo_tb is
   generic (
-    RUNNER_CFG      : string;
-    G_ENABLE_JITTER : boolean  := true;
-    G_DEPTH         : positive := 64;
-    G_PACKET_MODE   : boolean  := false;
-    G_DROP_OVERSIZE : boolean  := false
+    RUNNER_CFG       : string;
+    G_ENABLE_JITTER  : boolean  := true;
+    G_DEPTH          : positive := 64;
+    G_PACKET_MODE    : boolean  := false;
+    G_DROP_OVERSIZE  : boolean  := false;
+    G_DROP_WHEN_FULL : boolean  := false
   );
 end entity;
 
@@ -174,7 +175,7 @@ begin
     if run("test_random_data") then
       bfm_sub_enable <= '1';
 
-      for test_idx in 0 to G_DEPTH loop
+      for test_idx in 0 to G_DEPTH / 3 loop
         send_packet(rnd.Uniform(1, 3));
       end loop;
 
@@ -182,28 +183,60 @@ begin
       bfm_sub_enable <= '0';
 
       -- Send data while fifo not full
-      while sts_depth_spec < G_DEPTH loop
-        send_packet(rnd.Uniform(1, 3));
+      for i in 0 to (G_DEPTH / 4) - 1 loop
+        send_packet(4);
         wait until rising_edge(clk);
       end loop;
 
-      -- Queue up one additional packet to ensure it overflows
-      send_packet(5);
+      -- Queue up one additional packet to force the overflow
+      send_packet(12, G_DROP_WHEN_FULL);
 
-      -- Drain the fifo
+      -- Drain the fifo after it fills
+      wait until sts_depth_spec >= G_DEPTH;
+      wait until rising_edge(clk);
       bfm_sub_enable <= '1';
     elsif run("test_oversized") then
       bfm_sub_enable <= '1';
 
       send_packet(G_DEPTH * 3 / 4);
       send_packet(G_DEPTH + 100, G_DROP_OVERSIZE);
+      wait_until_done;
       send_packet(1);
+      wait_until_done;
       send_packet(G_DEPTH + 1, G_DROP_OVERSIZE);
       send_packet(G_DEPTH - 1);
+      wait_until_done;
       send_packet(G_DEPTH);
+      wait_until_done;
       send_packet(G_DEPTH + 2, G_DROP_OVERSIZE);
       send_packet(G_DEPTH * 1 / 4);
-    elsif run("test_drop") then
+      wait_until_done;
+    elsif run("test_drop_when_full") then
+      bfm_sub_enable <= '0';
+
+      -- Send a packet that almost fills the fifo
+      send_packet(G_DEPTH * 3 / 4);
+
+      -- Send another packet that would cause an overflow
+      send_packet(G_DEPTH * 3 / 4, G_DROP_WHEN_FULL);
+
+      -- Wait for first packet to finish sending
+      wait until (s_axis.tvalid and s_axis.tready and s_axis.tlast) = '1' and rising_edge(clk);
+
+      -- Wait for second dropped packet to finish sending.
+      -- Packet is only dropped in G_DROP_WHEN_FULL mode
+      if G_DROP_WHEN_FULL then
+        wait until (s_axis.tvalid and s_axis.tready and s_axis.tlast) = '1' and rising_edge(clk);
+      end if;
+
+      -- Enable the receiver bfm
+      wait until rising_edge(clk);
+      bfm_sub_enable <= '1';
+      wait_until_done;
+
+      -- Send one more small packet for good measure
+      send_packet(1);
+    elsif run("test_manual_drop") then
       bfm_sub_enable <= '1';
       ctl_drop       <= '0';
 
@@ -213,8 +246,7 @@ begin
         len      := rnd.Uniform(1, 10);
         send_packet(len, G_PACKET_MODE and drop);
         ctl_drop <= to_sl(drop);
-        wait until (s_axis.tvalid and s_axis.tready and s_axis.tlast) = '1' and
-          rising_edge(clk);
+        wait until (s_axis.tvalid and s_axis.tready and s_axis.tlast) = '1' and rising_edge(clk);
         ctl_drop <= '0';
       end loop;
 
@@ -260,15 +292,16 @@ begin
       bfm_sub_enable <= '0';
 
       -- Send data while fifo not full
-      while sts_depth_spec < G_DEPTH loop
+      for i in 0 to G_DEPTH - 1 loop
         send_packet(1);
         wait until rising_edge(clk);
       end loop;
 
-      -- Queue up a few additional packets
-      send_packet(1);
-      send_packet(1);
-      send_packet(1);
+      -- Queue up a few additional packets to cause overflow
+      send_packet(1, G_DROP_WHEN_FULL);
+      send_packet(1, G_DROP_WHEN_FULL);
+      send_packet(1, G_DROP_WHEN_FULL);
+      send_packet(1, G_DROP_WHEN_FULL);
 
       -- Drain the fifo
       bfm_sub_enable <= '1';
@@ -301,14 +334,15 @@ begin
   -- ---------------------------------------------------------------------------
   u_axis_fifo : entity work.axis_fifo
   generic map (
-    G_DW            => DW,
-    G_UW            => UW,
-    G_DEPTH         => G_DEPTH,
-    G_PACKET_MODE   => G_PACKET_MODE,
-    G_DROP_OVERSIZE => G_DROP_OVERSIZE,
-    G_USE_TLAST     => true,
-    G_USE_TKEEP     => true,
-    G_USE_TUSER     => true
+    G_DW             => DW,
+    G_UW             => UW,
+    G_DEPTH          => G_DEPTH,
+    G_PACKET_MODE    => G_PACKET_MODE,
+    G_DROP_OVERSIZE  => G_DROP_OVERSIZE,
+    G_DROP_WHEN_FULL => G_DROP_WHEN_FULL,
+    G_USE_TLAST      => true,
+    G_USE_TKEEP      => true,
+    G_USE_TUSER      => true
   )
   port map (
     clk    => clk,
@@ -349,7 +383,8 @@ begin
 
   -- ---------------------------------------------------------------------------
   gen_check_no_bubbles : if G_PACKET_MODE and G_DROP_OVERSIZE generate
-    signal end_event, en : std_ulogic := '0';
+    signal end_event : std_ulogic := '0';
+    signal en        : std_ulogic := '0';
   begin
     -- These inputs must be signals (not constants), so assign them here
     -- instead of the port map directly.
@@ -365,7 +400,28 @@ begin
       end_event => end_event,
     -- Assert that valid is always asserted until last arrives
       expr => m_axis.tvalid,
-      msg  => "There was a bubble in m_axis.tvalid!"
+      msg  => "There was an unexpected bubble in m_axis.tvalid!"
+    );
+  end generate;
+
+  ---------------------------------------------------------------------------
+  gen_check_no_stalls : if G_PACKET_MODE and G_DROP_WHEN_FULL generate
+    signal end_event   : std_ulogic := '0';
+    signal start_event : std_ulogic := '0';
+    signal en          : std_ulogic := '0';
+  begin
+
+    en          <= srstn;
+    start_event <= '0', srstn after CLK_PERIOD * 1.5;
+
+    check_stable (
+      clock       => clk,
+      en          => en,
+      start_event => start_event,
+      end_event   => end_event,
+    -- Assert that ready is always asserted
+      expr => s_axis.tready,
+      msg  => "There was an unexpected stall in s_axis.tready!"
     );
   end generate;
 

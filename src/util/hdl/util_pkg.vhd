@@ -145,6 +145,22 @@ package util_pkg is
     if_false : integer
   ) return integer;
 
+  function to_ascii (
+    char : character
+  ) return unsigned;
+
+  function to_ascii (
+    char : character
+  ) return std_ulogic_vector;
+
+  function to_char (
+    data : unsigned(7 downto 0)
+  ) return character;
+
+  function to_char (
+    data : std_ulogic_vector(7 downto 0)
+  ) return character;
+
 end package;
 
 package body util_pkg is
@@ -534,6 +550,34 @@ package body util_pkg is
     else
       return if_false;
     end if;
+  end function;
+
+  function to_ascii (
+    char : character
+  ) return unsigned is
+  begin
+    return to_unsigned(character'pos(char), 8);
+  end function;
+
+  function to_ascii (
+    char : character
+  ) return std_ulogic_vector is
+  begin
+    return std_ulogic_vector(to_unsigned(character'pos(char), 8));
+  end function;
+
+  function to_char (
+    data : unsigned(7 downto 0)
+  ) return character is
+  begin
+    return character'val(to_integer(unsigned(data)));
+  end function;
+
+  function to_char (
+    data : std_ulogic_vector(7 downto 0)
+  ) return character is
+  begin
+    return character'val(to_integer(unsigned(data)));
   end function;
 
 end package body;

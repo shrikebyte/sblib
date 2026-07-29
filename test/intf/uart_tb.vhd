@@ -1,12 +1,12 @@
 --##############################################################################
---# File : spi_mgr_tb.vhd
+--# File : uart_tb.vhd
 --# Auth : David Gussler
 --# ============================================================================
 --# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
 --# Copyright (C) Shrikebyte, LLC
 --# Licensed under the Apache 2.0 license, see LICENSE for details.
 --# ============================================================================
---# Spi manager testbench
+--# UART testbench
 --##############################################################################
 
 library ieee;
@@ -24,26 +24,20 @@ use work.util_pkg.all;
 use work.axis_pkg.all;
 use work.bfm_pkg.all;
 
-entity spi_mgr_tb is
+entity uart_tb is
   generic (
     RUNNER_CFG      : string;
-    G_ENABLE_JITTER : boolean  := true;
-    G_SCK_DIV       : positive := 4
+    G_ENABLE_JITTER : boolean := true;
+    G_USE_PARITY    : boolean := true;
+    G_EVEN_PARITY   : boolean := true
   );
 end entity;
 
-architecture tb of spi_mgr_tb is
-
-  constant G_CS_BITS : positive := 2;
-  constant G_CS_LEAD : positive := 2;
-  constant G_CS_LAG  : positive := 2;
-  constant G_CS_IDLE : positive := 8;
+architecture tb of uart_tb is
 
   -- TB Constants
-  constant RESET_TIME : time    := 50 ns;
-  constant CLK_PERIOD : time    := 10 ns;
-  constant DW         : integer := 16;
-  constant UW         : integer := 2 + G_CS_BITS;
+  constant RESET_TIME : time := 100 ns;
+  constant CLK_PERIOD : time := 10 ns;
 
   -- TB Signals
   signal clk   : std_ulogic := '1';
@@ -52,43 +46,38 @@ architecture tb of spi_mgr_tb is
   signal srstn : std_ulogic := '0';
 
   -- DUT Generics
-  constant G_SYS_CLK_HZ    : positive := 100_000_000;
-  constant G_SPI_CLK_HZ    : positive := 100_000_000 / 4;
-  constant G_CLK_TOLERANCE : real     := 2.5;
+  constant G_SYS_CLK_HZ     : positive := 100_000_000;
+  constant G_UART_BAUD_BPS  : positive := 100_000_000 / 8;
+  constant G_BAUD_TOLERANCE : real     := 2.5;
 
   -- DUT Signals
   signal s_axis : axis_t (
-    tdata(DW - 1 downto 0),
+    tdata(7 downto 0),
     tkeep(0 downto 0),
-    tuser(UW - 1 downto 0)
+    tuser(0 downto 0)
   );
 
   signal m_axis : axis_t (
-    tdata(DW - 1 downto 0),
+    tdata(7 downto 0),
     tkeep(0 downto 0),
-    tuser(UW - 1 downto 0)
+    tuser(2 downto 0)
   );
 
-  signal spi_sck  : std_ulogic;
-  signal spi_csn  : std_ulogic_vector((2 ** G_CS_BITS) - 1 downto 0);
-  signal spi_mosi : std_ulogic;
-  signal spi_miso : std_ulogic;
+  signal uart_txd : std_ulogic;
+  signal uart_rxd : std_ulogic;
 
   -- Testbench BFMs
   constant STALL_CFG : stall_configuration_t := (
     stall_probability => 0.9 * to_real(G_ENABLE_JITTER),
-    min_stall_cycles  => G_SCK_DIV * DW,
-    max_stall_cycles  => G_SCK_DIV * 2 * DW
+    min_stall_cycles  => 8,
+    max_stall_cycles  => G_SYS_CLK_HZ / G_UART_BAUD_BPS * 7
   );
 
   constant DATA_QUEUE     : queue_t := new_queue;
   constant REF_DATA_QUEUE : queue_t := new_queue;
-  constant USER_QUEUE     : queue_t := new_queue;
-  constant REF_USER_QUEUE : queue_t := new_queue;
 
-  signal num_packets_checked : natural    := 0;
-  signal num_packets_sent    : natural    := 0;
-  signal bfm_sub_enable      : std_ulogic := '0';
+  signal num_packets_checked : natural := 0;
+  signal num_packets_sent    : natural := 0;
 
 begin
 
@@ -101,20 +90,10 @@ begin
     variable expected_num_packets_checked : natural := 0;
     variable expected_num_packets_sent    : natural := 0;
 
-    procedure spi_txrx (
-      cpol : natural range 0 to 1;
-      cpha : natural range 0 to 1;
-      cs   : natural
-    ) is
-
-      constant PACKET_LENGTH_BEATS : natural := rnd.Uniform(1, 3);
+    procedure send_random is
 
       variable data      : integer_array_t := null_integer_array;
       variable data_copy : integer_array_t := null_integer_array;
-      variable user      : integer_array_t := new_3d(PACKET_LENGTH_BEATS, 1, 1, UW, false);
-      variable user_copy : integer_array_t := new_3d(PACKET_LENGTH_BEATS, 1, 1, UW, false);
-
-      variable tuser : u_unsigned(UW - 1 downto 0);
 
     begin
 
@@ -122,27 +101,16 @@ begin
       random_integer_array (
         rnd           => rnd,
         integer_array => data,
-        width         => PACKET_LENGTH_BEATS,
-        bits_per_word => DW,
+        width         => 250,
+        bits_per_word => 8,
         is_signed     => false
       );
 
-      tuser(0)                          := to_sl(cpol);
-      tuser(1)                          := to_sl(cpha);
-      tuser(G_CS_BITS + 2 - 1 downto 2) := to_unsigned(cs, G_CS_BITS);
-
-      for i in 0 to PACKET_LENGTH_BEATS - 1 loop
-        set(user, i, to_integer(tuser));
-      end loop;
-
       data_copy                    := copy(data);
       push_ref(REF_DATA_QUEUE, data_copy);
-      user_copy                    := copy(user);
-      push_ref(REF_USER_QUEUE, user_copy);
       expected_num_packets_checked := expected_num_packets_checked + 1;
 
       push_ref(DATA_QUEUE, data);
-      push_ref(USER_QUEUE, user);
       expected_num_packets_sent := expected_num_packets_sent + 1;
 
     end procedure;
@@ -164,12 +132,7 @@ begin
     wait until rising_edge(clk);
 
     if run("test_random_data") then
-      bfm_sub_enable <= '1';
-
-      for test_idx in 0 to 100 loop
-        spi_txrx(rnd.Uniform(0, 1), rnd.Uniform(0, 1), rnd.Uniform(0, (2 ** G_CS_BITS) - 1));
-      end loop;
-
+      send_random;
     end if;
 
     wait_until_done;
@@ -188,35 +151,30 @@ begin
   clk <= not clk after CLK_PERIOD / 2;
 
   -- ---------------------------------------------------------------------------
-  u_spi_mgr : entity work.spi_mgr
+  u_uart : entity work.uart
   generic map (
-    G_DW            => DW,
-    G_SYS_CLK_HZ    => G_SYS_CLK_HZ,
-    G_SPI_CLK_HZ    => G_SPI_CLK_HZ,
-    G_CLK_TOLERANCE => G_CLK_TOLERANCE,
-    G_CS_BITS       => G_CS_BITS,
-    G_CS_LEAD       => G_CS_LEAD,
-    G_CS_LAG        => G_CS_LAG,
-    G_CS_IDLE       => G_CS_IDLE
+    G_SYS_CLK_HZ     => G_SYS_CLK_HZ,
+    G_UART_BAUD_BPS  => G_UART_BAUD_BPS,
+    G_BAUD_TOLERANCE => G_BAUD_TOLERANCE,
+    G_USE_PARITY     => G_USE_PARITY,
+    G_EVEN_PARITY    => G_EVEN_PARITY
   )
   port map (
     clk      => clk,
     srst     => srst,
     s_axis   => s_axis,
     m_axis   => m_axis,
-    spi_sck  => spi_sck,
-    spi_csn  => spi_csn,
-    spi_mosi => spi_mosi,
-    spi_miso => spi_miso
+    uart_txd => uart_txd,
+    uart_rxd => uart_rxd
   );
 
   -- Loopback
-  spi_miso <= spi_mosi;
+  uart_rxd <= uart_txd;
 
   u_bfm_axis_mgr : entity work.bfm_axis_mgr
   generic map (
     G_DATA_QUEUE   => DATA_QUEUE,
-    G_USER_QUEUE   => USER_QUEUE,
+    G_ENABLE_TUSER => false,
     G_STALL_CONFIG => STALL_CFG
   )
   port map (
@@ -228,7 +186,9 @@ begin
   u_bfm_axis_sub : entity work.bfm_axis_sub
   generic map (
     G_REF_DATA_QUEUE => REF_DATA_QUEUE,
-    G_REF_USER_QUEUE => REF_USER_QUEUE,
+    G_ENABLE_TUSER   => false,
+    G_ENABLE_TKEEP   => false,
+    G_ENABLE_TLAST   => false,
     G_STALL_CONFIG   => STALL_CFG
   )
   port map (
@@ -236,5 +196,12 @@ begin
     s_axis              => m_axis,
     num_packets_checked => num_packets_checked
   );
+
+  prc_monitor_tuser : process is begin
+    wait until m_axis.tvalid = '1' and m_axis.tready = '1' and rising_edge(clk);
+    assert or m_axis.tuser = '0'
+      report "UART tuser indicated an error"
+      severity failure;
+  end process;
 
 end architecture;

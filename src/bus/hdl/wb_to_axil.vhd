@@ -27,12 +27,19 @@ end entity;
 architecture rtl of wb_to_axil is
 
   type state_t is (
-    ST_IDLE, ST_WRITE_WAIT, ST_WRITE_RSP_WAIT, ST_READ_WAIT, ST_READ_RSP_WAIT
+    ST_IDLE, ST_WRITE_WAIT, ST_WRITE_RSP_WAIT, ST_READ_WAIT, ST_READ_RSP_WAIT,
+    ST_DONE
   );
 
   signal state : state_t;
 
+  signal axil_resp_err : std_logic;
+
 begin
+
+  axil_resp_err <= to_sl(
+      (m_axil.bresp = AXI_RSP_SLVERR) or (m_axil.bresp = AXI_RSP_DECERR)
+    );
 
   -- Wishbone manager guarantees that these stay stable during the
   -- transaction, so no need to waste resources by registering them in the fsm
@@ -83,8 +90,8 @@ begin
           if m_axil.bvalid then
             m_axil.bready <= '0';
             s_wb.ack      <= '1';
-            s_wb.err      <= to_sl((m_axil.bresp = AXI_RSP_SLVERR) or (m_axil.bresp = AXI_RSP_DECERR));
-            state         <= ST_IDLE;
+            s_wb.err      <= axil_resp_err;
+            state         <= ST_DONE;
           end if;
 
         -- ---------------------------------------------------------------------
@@ -100,10 +107,16 @@ begin
           if m_axil.rvalid then
             m_axil.rready <= '0';
             s_wb.ack      <= '1';
-            s_wb.err      <= to_sl((m_axil.bresp = AXI_RSP_SLVERR) or (m_axil.bresp = AXI_RSP_DECERR));
+            s_wb.err      <= axil_resp_err;
             s_wb.rdat     <= m_axil.rdata;
-            state         <= ST_IDLE;
+            state         <= ST_DONE;
           end if;
+
+        -- ---------------------------------------------------------------------
+        when ST_DONE =>
+          s_wb.ack <= '0';
+          s_wb.err <= '0';
+          state    <= ST_IDLE;
 
         when others =>
           null;

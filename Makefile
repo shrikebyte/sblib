@@ -24,7 +24,7 @@ THIS_DIR := $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
 SRC_DIR := $(THIS_DIR)src
 TEST_DIR := $(THIS_DIR)test
 BUILD_DIR := $(THIS_DIR)build
-VENV_DIR = $(THIS_DIR).build_venv
+VENV_DIR = $(THIS_DIR).venv
 VER_STRING := v$(PROJECT_VERSION)
 REGS_SRC := $(SRC_DIR)/*/regs/*.toml
 STYLE_SRC := $(shell find $(SRC_DIR) $(TEST_DIR) -type f -name "*.vhd" -not -path "$(SRC_DIR)/hdlm/hdl/*")
@@ -39,7 +39,7 @@ VSG := $(VENV_DIR)/bin/vsg
 # Run the VUnit simulation
 sim: $(BUILD_DIR)/regs_out/.stamp
 	cd scripts && $(PYTHON) sim.py --vhdl_ls
-	cd scripts && $(PYTHON) sim.py --xunit-xml $(BUILD_DIR)/sim_report.xml
+	cd scripts && $(PYTHON) sim.py --xunit-xml $(BUILD_DIR)/sim_report.xml -p 0
 
 # Check the coding style of the VHDL src files
 style: $(VENV_DIR)/.stamp $(STYLE_SRC)

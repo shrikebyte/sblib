@@ -26,15 +26,24 @@ entity axis_fifo_async is
     G_USE_TKEEP : boolean := true;
     G_USE_TLAST : boolean := true;
     G_USE_TUSER : boolean := true;
-    --
-    -- If true, then output will not go valid until one full packet has been
-    -- stored at the input. This guarantees that output valid will never
-    -- be lowered during a packet.
+    -- True: output will not go valid until one full packet has been
+    --   received at the input. This guarantees that output valid will never
+    --   be lowered during a packet (as long as the max packet length is
+    --   lower than the fifo depth or G_DROP_OVERSIZE is True).
+    -- Requires G_USE_TLAST.
     G_PACKET_MODE : boolean := false;
-    -- If true: drop oversized packets that do not fit in the FIFO.
-    -- If false: use "cut-through" mode.
-    -- Only applicable in packet mode.
+    -- True: drop oversized packets that do not fit into the FIFO.
+    --   Guarantees that output valid stays high for the duration of every
+    --   packet.
+    -- False: use "cut-through" mode where the fifo output becomes valid
+    --   when the fifo becomes full, even if the input packet is larger than
+    --   the fifo depth. Guarantees that oversized data packets are not dropped.
+    -- Requires G_PACKET_MODE.
     G_DROP_OVERSIZE : boolean := false;
+    -- If true: Drop input packet if trying to write to a full fifo.
+    --   Guarantees that input ready is always high.
+    -- Requires G_DROP_OVERSIZE.
+    G_DROP_WHEN_FULL : boolean := false;
     --
     G_EXTRA_SYNC : natural := 0
   );
@@ -95,8 +104,7 @@ architecture rtl of axis_fifo_async is
   signal s_rd_ptr_cdc      : u_unsigned(AW downto 0);
   signal m_wr_ptr_comm_cdc : u_unsigned(AW downto 0);
   signal m_wr_ptr_spec_cdc : u_unsigned(AW downto 0);
-
-  signal s_reset_done : std_ulogic;
+  signal s_reset_done      : std_ulogic;
 
 begin
 
@@ -113,6 +121,10 @@ begin
 
   assert not (G_PACKET_MODE = false and G_DROP_OVERSIZE = true)
     report "axis_fifo_async: G_DROP_OVERSIZE requires G_PACKET_MODE to be enabled."
+    severity failure;
+
+  assert not (G_DROP_OVERSIZE = false and G_DROP_WHEN_FULL = true)
+    report "axis_fifo_async: G_DROP_WHEN_FULL requires G_DROP_OVERSIZE to be enabled."
     severity failure;
 
   -- ---------------------------------------------------------------------------
@@ -142,7 +154,12 @@ begin
     m_axis.tlast                     <= '1';
   end generate;
 
-  s_axis.tready <= (not s_full or (to_sl(G_DROP_OVERSIZE) and s_full_wr)) and s_reset_done;
+  s_axis.tready <= s_reset_done and (
+      not s_full or
+      (to_sl(G_DROP_OVERSIZE) and s_full_wr) or
+      to_sl(G_DROP_WHEN_FULL)
+    ) when G_PACKET_MODE else
+ s_reset_done and not s_full;
 
   s_full <= to_sl(
       s_wr_ptr_spec(AW) /= s_rd_ptr_cdc(AW) and
@@ -256,7 +273,9 @@ begin
         end if;
 
         if s_axis.tvalid and s_axis.tready then
-          if (to_sl(G_DROP_OVERSIZE) and s_full_wr) or s_ctl_drop or s_drop_reg then
+          if (to_sl(G_DROP_WHEN_FULL) and s_full) or
+             (to_sl(G_DROP_OVERSIZE) and s_full_wr) or
+             s_ctl_drop or s_drop_reg then
             if s_axis.tlast then
               s_drop_reg    <= '0';
               s_sts_dropped <= '1';
@@ -309,12 +328,13 @@ begin
 
   end generate;
 
+  -- ---------------------------------------------------------------------------
   prc_reset_done : process (s_clk) is begin
     if rising_edge(s_clk) then
-      s_reset_done <= '1';
-
       if s_srst_cdc then
         s_reset_done <= '0';
+      else
+        s_reset_done <= '1';
       end if;
     end if;
   end process;

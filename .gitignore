@@ -9,5 +9,5 @@ vhdl_ls.toml
 build/
 vunit_out/
 __pycache__
-.build_venv
+.venv
 local.mk

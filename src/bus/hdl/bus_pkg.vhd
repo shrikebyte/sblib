@@ -20,12 +20,13 @@ package bus_pkg is
   -- AXI Lite
   constant AXIL_DATA_WIDTH : positive := 32;
   constant AXIL_ADDR_WIDTH : positive := 32;
+  constant AXIL_STRB_WIDTH : positive := AXIL_DATA_WIDTH / 8;
   constant AXIL_PROT_WIDTH : positive := 3;
   constant AXIL_RSP_WIDTH  : positive := 2;
 
   subtype axil_data_range is natural range AXIL_DATA_WIDTH - 1 downto 0;
   subtype axil_addr_range is natural range AXIL_ADDR_WIDTH - 1 downto 0;
-  subtype axil_strb_range is natural range AXIL_DATA_WIDTH / 8 - 1 downto 0;
+  subtype axil_strb_range is natural range AXIL_STRB_WIDTH - 1 downto 0;
   subtype axil_prot_range is natural range AXIL_PROT_WIDTH - 1 downto 0;
   subtype axil_rsp_range is natural range AXIL_RSP_WIDTH - 1 downto 0;
 
