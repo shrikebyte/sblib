@@ -161,6 +161,18 @@ package util_pkg is
     data : std_ulogic_vector(7 downto 0)
   ) return character;
 
+  function hex_to_nibble (
+    char : character
+  ) return std_ulogic_vector;
+
+  function nibble_to_hex (
+    nibble : std_ulogic_vector(3 downto 0)
+  ) return character;
+
+  function is_hex (
+    char : character
+  ) return boolean;
+
 end package;
 
 package body util_pkg is
@@ -578,6 +590,77 @@ package body util_pkg is
   ) return character is
   begin
     return character'val(to_integer(unsigned(data)));
+  end function;
+
+  function hex_to_nibble (
+    char : character
+  ) return std_ulogic_vector is
+  begin
+    case char is
+      when '0' => return x"0";
+      when '1' => return x"1";
+      when '2' => return x"2";
+      when '3' => return x"3";
+      when '4' => return x"4";
+      when '5' => return x"5";
+      when '6' => return x"6";
+      when '7' => return x"7";
+      when '8' => return x"8";
+      when '9' => return x"9";
+      when 'A' | 'a' => return x"A";
+      when 'B' | 'b' => return x"B";
+      when 'C' | 'c' => return x"C";
+      when 'D' | 'd' => return x"D";
+      when 'E' | 'e' => return x"E";
+      when 'F' | 'f' => return x"F";
+      when others =>
+        report "hex_to_nibble: Invalid hex character '" & char & "'"
+          severity warning;
+        return x"0";
+    end case;
+
+  end function;
+
+  function nibble_to_hex (
+    nibble : std_ulogic_vector(3 downto 0)
+  ) return character is
+  begin
+    case nibble is
+      when x"0" => return '0';
+      when x"1" => return '1';
+      when x"2" => return '2';
+      when x"3" => return '3';
+      when x"4" => return '4';
+      when x"5" => return '5';
+      when x"6" => return '6';
+      when x"7" => return '7';
+      when x"8" => return '8';
+      when x"9" => return '9';
+      when x"A" => return 'A';
+      when x"B" => return 'B';
+      when x"C" => return 'C';
+      when x"D" => return 'D';
+      when x"E" => return 'E';
+      when x"F" => return 'F';
+      when others =>
+        report "hex_to_nibble: Invalid hex nibble '" & to_hstring(nibble) & "'"
+          severity warning;
+        return '0';
+    end case;
+
+  end function;
+
+  function is_hex (
+    char : character
+  ) return boolean is
+  begin
+    case char is
+      when '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'A' |
+           'a' | 'B' | 'b' | 'C' | 'c' | 'D' | 'd' | 'E' | 'e' | 'F' | 'f'
+                  => return true;
+      when others => return false;
+    end case;
+
   end function;
 
 end package body;

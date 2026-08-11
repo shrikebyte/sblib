@@ -127,7 +127,7 @@ architecture rtl of wb_ascii_mgr is
   signal addr_prev : std_ulogic_vector(AXIL_ADDR_RANGE);
   signal wdat_prev : std_ulogic_vector(AXIL_DATA_RANGE);
   signal rdat      : std_ulogic_vector(AXIL_DATA_RANGE);
-  signal cnt       : unsigned(clog2(maximum(CHARS_PER_ADDR, CHARS_PER_DATA)) downto 0); -- Character count
+  signal cnt       : unsigned(clog2(maximum(CHARS_PER_ADDR, CHARS_PER_DATA)) downto 0);
 
 begin
 
@@ -232,59 +232,15 @@ begin
         -- ---------------------------------------------------------------------
         when ST_RX_ADDR =>
           if s_axis.tvalid then
-            -- Overflow.
+            -- Overflow
             if cnt = CHARS_PER_ADDR then
               state <= ST_SYNTAX_ERR;
             end if;
 
             case rx_char is
-              when '0' =>
-                m_wb.addr <= m_wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"0";
-                cnt       <= cnt + 1;
-              when '1' =>
-                m_wb.addr <= m_wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"1";
-                cnt       <= cnt + 1;
-              when '2' =>
-                m_wb.addr <= m_wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"2";
-                cnt       <= cnt + 1;
-              when '3' =>
-                m_wb.addr <= m_wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"3";
-                cnt       <= cnt + 1;
-              when '4' =>
-                m_wb.addr <= m_wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"4";
-                cnt       <= cnt + 1;
-              when '5' =>
-                m_wb.addr <= m_wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"5";
-                cnt       <= cnt + 1;
-              when '6' =>
-                m_wb.addr <= m_wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"6";
-                cnt       <= cnt + 1;
-              when '7' =>
-                m_wb.addr <= m_wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"7";
-                cnt       <= cnt + 1;
-              when '8' =>
-                m_wb.addr <= m_wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"8";
-                cnt       <= cnt + 1;
-              when '9' =>
-                m_wb.addr <= m_wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"9";
-                cnt       <= cnt + 1;
-              when 'a' | 'A' =>
-                m_wb.addr <= m_wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"A";
-                cnt       <= cnt + 1;
-              when 'b' | 'B' =>
-                m_wb.addr <= m_wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"B";
-                cnt       <= cnt + 1;
-              when 'c' | 'C' =>
-                m_wb.addr <= m_wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"C";
-                cnt       <= cnt + 1;
-              when 'd' | 'D' =>
-                m_wb.addr <= m_wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"D";
-                cnt       <= cnt + 1;
-              when 'e' | 'E' =>
-                m_wb.addr <= m_wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"E";
-                cnt       <= cnt + 1;
-              when 'f' | 'F' =>
-                m_wb.addr <= m_wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & x"F";
+              when '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'A' |
+                   'a' | 'B' | 'b' | 'C' | 'c' | 'D' | 'd' | 'E' | 'e' | 'F' | 'f' =>
+                m_wb.addr <= m_wb.addr(AXIL_ADDR_WIDTH - 5 downto 0) & hex_to_nibble(rx_char);
                 cnt       <= cnt + 1;
 
               -- Ignore carriage return
@@ -371,53 +327,9 @@ begin
             end if;
 
             case rx_char is
-              when '0' =>
-                m_wb.wdat <= m_wb.wdat(AXIL_DATA_WIDTH - 5 downto 0) & x"0";
-                cnt       <= cnt + 1;
-              when '1' =>
-                m_wb.wdat <= m_wb.wdat(AXIL_DATA_WIDTH - 5 downto 0) & x"1";
-                cnt       <= cnt + 1;
-              when '2' =>
-                m_wb.wdat <= m_wb.wdat(AXIL_DATA_WIDTH - 5 downto 0) & x"2";
-                cnt       <= cnt + 1;
-              when '3' =>
-                m_wb.wdat <= m_wb.wdat(AXIL_DATA_WIDTH - 5 downto 0) & x"3";
-                cnt       <= cnt + 1;
-              when '4' =>
-                m_wb.wdat <= m_wb.wdat(AXIL_DATA_WIDTH - 5 downto 0) & x"4";
-                cnt       <= cnt + 1;
-              when '5' =>
-                m_wb.wdat <= m_wb.wdat(AXIL_DATA_WIDTH - 5 downto 0) & x"5";
-                cnt       <= cnt + 1;
-              when '6' =>
-                m_wb.wdat <= m_wb.wdat(AXIL_DATA_WIDTH - 5 downto 0) & x"6";
-                cnt       <= cnt + 1;
-              when '7' =>
-                m_wb.wdat <= m_wb.wdat(AXIL_DATA_WIDTH - 5 downto 0) & x"7";
-                cnt       <= cnt + 1;
-              when '8' =>
-                m_wb.wdat <= m_wb.wdat(AXIL_DATA_WIDTH - 5 downto 0) & x"8";
-                cnt       <= cnt + 1;
-              when '9' =>
-                m_wb.wdat <= m_wb.wdat(AXIL_DATA_WIDTH - 5 downto 0) & x"9";
-                cnt       <= cnt + 1;
-              when 'a' | 'A' =>
-                m_wb.wdat <= m_wb.wdat(AXIL_DATA_WIDTH - 5 downto 0) & x"A";
-                cnt       <= cnt + 1;
-              when 'b' | 'B' =>
-                m_wb.wdat <= m_wb.wdat(AXIL_DATA_WIDTH - 5 downto 0) & x"B";
-                cnt       <= cnt + 1;
-              when 'c' | 'C' =>
-                m_wb.wdat <= m_wb.wdat(AXIL_DATA_WIDTH - 5 downto 0) & x"C";
-                cnt       <= cnt + 1;
-              when 'd' | 'D' =>
-                m_wb.wdat <= m_wb.wdat(AXIL_DATA_WIDTH - 5 downto 0) & x"D";
-                cnt       <= cnt + 1;
-              when 'e' | 'E' =>
-                m_wb.wdat <= m_wb.wdat(AXIL_DATA_WIDTH - 5 downto 0) & x"E";
-                cnt       <= cnt + 1;
-              when 'f' | 'F' =>
-                m_wb.wdat <= m_wb.wdat(AXIL_DATA_WIDTH - 5 downto 0) & x"F";
+              when '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'A' |
+                   'a' | 'B' | 'b' | 'C' | 'c' | 'D' | 'd' | 'E' | 'e' | 'F' | 'f' =>
+                m_wb.wdat <= m_wb.wdat(AXIL_DATA_WIDTH - 5 downto 0) & hex_to_nibble(rx_char);
                 cnt       <= cnt + 1;
 
               when ' ' | HT =>
@@ -514,27 +426,8 @@ begin
 
             m_axis.tvalid <= '1';
             rdat          <= rdat(AXIL_DATA_WIDTH - 5 downto 0) & x"0";
+            m_axis.tdata  <= to_ascii(nibble_to_hex(rdat(AXIL_DATA_WIDTH - 1 downto AXIL_DATA_WIDTH - 4)));
             cnt           <= cnt + 1;
-
-            case rdat(AXIL_DATA_WIDTH - 1 downto AXIL_DATA_WIDTH - 4) is
-              when x"0" => m_axis.tdata <= to_ascii('0');
-              when x"1" => m_axis.tdata <= to_ascii('1');
-              when x"2" => m_axis.tdata <= to_ascii('2');
-              when x"3" => m_axis.tdata <= to_ascii('3');
-              when x"4" => m_axis.tdata <= to_ascii('4');
-              when x"5" => m_axis.tdata <= to_ascii('5');
-              when x"6" => m_axis.tdata <= to_ascii('6');
-              when x"7" => m_axis.tdata <= to_ascii('7');
-              when x"8" => m_axis.tdata <= to_ascii('8');
-              when x"9" => m_axis.tdata <= to_ascii('9');
-              when x"A" => m_axis.tdata <= to_ascii('A');
-              when x"B" => m_axis.tdata <= to_ascii('B');
-              when x"C" => m_axis.tdata <= to_ascii('C');
-              when x"D" => m_axis.tdata <= to_ascii('D');
-              when x"E" => m_axis.tdata <= to_ascii('E');
-              when x"F" => m_axis.tdata <= to_ascii('F');
-              when others => m_axis.tdata <= to_ascii('0');
-            end case;
 
           end if;
 
