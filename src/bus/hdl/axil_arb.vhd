@@ -83,7 +83,7 @@ begin
       end case;
 
       if srst then
-        wr_sel   <= wr_sel'low;
+        wr_sel   <= 0;
         aw_en    <= '0';
         w_en     <= '0';
         b_en     <= '0';
@@ -123,7 +123,7 @@ begin
       end case;
 
       if srst then
-        rd_sel   <= rd_sel'low;
+        rd_sel   <= 0;
         ar_en    <= '0';
         r_en     <= '0';
         rd_state <= ST_RD_IDLE;

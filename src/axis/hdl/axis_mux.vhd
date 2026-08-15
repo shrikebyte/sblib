@@ -98,7 +98,7 @@ begin
 
       if srst then
         m_axis.tvalid <= '0';
-        sel_reg       <= sel_reg'low;
+        sel_reg       <= 0;
         state         <= ST_UNLOCKED;
       end if;
     end if;

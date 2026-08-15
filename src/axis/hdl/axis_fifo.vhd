@@ -115,15 +115,15 @@ begin
 
   assert not (G_USE_TLAST = false and G_PACKET_MODE = true)
     report "axis_fifo: G_PACKET_MODE requires G_USE_TLAST to be enabled."
-    severity failure;
+    severity error;
 
   assert not (G_PACKET_MODE = false and G_DROP_OVERSIZE = true)
     report "axis_fifo: G_DROP_OVERSIZE requires G_PACKET_MODE to be enabled."
-    severity failure;
+    severity error;
 
   assert not (G_DROP_OVERSIZE = false and G_DROP_WHEN_FULL = true)
     report "axis_fifo: G_DROP_WHEN_FULL requires G_DROP_OVERSIZE to be enabled."
-    severity failure;
+    severity error;
 
   -- ---------------------------------------------------------------------------
   wr_data(DW - 1 downto 0) <= s_axis.tdata;

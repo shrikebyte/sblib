@@ -56,15 +56,15 @@ begin
   prc_switch_on_tlast : process (clk) is begin
     if rising_edge(clk) then
       if s_axis(sel).tvalid and s_axis(sel).tready and s_axis(sel).tlast then
-        if sel = sel'high then
-          sel <= sel'low;
+        if sel = (G_NUM_S - 1) then
+          sel <= 0;
         else
           sel <= sel + 1;
         end if;
       end if;
 
       if srst then
-        sel <= sel'low;
+        sel <= 0;
       end if;
     end if;
   end process;

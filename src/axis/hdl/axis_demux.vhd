@@ -102,7 +102,7 @@ begin
 
       if srst then
         axis_tvalid <= (others=> '0');
-        sel_reg     <= sel_reg'low;
+        sel_reg     <= 0;
         state       <= ST_UNLOCKED;
       end if;
     end if;

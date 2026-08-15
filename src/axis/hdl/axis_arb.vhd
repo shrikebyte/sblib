@@ -56,7 +56,7 @@ begin
   prc_arb_sel : process (all) is begin
 
     -- Default
-    sel <= sel'low;
+    sel <= 0;
 
     for i in 0 to G_NUM_S - 1 loop
       if s_axis(i).tvalid then

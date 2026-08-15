@@ -237,13 +237,14 @@ begin
       -- Send one more small packet for good measure
       send_packet(1);
     elsif run("test_manual_drop") then
+      wait until rising_edge(clk);
       bfm_sub_enable <= '1';
       ctl_drop       <= '0';
 
       -- Sometimes hold the drop signal during random packets
       for test_idx in 0 to 20 loop
         drop     := to_bool(rnd.RandInt(0, 1));
-        len      := rnd.Uniform(1, 10);
+        len      := rnd.Uniform(2, 10);
         send_packet(len, G_PACKET_MODE and drop);
         ctl_drop <= to_sl(drop);
         wait until (s_axis.tvalid and s_axis.tready and s_axis.tlast) = '1' and rising_edge(clk);

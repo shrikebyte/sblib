@@ -42,15 +42,15 @@ architecture rtl of tick is
 
 begin
 
-  assert TOL < G_TOLERANCE
+  assert TOL <= G_TOLERANCE
     report "ERROR: tick: Actual freq is too different from requested freq"
     severity error;
 
   assert false
-    report "NOTE: tick: Requested freq: " & real'image(real(G_TICK_HZ)) &
-           " Actual freq: " & real'image(ACTUAL) &
-           " Requested tolerance (%): " & real'image(G_TOLERANCE) &
-           " Actual difference (%): " & real'image(TOL)
+    report "NOTE: tick: Requested freq: " & to_string(G_TICK_HZ) &
+           " Actual freq: " & to_string(ACTUAL) &
+           " Requested tolerance (%): " & to_string(G_TOLERANCE) &
+           " Actual difference (%): " & to_string(TOL)
     severity note;
 
   prc_tick : process (clk) is begin

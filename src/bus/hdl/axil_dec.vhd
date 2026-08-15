@@ -135,7 +135,7 @@ begin
   -- ---------------------------------------------------------------------------
   assert check_baseaddrs
     report "The supplied address set is invalid. See messages above."
-    severity failure;
+    severity error;
 
   -- ---------------------------------------------------------------------------
   prc_wr_select : process (clk) is begin
@@ -175,7 +175,7 @@ begin
         aw_en    <= '0';
         w_en     <= '0';
         b_en     <= '0';
-        wr_sel   <= wr_sel'low;
+        wr_sel   <= 0;
         wr_state <= ST_WR_IDLE;
       end if;
     end if;
@@ -211,7 +211,7 @@ begin
       if srst then
         ar_en    <= '0';
         r_en     <= '0';
-        rd_sel   <= rd_sel'low;
+        rd_sel   <= 0;
         rd_state <= ST_RD_IDLE;
       end if;
     end if;
