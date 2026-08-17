@@ -21,9 +21,7 @@ This repository is hosted on [GitHub](https://github.com/shrikebyte/sblib) and c
 
 #### Install Python Tools
 
-Assuming a relatively recent version of python3 and pip3 are already available on the system, run the following command to install the python tools. Optionally, you may want to use a python virtual environment.
-
-`python -m pip install hdl_registers==8.1.0 vsg==3.35.0 vunit_hdl==5.0.0.dev8`
+Python tools are now automatically installed in a venv as part of the makefile flow.
 
 #### Install NVC
 
@@ -31,23 +29,19 @@ NVC is an open-source VHDL simulator.
 
 The latest version can be compiled from source and manually installed by cloning, building, and installing the open-source repo (recommended):
 
-`git clone https://github.com/nickg/nvc.git`
+```sh
+git clone https://github.com/nickg/nvc.git
+```
 
-Alternatively, a pre-compiled release can be downloaded from [Github](https://github.com/nickg/nvc/releases), however, this is a rapidly evolving project so compiling the most up-to-date code yourself is the recommended approach.
+Alternatively, a pre-compiled release can be downloaded from [Github](https://github.com/nickg/nvc/releases), however, this is a rapidly evolving project so compiling the most up-to-date code yourself is recommended.
 
 ### Test
 
-Walk through the following steps to run the simulations.
+Run the following command to start the simulations
 
-1. Ensure the required build tools have been properly installed and made
-   available on the system's command line.
-
-   `make tool-check`
-
-2. Run the simulations. By default, this will use all CPU cores to run multiple
-   sims in parallel.
-
-   `make sim`
+```sh
+make sim
+```
 
 ## Release Process
 

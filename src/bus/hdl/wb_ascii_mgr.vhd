@@ -20,11 +20,12 @@
 --#
 --# | Command         | Command Format      | Success Resp  | Fail Resp |
 --# |-----------------|---------------------|---------------|-----------|
---# | Read            | r aaaaaaaa          | dddddddd      | ! or ?    |
---# | Write           | w aaaaaaaa dddddddd | +             | ! or ?    |
---# | Read Increment  | n                   | dddddddd      | ! or ?    |
---# | Write Increment | m dddddddd          | +             | ! or ?    |
---# | Previous        | p                   | + or dddddddd | ! or ?    |
+--# | Read            | r aaaaaaaa          | dddddddd      | !         |
+--# | Write           | w aaaaaaaa dddddddd | +             | !         |
+--# | Read Increment  | g                   | dddddddd      | !         |
+--# | Write Increment | s dddddddd          | +             | !         |
+--# | Previous        | p                   | + or dddddddd | !         |
+--# | Mode            | m <0|1|2> --TODO--  | +             | !         |
 --#
 --# The protocol was designed to work equally well with an interactive terminal
 --# or a scripted software parser. An interactive terminal could be used
@@ -34,8 +35,10 @@
 --#
 --# * Read (r) - Read data from an address
 --# * Write (w) - Write data to an address
---# * Read Increment (n) - Read from the last command's address + 4
---# * Write Increment (m) - Write to the last command's address + 4
+--# * Read Increment (g) - Read from the last command's address + 4
+--# * Write Increment (s) - Write to the last command's address + 4
+--# * Mode (m) - 0 = 8-bit data; 1 = 16-bit data; 2 = 32-bit data
+--#     Mode 2 is the default.
 --# * Previous (p) - Re-run the previous command. If the last command was an
 --#     increment command, then the address is NOT incremented again.
 --# * Previous and increment commands default to using address and data of 0x0
@@ -152,33 +155,33 @@ begin
             case rx_char is
 
               -- Read command
-              when 'r' | 'R' =>
+              when 'R' | 'r' =>
                 m_wb.wen  <= '0';
                 m_wb.addr <= (others => '0');
                 state     <= ST_RX_DELIM0;
 
               -- Write command
-              when 'w' | 'W' =>
+              when 'W' | 'w' =>
                 m_wb.wen  <= '1';
                 m_wb.addr <= (others => '0');
                 m_wb.wdat <= (others => '0');
                 state     <= ST_RX_DELIM0;
 
-              -- Read increment command
-              when 'n' | 'N' =>
+              -- Read increment (get next) command
+              when 'G' | 'g' =>
                 m_wb.wen  <= '0';
                 m_wb.addr <= addr_incr;
                 state     <= ST_BUS_START;
 
-              -- Write increment command
-              when 'm' | 'M' =>
+              -- Write increment (set next) command
+              when 'S' | 's' =>
                 m_wb.wen  <= '1';
                 m_wb.addr <= addr_incr;
                 m_wb.wdat <= (others => '0');
                 state     <= ST_RX_DELIM1;
 
               -- Repeat previous command
-              when 'p' | 'P' =>
+              when 'P' | 'p' =>
                 m_wb.wen  <= wen_prev;
                 m_wb.addr <= addr_prev;
                 m_wb.wdat <= wdat_prev;

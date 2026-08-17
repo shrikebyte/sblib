@@ -158,25 +158,25 @@ begin
       send_ascii("r 04" & LF, "00001234" & LF);
 
       info("Incrementing writes");
-      send_ascii("m 1" & LF, "+" & LF);
-      send_ascii("m 2" & LF, "+" & LF);
-      send_ascii("m 3" & LF, "+" & LF);
-      send_ascii("M 4" & LF, "+" & LF);
-      send_ascii("m 5" & LF, "+" & LF);
-      send_ascii("m 6" & LF, "+" & LF);
-      send_ascii("m 7" & LF, "+" & LF);
-      send_ascii("m 8" & LF, "+" & LF);
+      send_ascii("s 1" & LF, "+" & LF);
+      send_ascii("s 2" & LF, "+" & LF);
+      send_ascii("s 3" & LF, "+" & LF);
+      send_ascii("S 4" & LF, "+" & LF);
+      send_ascii("s 5" & LF, "+" & LF);
+      send_ascii("S 6" & LF, "+" & LF);
+      send_ascii("s 7" & LF, "+" & LF);
+      send_ascii("s 8" & LF, "+" & LF);
 
       info("Incrementing reads");
       send_ascii("R 00004" & LF, "00001234" & LF);
-      send_ascii("n" & LF, "00000001" & LF);
-      send_ascii("n" & LF, "00000002" & LF);
-      send_ascii("N" & LF, "00000003" & LF);
-      send_ascii("n" & LF, "00000004" & LF);
-      send_ascii("N" & LF, "00000005" & LF);
-      send_ascii("n" & LF, "00000006" & LF);
-      send_ascii("n" & LF, "00000007" & LF);
-      send_ascii("n" & LF, "00000008" & LF);
+      send_ascii("g" & LF, "00000001" & LF);
+      send_ascii("g" & LF, "00000002" & LF);
+      send_ascii("G" & LF, "00000003" & LF);
+      send_ascii("g" & LF, "00000004" & LF);
+      send_ascii("G" & LF, "00000005" & LF);
+      send_ascii("g" & LF, "00000006" & LF);
+      send_ascii("g" & LF, "00000007" & LF);
+      send_ascii("g" & LF, "00000008" & LF);
 
       info("Previous read");
       send_ascii("p" & LF, "00000008" & LF);
@@ -193,9 +193,9 @@ begin
       info("Strange but legal syntax");
       send_ascii("W                         0  " & HT & "B" & LF, "+" & LF);
       send_ascii(HT & "  r  0  " & HT & LF, "0000000B" & LF);
-      send_ascii("m c" & CR & LF, "+" & LF);
+      send_ascii("s c" & CR & LF, "+" & LF);
       send_ascii(" r  04 " & CR & LF, "0000000C" & LF);
-      send_ascii('m' & HT & 'd' & LF & CR, "+" & LF);
+      send_ascii('s' & HT & 'd' & LF & CR, "+" & LF);
 
       info("Illegal syntax");
       send_ascii("123" & LF, "?" & LF);
