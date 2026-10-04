@@ -28,21 +28,33 @@ VENV_DIR = $(THIS_DIR).venv
 VER_STRING := v$(PROJECT_VERSION)
 REGS_SRC := $(SRC_DIR)/*/regs/*.toml
 STYLE_SRC := $(shell find $(SRC_DIR) $(TEST_DIR) -type f -name "*.vhd" -not -path "$(SRC_DIR)/hdlm/hdl/*")
-PYTHON := $(VENV_DIR)/bin/python
-PIP := $(VENV_DIR)/bin/pip
-VSG := $(VENV_DIR)/bin/vsg
+REGS_STAMP := $(BUILD_DIR)/regs_out/.regs_stamp
+VENV_STAMP := $(VENV_DIR)/.venv_stamp
+
+ifeq ($(OS),Windows_NT)
+	PYTHON_SYS := python.exe
+	PYTHON := $(VENV_DIR)/Scripts/python.exe
+else
+	PYTHON_SYS := python3
+	PYTHON := $(VENV_DIR)/bin/python
+endif
+PIP := $(PYTHON) -m pip
+VSG := $(PYTHON) -m vsg
 
 # Phony rules
-.PHONY: release sim regs style style-fix clean
+.PHONY: release sim regs style style-fix clean synth
 
+# Synthesize each submodule and save utilization & timing results
+synth: $(REGS_STAMP)
+	cd scripts && $(VIVADO) -mode batch -nojournal -nolog -notrace -source synth.tcl | tee $(BUILD_DIR)/vivado_out/synth.log
 
 # Run the VUnit simulation
-sim: $(BUILD_DIR)/regs_out/.stamp
-	cd scripts && $(PYTHON) sim.py --vhdl_ls
-	cd scripts && $(PYTHON) sim.py --xunit-xml $(BUILD_DIR)/sim_report.xml -p 0
+sim: $(REGS_STAMP)
+	$(PYTHON) scripts/sim.py --vhdl_ls
+	$(PYTHON) scripts/sim.py --xunit-xml $(BUILD_DIR)/sim_report.xml
 
 # Check the coding style of the VHDL src files
-style: $(VENV_DIR)/.stamp $(STYLE_SRC)
+style: $(VENV_STAMP) $(STYLE_SRC)
 	mkdir -p $(BUILD_DIR)
 	$(VSG) -f $(STYLE_SRC) \
 	-c vsg_rules.yaml \
@@ -51,7 +63,7 @@ style: $(VENV_DIR)/.stamp $(STYLE_SRC)
 	--quality_report $(BUILD_DIR)/style_report.json
 
 # Check AND FIX the coding style of the VHDL src files
-style-fix: $(VENV_DIR)/.stamp $(STYLE_SRC)
+style-fix: $(VENV_STAMP) $(STYLE_SRC)
 	mkdir -p $(BUILD_DIR)
 	$(VSG) -f $(STYLE_SRC) \
 	-c vsg_rules.yaml \
@@ -59,16 +71,16 @@ style-fix: $(VENV_DIR)/.stamp $(STYLE_SRC)
 	--fix
 
 # Generate register output products
-$(BUILD_DIR)/regs_out/.stamp: $(VENV_DIR)/.stamp $(REGS_SRC)
-	cd scripts && $(PYTHON) regs.py $(REGS_SRC)
-	touch $(BUILD_DIR)/regs_out/.stamp
+$(REGS_STAMP): $(VENV_STAMP) $(REGS_SRC)
+	$(PYTHON) scripts/regs.py $(REGS_SRC)
+	touch $(REGS_STAMP)
 
 # Install venv and python packages
-$(VENV_DIR)/.stamp: build-requirements.txt
-	test -d $(VENV_DIR) || python3 -m venv $(VENV_DIR)
+$(VENV_STAMP): python-requirements.txt
+	test -d $(VENV_DIR) || $(PYTHON_SYS) -m venv $(VENV_DIR)
 	$(PIP) install --upgrade pip
-	$(PIP) install -r build-requirements.txt
-	touch $(VENV_DIR)/.stamp
+	$(PIP) install -r python-requirements.txt
+	touch $(VENV_STAMP)
 
 # Create a new git tag and Github release for this version of the code. A Github
 # action will generate the release from source.

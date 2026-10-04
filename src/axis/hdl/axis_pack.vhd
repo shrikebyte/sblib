@@ -19,6 +19,12 @@
 --#      an additional cycle of latency, and as with the first first
 --#      restriction, there are very few systems in practice that would need
 --#      support for this feature.
+--#
+--# Maintains full throughput, except for the edge case in which a single input
+--# tlast beat results in two output beats because the tlast least beat caused
+--# output buffer to spill over. For example, this will happen if data width is
+--# 16 bits, input beat 0 has one valid byte, input beat 1 has two valid
+--# bytes, and tlast is asserted.
 --##############################################################################
 
 library ieee;

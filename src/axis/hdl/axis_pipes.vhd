@@ -7,6 +7,7 @@
 --# Licensed under the Apache 2.0 license, see LICENSE for details.
 --# ============================================================================
 --# Cascaded axi stream pipeline registers.
+--# Maintains full throughput.
 --##############################################################################
 
 library ieee;

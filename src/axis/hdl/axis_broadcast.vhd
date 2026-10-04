@@ -7,6 +7,7 @@
 --# Licensed under the Apache 2.0 license, see LICENSE for details.
 --# ============================================================================
 --# Broadcasts one input stream to several output streams.
+--# Maintains full throughput.
 --##############################################################################
 
 library ieee;

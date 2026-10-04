@@ -16,6 +16,8 @@
 --#
 --# Output tkeep bits will always be contiguous, so long as the input rules are
 --# followed.
+--#
+--# Stalls for one cycle at the start of each input packet.
 --##############################################################################
 
 library ieee;
@@ -59,11 +61,9 @@ entity axis_slice is
     );
     -- Number of bytes from the start of the input to send to the first output
     -- port. The remaining input bytes, until tlast, will be sent to the
-    -- second output port. Note tat this does not necessarily have to be
-    -- 8-bit bytes. For example, if data width is 32 and keep width is 2, then
-    -- byte width would be 16.
+    -- second output port.
     num_bytes : in    natural range 0 to G_MAX_M0_BYTES;
-    -- Pulses if the length of the input packet was shorter than split_bytes.
+    -- Pulses if the length of the input packet was shorter than num_bytes.
     sts_short : out   std_ulogic
   );
 end entity;

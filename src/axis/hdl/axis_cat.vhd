@@ -9,6 +9,7 @@
 --# Concatenate packets, in order, from lowest subordinate index up to
 --# highest.
 --# This is useful for adding headers / trailers to a payload.
+--# Maintains full throughput.
 --#
 --# NOTICE: Does not pack tkeep for unaligned input packets. If this
 --# feature is needed, then instantiate `axis_pack` between the output

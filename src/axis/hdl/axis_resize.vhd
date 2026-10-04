@@ -22,8 +22,10 @@
 --#
 --# Packed input streams always result in a packed output stream.
 --# Unpacked input streams may result in an unpacked output stream.
---# Output tkeep bits will alwyas be contiguous, so long as the input rules are
+--# Output tkeep bits will always be contiguous, so long as the input rules are
 --# followed.
+--#
+--# Maintains full throughput.
 --##############################################################################
 
 library ieee;
