@@ -18,14 +18,14 @@
 --# The simple user protocol supports two commands: read and write, with
 --# a few additional variants for shorthand convenience.
 --#
---# | Command         | Command Format      | Success Resp  | Fail Resp |
---# |-----------------|---------------------|---------------|-----------|
---# | Mode            | m <0|1|2>           | +             | !         |
---# | Read            | r aaaaaaaa          | dddddddd      | !         |
---# | Write           | w aaaaaaaa dddddddd | +             | !         |
---# | Read Increment  | g                   | dddddddd      | !         |
---# | Write Increment | s dddddddd          | +             | !         |
---# | Previous        | p                   | + or dddddddd | !         |
+--# | Command         | Command Format      | Success Resp  |
+--# |-----------------|---------------------|---------------|
+--# | Mode            | m <0|1|2>           | +             |
+--# | Read            | r aaaaaaaa          | dddddddd      |
+--# | Write           | w aaaaaaaa dddddddd | +             |
+--# | Read Increment  | g                   | dddddddd      |
+--# | Write Increment | s dddddddd          | +             |
+--# | Previous        | p                   | + or dddddddd |
 --#
 --# The protocol was designed to work equally well with an interactive terminal
 --# or a scripted software parser. An interactive terminal could be used
@@ -49,7 +49,7 @@
 --#    from 1 to 8 characters.
 --# * 'dddddddd' is hex formatted data value. It can be anywhere
 --#    from 1 to 8 characters.
---# * '+' is a write success response, returned by the FPGA.
+--# * '+' is a success response, returned by the FPGA.
 --# * '!' is a bus error response, returned by the FPGA.
 --# * '?' is an unknown command or parsing error, returned by the FPGA.
 --# * '<LF>' is a line feed character
@@ -134,7 +134,8 @@ architecture rtl of wb_ascii_mgr is
   signal cnt            : unsigned(clog2(CHARS_PER_WORD) downto 0);
   signal mode           : integer range 0 to 2;
   signal mode_cmd       : std_ulogic;
-  signal chars_per_data : integer range 2 to CHARS_PER_WORD;
+  signal mode_num_bytes : integer range 0 to 4;
+  signal chars_per_data : integer range 0 to CHARS_PER_WORD;
 
 begin
 
@@ -142,9 +143,17 @@ begin
   m_axis.tlast   <= '1';
   m_axis.tuser   <= (others => '0');
   rx_char        <= to_char(s_axis.tdata);
-  addr_incr      <= std_ulogic_vector(unsigned(addr_prev) + (2 ** mode));
-  chars_per_data <= (2 ** mode) * 2;
 
+  -- ---------------------------------------------------------------------------
+  prc_pipe : process (clk) is begin
+    if rising_edge(clk) then
+      mode_num_bytes <= 2 ** mode;
+      addr_incr      <= std_ulogic_vector(unsigned(addr_prev) + mode_num_bytes);
+      chars_per_data <= 2 * mode_num_bytes;
+    end if;
+  end process;
+
+  -- ---------------------------------------------------------------------------
   prc_fsm : process (clk) is begin
     if rising_edge(clk) then
       case state is
