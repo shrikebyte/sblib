@@ -1,5 +1,5 @@
 --#############################################################################
---# File : cdc_grey.vhd
+--# File : cdc_gray.vhd
 --# Auth : David Gussler
 --# ============================================================================
 --# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
@@ -24,9 +24,9 @@ entity cdc_gray is
   );
   port (
     src_clk : in    std_ulogic;
-    src_cnt : in    u_unsigned;
+    src_cnt : in    u_unsigned(G_WIDTH - 1 downto 0);
     dst_clk : in    std_ulogic;
-    dst_cnt : out   u_unsigned
+    dst_cnt : out   u_unsigned(G_WIDTH - 1 downto 0)
   );
 end entity;
 

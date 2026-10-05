@@ -44,10 +44,6 @@ VSG := $(PYTHON) -m vsg
 # Phony rules
 .PHONY: release sim regs style style-fix clean synth
 
-# Synthesize each submodule and save utilization & timing results
-synth: $(REGS_STAMP)
-	cd scripts && $(VIVADO) -mode batch -nojournal -nolog -notrace -source synth.tcl | tee $(BUILD_DIR)/vivado_out/synth.log
-
 # Run the VUnit simulation
 sim: $(REGS_STAMP)
 	$(PYTHON) scripts/sim.py --vhdl_ls
@@ -69,6 +65,10 @@ style-fix: $(VENV_STAMP) $(STYLE_SRC)
 	-c vsg_rules.yaml \
 	-of vsg \
 	--fix
+
+# Synthesize each submodule and save utilization & timing results
+synth: $(REGS_STAMP)
+	cd scripts && $(VIVADO) -mode batch -nojournal -nolog -notrace -source synth.tcl | tee $(BUILD_DIR)/vivado_out/synth.log
 
 # Generate register output products
 $(REGS_STAMP): $(VENV_STAMP) $(REGS_SRC)
