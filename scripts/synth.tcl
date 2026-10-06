@@ -105,7 +105,13 @@ if { $single_module ne "" } {
     set top [dict get $config top]
     set tag [dict get $config tag]
 
-    if { "$single_module" eq "${top}_${tag}" } {
+    if {${tag} eq ""} {
+      set compare "${top}"
+    } else {
+      set compare "${top}_${tag}"
+    }
+
+    if { "$single_module" eq "${compare}" } {
       set configs [ list $config ]
       set match 1
       break

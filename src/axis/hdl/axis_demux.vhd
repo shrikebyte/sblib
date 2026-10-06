@@ -15,8 +15,6 @@
 --# latency, utilization, and combinatorial loading on s_axis.tready. For large
 --# packets, the bubble will be negligible compared to the overall packet, but
 --# for packets sized one beat, the best possible thruput of this module is 50%.
---#
---# TODO: Consider an alternate implementation with no bubble cycles.
 --##############################################################################
 
 library ieee;
