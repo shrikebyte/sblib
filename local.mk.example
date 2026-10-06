@@ -5,3 +5,4 @@
 # VIVADO := /opt/Xilinx/2025.2/Vivado/bin/vivado
 # VIVADO := /mnt/drive/apps/Xilinx/2025.2/Vivado/bin/vivado
 # VIVADO := C:/Xilinx/2025.2/Vivado/bin/vivado
+# SYNTH := axis_fifo_a

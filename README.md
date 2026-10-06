@@ -2,7 +2,7 @@
 
 [![test](https://github.com/shrikebyte/sblib/actions/workflows/test.yaml/badge.svg)](https://github.com/shrikebyte/sblib/actions/workflows/test.yaml)
 
-This repository holds Shrikebyte's open source VHDL library of reusable HDL building blocks.
+This repository holds Shrikebyte's open-source VHDL library of reusable HDL building blocks.
 
 ## Getting Started
 
@@ -14,20 +14,21 @@ This repository is hosted on [GitHub](https://github.com/shrikebyte/sblib) and c
 
 ### Install Project Tools
 
-- HDL Registers 8.1.0
-- VHDL Style Guide 3.35.0
-- VUnit 5.0.0.dev8
-- NVC latest
+- HDL Registers
+- VHDL Style Guide
+- VUnit
+- NVC
+- Vivado (optional)
 
 #### Install Python Tools
 
-Python tools are now automatically installed in a venv as part of the makefile flow.
+Python tools are automatically installed in a venv as part of the makefile flow.
 
 #### Install NVC
 
 NVC is an open-source VHDL simulator.
 
-The latest version can be compiled from source and manually installed by cloning, building, and installing the open-source repo (recommended):
+The latest version can be compiled from source and manually installed from here:
 
 ```sh
 git clone https://github.com/nickg/nvc.git
@@ -35,12 +36,22 @@ git clone https://github.com/nickg/nvc.git
 
 Alternatively, a pre-compiled release can be downloaded from [Github](https://github.com/nickg/nvc/releases), however, this is a rapidly evolving project so compiling the most up-to-date code yourself is recommended.
 
+#### Install Vivado
+
+Vivado can optionally be used to synthesize each module in out-of-context mode. This is useful for checking preliminary timing and utilization results after making changes to a module.
+
 ### Test
 
-Run the following command to start the simulations
+Run the following command to start the simulation regression. It will run the sub-tests in parallel, making full use of all the available CPU cores.
 
 ```sh
 make sim
+```
+
+Run the following command to start the synthesis regression.
+
+```sh
+make synth
 ```
 
 ## Release Process

@@ -18,6 +18,7 @@ PROJECT_VERSION := 0.2.0
 
 # Defaults (can be overridden by local.mk)
 VIVADO ?= $(shell which vivado 2>/dev/null)
+SYNTH ?= ""
 
 # Paths & tools
 THIS_DIR := $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
@@ -66,9 +67,12 @@ style-fix: $(VENV_STAMP) $(STYLE_SRC)
 	-of vsg \
 	--fix
 
-# Synthesize each submodule and save utilization & timing results
+# Synthesize submodules and save results
 synth: $(REGS_STAMP)
-	cd scripts && $(VIVADO) -mode batch -nojournal -nolog -notrace -source synth.tcl | tee $(BUILD_DIR)/vivado_out/synth.log
+	cd scripts && $(VIVADO) -mode batch -nojournal -nolog -notrace \
+	-source synth.tcl \
+	-tclargs $(SYNTH) \
+	| tee $(BUILD_DIR)/vivado_out/synth.log
 
 # Generate register output products
 $(REGS_STAMP): $(VENV_STAMP) $(REGS_SRC)

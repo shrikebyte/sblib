@@ -3,7 +3,20 @@
 # Auth : David Gussler
 # ==============================================================================
 # Vivado OOC synthesis script
+# Takes one optional argument of a module name. If the argument is given, then
+# only that single module is synthesized; Otherwise, all modules are synthed.
 ################################################################################
+
+if { $argc > 1 } {
+  puts "ERROR: Script usage - synth.tcl \[single_module\]"
+  exit -1
+}
+if { $argc == 1 } {
+  set single_module [lindex $argv 0]
+} else {
+  set single_module ""
+}
+
 set CHECK_TIMING 0
 set FPGA_PART "xc7a35tcpg236-1"
 set SCRIPT_DIR [file normalize [file dirname [info script]]]
@@ -38,18 +51,18 @@ set configs [list \
   [dict create top "axis_broadcast"  tag ""   generics [list "G_NUM_M=16" "G_DW=64" "G_UW=8"]] \
   [dict create top "axis_cat"        tag ""   generics [list "G_NUM_S=16" "G_DW=64" "G_UW=8"]] \
   [dict create top "axis_demux"      tag ""   generics [list "G_NUM_M=16" "G_DW=64" "G_UW=8"]] \
-  [dict create top "axis_fifo"       tag "a_" generics [list "G_DW=64" "G_UW=8" "G_DEPTH=1024" "G_PACKET_MODE=1'b0"]] \
-  [dict create top "axis_fifo"       tag "b_" generics [list "G_DW=64" "G_UW=8" "G_DEPTH=1024" "G_PACKET_MODE=1'b1"]] \
-  [dict create top "axis_fifo_async" tag "a_" generics [list "G_DW=64" "G_UW=8" "G_DEPTH=1024" "G_PACKET_MODE=1'b0"]] \
-  [dict create top "axis_fifo_async" tag "b_" generics [list "G_DW=64" "G_UW=8" "G_DEPTH=1024" "G_PACKET_MODE=1'b1"]] \
+  [dict create top "axis_fifo"       tag "a"  generics [list "G_DW=64" "G_UW=8" "G_DEPTH=1024" "G_PACKET_MODE=1'b0"]] \
+  [dict create top "axis_fifo"       tag "b"  generics [list "G_DW=64" "G_UW=8" "G_DEPTH=1024" "G_PACKET_MODE=1'b1"]] \
+  [dict create top "axis_fifo_async" tag "a"  generics [list "G_DW=64" "G_UW=8" "G_DEPTH=1024" "G_PACKET_MODE=1'b0"]] \
+  [dict create top "axis_fifo_async" tag "b"  generics [list "G_DW=64" "G_UW=8" "G_DEPTH=1024" "G_PACKET_MODE=1'b1"]] \
   [dict create top "axis_mux"        tag ""   generics [list "G_NUM_S=16" "G_DW=64" "G_UW=8"]] \
-  [dict create top "axis_pack"       tag "a_" generics [list "G_DW=64" "G_UW=8" "G_EXTRA_PIPE=1'b0"]] \
-  [dict create top "axis_pack"       tag "b_" generics [list "G_DW=64" "G_UW=8" "G_EXTRA_PIPE=1'b1"]] \
+  [dict create top "axis_pack"       tag "a"  generics [list "G_DW=64" "G_UW=8" "G_EXTRA_PIPE=1'b0"]] \
+  [dict create top "axis_pack"       tag "b"  generics [list "G_DW=64" "G_UW=8" "G_EXTRA_PIPE=1'b1"]] \
   [dict create top "axis_pipes"      tag ""   generics [list "G_DW=64" "G_UW=8"]] \
-  [dict create top "axis_resize"     tag "a_" generics [list "G_S_DW=128" "G_S_UW=8" "G_M_DW=16" "G_M_UW=1"]] \
-  [dict create top "axis_resize"     tag "b_" generics [list "G_S_DW=16" "G_S_UW=1" "G_M_DW=128" "G_M_UW=8"]] \
-  [dict create top "axis_slice"      tag "a_" generics [list "G_DW=64" "G_UW=8" "G_EXTRA_PIPE=1'b0"]] \
-  [dict create top "axis_slice"      tag "b_" generics [list "G_DW=64" "G_UW=8" "G_EXTRA_PIPE=1'b1"]] \
+  [dict create top "axis_resize"     tag "a"  generics [list "G_S_DW=128" "G_S_UW=8" "G_M_DW=16" "G_M_UW=1"]] \
+  [dict create top "axis_resize"     tag "b"  generics [list "G_S_DW=16" "G_S_UW=1" "G_M_DW=128" "G_M_UW=8"]] \
+  [dict create top "axis_slice"      tag "a"  generics [list "G_DW=64" "G_UW=8" "G_EXTRA_PIPE=1'b0"]] \
+  [dict create top "axis_slice"      tag "b"  generics [list "G_DW=64" "G_UW=8" "G_EXTRA_PIPE=1'b1"]] \
   [dict create top "apb_to_axil"     tag ""   generics [list ""]] \
   [dict create top "axil_arb"        tag ""   generics [list "G_NUM_S=16"]] \
   [dict create top "axil_ascii_mgr"  tag ""   generics [list ""]] \
@@ -86,11 +99,34 @@ set configs [list \
   [dict create top "tick"            tag ""   generics [list ""]] \
 ]
 
+if { $single_module ne "" } {
+  set match 0
+  foreach config $configs {
+    set top [dict get $config top]
+    set tag [dict get $config tag]
+
+    if { "$single_module" eq "${top}_${tag}" } {
+      set configs [ list $config ]
+      set match 1
+      break
+    }
+  }
+  if { $match == 0 } {
+    puts "ERROR: Unknown module configuration $single_module"
+    exit -1
+  }
+}
+
 foreach config $configs {
   set top [dict get $config top]
   set tag [dict get $config tag]
   set generics [dict get $config generics]
-  set path "${OUTPUT_DIR}/${top}_${tag}_"
+
+  if {${tag} eq ""} {
+    set path "${OUTPUT_DIR}/${top}__"
+  } else {
+    set path "${OUTPUT_DIR}/${top}_${tag}__"
+  }
 
   puts "INFO: Synthesizing ${top} with generics: ${generics}"
   synth_design -part $FPGA_PART -top $top -generic $generics -mode out_of_context
@@ -119,8 +155,8 @@ foreach config $configs {
       set should_exit 1
     }
 
-    if {${should_exit} eq 1} {
-      exit 1
+    if {${should_exit} == 1} {
+      exit -1
     }
   }
 }
