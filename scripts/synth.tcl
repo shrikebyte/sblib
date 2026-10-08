@@ -66,6 +66,8 @@ set configs [list \
   [dict create top "apb_to_axil"     tag ""   generics [list ""]] \
   [dict create top "axil_arb"        tag ""   generics [list "G_NUM_S=16"]] \
   [dict create top "axil_ascii_mgr"  tag ""   generics [list ""]] \
+  [dict create top "axil_fifo"       tag ""   generics [list "G_DEPTH=32"]] \
+  [dict create top "axil_fifo_async" tag ""   generics [list "G_DEPTH=32"]] \
   [dict create top "axil_pipes"      tag ""   generics [list ""]] \
   [dict create top "axil_ram"        tag ""   generics [list "G_RD_LATENCY=2"]] \
   [dict create top "axil_ram_shared" tag ""   generics [list "G_RD_LATENCY=2"]] \
@@ -136,6 +138,7 @@ foreach config $configs {
 
   puts "INFO: Synthesizing ${top} with generics: ${generics}"
   synth_design -part $FPGA_PART -top $top -generic $generics -mode out_of_context
+  opt_design
 
   report_utilization -file "${path}util.rpt"
   report_timing_summary -delay_type min_max -max_paths 10 -report_unconstrained -file "${path}timing.rpt"

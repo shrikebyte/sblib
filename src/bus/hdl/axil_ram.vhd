@@ -1,6 +1,6 @@
 --##############################################################################
---# File     : axil_ram.vhd
---# Author   : David Gussler
+--# File : axil_ram.vhd
+--# Auth : David Gussler
 --# ============================================================================
 --# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
 --# Copyright (C) Shrikebyte, LLC

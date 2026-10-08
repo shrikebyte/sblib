@@ -1,12 +1,12 @@
 --##############################################################################
---# File : axil_pipes.vhd
+--# File : axil_fifo_async.vhd
 --# Auth : David Gussler
 --# ============================================================================
 --# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
 --# Copyright (C) Shrikebyte, LLC
 --# Licensed under the Apache 2.0 license, see LICENSE for details.
 --# ============================================================================
---# Cascaded AXI Lite pipeline registers.
+--# AXI Lite Async FIFO
 --##############################################################################
 
 library ieee;
@@ -16,29 +16,21 @@ use work.util_pkg.all;
 use work.bus_pkg.all;
 use work.axis_pkg.all;
 
-entity axil_pipes is
+entity axil_fifo_async is
   generic (
-    G_STAGES        : positive := 1;
-    G_AW_DATA_PIPE  : boolean  := true;
-    G_AW_READY_PIPE : boolean  := true;
-    G_W_DATA_PIPE   : boolean  := true;
-    G_W_READY_PIPE  : boolean  := true;
-    G_B_DATA_PIPE   : boolean  := true;
-    G_B_READY_PIPE  : boolean  := true;
-    G_AR_DATA_PIPE  : boolean  := true;
-    G_AR_READY_PIPE : boolean  := true;
-    G_R_DATA_PIPE   : boolean  := true;
-    G_R_READY_PIPE  : boolean  := true
+    G_DEPTH      : positive;
+    G_EXTRA_SYNC : natural := 0
   );
   port (
-    clk    : in    std_ulogic;
-    srst   : in    std_ulogic;
+    arst   : in   std_ulogic;
+    s_clk  : in   std_ulogic;
+    m_clk  : in   std_ulogic;
     s_axil : view s_axil_view;
     m_axil : view m_axil_view
   );
 end entity;
 
-architecture rtl of axil_pipes is
+architecture rtl of axil_fifo_async is
 
   signal aw0 : axis_t (tdata(AXIL_ADDR_RANGE), tkeep(AXIL_STRB_RANGE), tuser(0 downto 0));
   signal aw1 : axis_t (tdata(AXIL_ADDR_RANGE), tkeep(AXIL_STRB_RANGE), tuser(0 downto 0));
@@ -54,21 +46,26 @@ architecture rtl of axil_pipes is
 begin
 
   -- ---------------------------------------------------------------------------
-  u_axis_pipes_aw : entity work.axis_pipes
+  u_axis_fifo_aw : entity work.axis_fifo_async
   generic map (
-    G_DW         => AXIL_ADDR_WIDTH,
-    G_UW         => 1,
-    G_STAGES     => G_STAGES,
-    G_DATA_PIPE  => G_AW_DATA_PIPE,
-    G_READY_PIPE => G_AW_READY_PIPE
+    G_DW             => AXIL_ADDR_WIDTH,
+    G_UW             => 1,
+    G_DEPTH          => G_DEPTH,
+    G_USE_TKEEP      => false,
+    G_USE_TLAST      => false,
+    G_USE_TUSER      => false,
+    G_PACKET_MODE    => false,
+    G_DROP_OVERSIZE  => false,
+    G_DROP_WHEN_FULL => false,
+    G_EXTRA_SYNC     => G_EXTRA_SYNC
   )
-  port map (
-    clk    => clk,
-    srst   => srst,
+  port map(
+    arst   => arst,
+    s_clk  => s_clk,
+    m_clk  => m_clk,
     s_axis => aw0,
     m_axis => aw1
   );
-
   aw0.tvalid     <= s_axil.awvalid;
   s_axil.awready <= aw0.tready;
   aw0.tdata      <= s_axil.awaddr;
@@ -78,21 +75,26 @@ begin
   m_axil.awaddr  <= aw1.tdata;
 
   -- ---------------------------------------------------------------------------
-  u_axis_pipes_w : entity work.axis_pipes
+  u_axis_fifo_w : entity work.axis_fifo_async
   generic map (
-    G_DW         => AXIL_DATA_WIDTH,
-    G_UW         => 1,
-    G_STAGES     => G_STAGES,
-    G_DATA_PIPE  => G_W_DATA_PIPE,
-    G_READY_PIPE => G_W_READY_PIPE
+    G_DW             => AXIL_DATA_WIDTH,
+    G_UW             => 1,
+    G_DEPTH          => G_DEPTH,
+    G_USE_TKEEP      => true,
+    G_USE_TLAST      => false,
+    G_USE_TUSER      => false,
+    G_PACKET_MODE    => false,
+    G_DROP_OVERSIZE  => false,
+    G_DROP_WHEN_FULL => false,
+    G_EXTRA_SYNC     => G_EXTRA_SYNC
   )
-  port map (
-    clk    => clk,
-    srst   => srst,
+  port map(
+    arst   => arst,
+    s_clk  => s_clk,
+    m_clk  => m_clk,
     s_axis => w0,
     m_axis => w1
   );
-
   w0.tvalid     <= s_axil.wvalid;
   s_axil.wready <= w0.tready;
   w0.tdata      <= s_axil.wdata;
@@ -104,21 +106,26 @@ begin
   m_axil.wstrb  <= w1.tkeep;
 
   -- ---------------------------------------------------------------------------
-  u_axis_pipes_b : entity work.axis_pipes
+  u_axis_fifo_b : entity work.axis_fifo_async
   generic map (
-    G_DW         => 8,
-    G_UW         => AXIL_RSP_WIDTH,
-    G_STAGES     => G_STAGES,
-    G_DATA_PIPE  => G_B_DATA_PIPE,
-    G_READY_PIPE => G_B_READY_PIPE
+    G_DW             => 8,
+    G_UW             => AXIL_RSP_WIDTH,
+    G_DEPTH          => G_DEPTH,
+    G_USE_TKEEP      => false,
+    G_USE_TLAST      => false,
+    G_USE_TUSER      => true,
+    G_PACKET_MODE    => false,
+    G_DROP_OVERSIZE  => false,
+    G_DROP_WHEN_FULL => false,
+    G_EXTRA_SYNC     => G_EXTRA_SYNC
   )
-  port map (
-    clk    => clk,
-    srst   => srst,
+  port map(
+    arst   => arst,
+    s_clk  => s_clk,
+    m_clk  => m_clk,
     s_axis => b0,
     m_axis => b1
   );
-
   b0.tvalid     <= m_axil.bvalid;
   m_axil.bready <= b0.tready;
   b0.tuser      <= m_axil.bresp;
@@ -128,21 +135,26 @@ begin
   s_axil.bresp  <= b1.tuser;
 
   -- ---------------------------------------------------------------------------
-  u_axis_pipes_ar : entity work.axis_pipes
+  u_axis_fifo_ar : entity work.axis_fifo_async
   generic map (
-    G_DW         => AXIL_ADDR_WIDTH,
-    G_UW         => 1,
-    G_STAGES     => G_STAGES,
-    G_DATA_PIPE  => G_AR_DATA_PIPE,
-    G_READY_PIPE => G_AR_READY_PIPE
+    G_DW             => AXIL_ADDR_WIDTH,
+    G_UW             => 1,
+    G_DEPTH          => G_DEPTH,
+    G_USE_TKEEP      => false,
+    G_USE_TLAST      => false,
+    G_USE_TUSER      => false,
+    G_PACKET_MODE    => false,
+    G_DROP_OVERSIZE  => false,
+    G_DROP_WHEN_FULL => false,
+    G_EXTRA_SYNC     => G_EXTRA_SYNC
   )
-  port map (
-    clk    => clk,
-    srst   => srst,
+  port map(
+    arst   => arst,
+    s_clk  => s_clk,
+    m_clk  => m_clk,
     s_axis => ar0,
     m_axis => ar1
   );
-
   ar0.tvalid     <= s_axil.arvalid;
   s_axil.arready <= ar0.tready;
   ar0.tdata      <= s_axil.araddr;
@@ -152,21 +164,26 @@ begin
   m_axil.araddr  <= ar1.tdata;
 
   -- ---------------------------------------------------------------------------
-  u_axis_pipes_r : entity work.axis_pipes
+  u_axis_fifo_r : entity work.axis_fifo_async
   generic map (
-    G_DW         => AXIL_DATA_WIDTH,
-    G_UW         => AXIL_RSP_WIDTH,
-    G_STAGES     => G_STAGES,
-    G_DATA_PIPE  => G_R_DATA_PIPE,
-    G_READY_PIPE => G_R_READY_PIPE
+    G_DW             => AXIL_DATA_WIDTH,
+    G_UW             => AXIL_RSP_WIDTH,
+    G_DEPTH          => G_DEPTH,
+    G_USE_TKEEP      => false,
+    G_USE_TLAST      => false,
+    G_USE_TUSER      => true,
+    G_PACKET_MODE    => false,
+    G_DROP_OVERSIZE  => false,
+    G_DROP_WHEN_FULL => false,
+    G_EXTRA_SYNC     => G_EXTRA_SYNC
   )
-  port map (
-    clk    => clk,
-    srst   => srst,
+  port map(
+    arst   => arst,
+    s_clk  => s_clk,
+    m_clk  => m_clk,
     s_axis => r0,
     m_axis => r1
   );
-
   r0.tvalid     <= m_axil.rvalid;
   m_axil.rready <= r0.tready;
   r0.tdata      <= m_axil.rdata;

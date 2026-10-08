@@ -1,6 +1,6 @@
 --##############################################################################
---# File     : axil_ram_shared.vhd
---# Author   : David Gussler
+--# File : axil_ram_shared.vhd
+--# Auth : David Gussler
 --# ============================================================================
 --# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
 --# Copyright (C) Shrikebyte, LLC
