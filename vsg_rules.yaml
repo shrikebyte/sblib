@@ -222,6 +222,8 @@ rule:
   sequential_004:
     align_left: yes
     align_paren: no
+  sequential_008:
+    new_line_after_assign: ignore
   sequential_009:
     first_paren_new_line: no
     assign_on_single_line: ignore

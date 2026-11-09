@@ -1,5 +1,5 @@
 --##############################################################################
---# File : axil_to_reg.vhd
+--# File : axil_to_lcl.vhd
 --# Auth : David Gussler
 --# ============================================================================
 --# Shrikebyte VHDL Library - https://github.com/shrikebyte/sblib
@@ -17,7 +17,7 @@ use work.util_pkg.all;
 use work.bus_pkg.all;
 use work.axis_pkg.all;
 
-entity axil_to_reg is
+entity axil_to_lcl is
   generic (
     G_WR_LATENCY : positive := 1;
     G_RD_LATENCY : positive := 1
@@ -26,11 +26,11 @@ entity axil_to_reg is
     clk    : in    std_ulogic;
     srst   : in    std_ulogic;
     s_axil : view s_axil_view;
-    m_reg  : view m_reg_view
+    m_lcl  : view m_lcl_view
   );
 end entity;
 
-architecture rtl of axil_to_reg is
+architecture rtl of axil_to_lcl is
 
   signal rvalid  : std_ulogic;
   signal rdata   : std_ulogic_vector(AXIL_DATA_RANGE);
@@ -47,9 +47,9 @@ begin
   -- ---------------------------------------------------------------------------
   -- Enable an outgoing read request when the read address
   -- is valid and when the read response is not stalled.
-  m_reg.ren      <= s_axil.arvalid and (s_axil.rready or not s_axil.rvalid);
-  m_reg.raddr    <= s_axil.araddr;
-  s_axil.arready <= m_reg.ren;
+  m_lcl.ren      <= s_axil.arvalid and (s_axil.rready or not s_axil.rvalid);
+  m_lcl.raddr    <= s_axil.araddr;
+  s_axil.arready <= m_lcl.ren;
 
   -- Pulse rvalid exactly G_RD_LATENCY cycles after ren. Since we control the
   -- ren logic and since we know that a read response always comes in
@@ -66,12 +66,12 @@ begin
     clk  => clk,
     srst => srst,
     en   => '1',
-    d(0) => m_reg.ren,
+    d(0) => m_lcl.ren,
     q(0) => rvalid
   );
 
-  rresp <= AXI_RSP_SLVERR when m_reg.rerr else AXI_RSP_OKAY;
-  rdata <= m_reg.rdata;
+  rresp <= AXI_RSP_SLVERR when m_lcl.rerr else AXI_RSP_OKAY;
+  rdata <= m_lcl.rdata;
 
   -- Read response buffer.
   -- This is needed to maintain throughput because the slave read response
@@ -103,12 +103,12 @@ begin
   s_axil.rresp   <= axil_r1.tuser;
 
   -- ---------------------------------------------------------------------------
-  m_reg.wen      <= s_axil.awvalid and s_axil.wvalid and (s_axil.bready or not s_axil.bvalid);
-  m_reg.waddr    <= s_axil.awaddr;
-  m_reg.wdata    <= s_axil.wdata;
-  m_reg.wstrb    <= s_axil.wstrb;
-  s_axil.wready  <= m_reg.wen;
-  s_axil.awready <= m_reg.wen;
+  m_lcl.wen      <= s_axil.awvalid and s_axil.wvalid and (s_axil.bready or not s_axil.bvalid);
+  m_lcl.waddr    <= s_axil.awaddr;
+  m_lcl.wdata    <= s_axil.wdata;
+  m_lcl.wstrb    <= s_axil.wstrb;
+  s_axil.wready  <= m_lcl.wen;
+  s_axil.awready <= m_lcl.wen;
 
   u_b_delay : entity work.shift_reg
   generic map (
@@ -121,11 +121,11 @@ begin
     clk  => clk,
     srst => srst,
     en   => '1',
-    d(0) => m_reg.wen,
+    d(0) => m_lcl.wen,
     q(0) => bvalid
   );
 
-  bresp <= AXI_RSP_SLVERR when m_reg.werr else AXI_RSP_OKAY;
+  bresp <= AXI_RSP_SLVERR when m_lcl.werr else AXI_RSP_OKAY;
 
   u_b_buffer : entity work.axis_pipes
   generic map (

@@ -196,7 +196,7 @@ package bus_pkg is
   );
 
   -- ---------------------------------------------------------------------------
-  -- Register Bus
+  -- Local Bus
   -- ..This is a simple bus interface for basic components that don't need
   -- most of the features offered by busses like axi, but
   -- still require higher performance than can be offered by busses like apb.
@@ -206,7 +206,7 @@ package bus_pkg is
   -- Full duplex communication at 1 transfer per cycle for maximum bandwidth.
   -- Recommended to use this for user logic and connect to an axil adapter for
   -- external pipelining and interconnect logic.
-  type bus_reg_t is record
+  type bus_lcl_t is record
     wen   : std_ulogic;
     waddr : std_ulogic_vector(AXIL_ADDR_RANGE);
     wstrb : std_ulogic_vector(AXIL_STRB_RANGE);
@@ -218,9 +218,9 @@ package bus_pkg is
     rerr  : std_ulogic;
   end record;
 
-  type bus_reg_arr_t is array(natural range <>) of bus_reg_t;
+  type bus_lcl_arr_t is array(natural range <>) of bus_lcl_t;
 
-  view m_reg_view of bus_reg_t is
+  view m_lcl_view of bus_lcl_t is
     wen   : out;
     waddr : out;
     wstrb : out;
@@ -232,9 +232,9 @@ package bus_pkg is
     rerr  : in;
   end view;
 
-  alias s_reg_view is m_reg_view'converse;
+  alias s_lcl_view is m_lcl_view'converse;
 
-  view p_reg_view of bus_reg_t is
+  view p_lcl_view of bus_lcl_t is
     wen   : in;
     waddr : in;
     wstrb : in;
@@ -246,9 +246,9 @@ package bus_pkg is
     rerr  : in;
   end view;
 
-  procedure reg_attach (
-    signal s_reg : view s_reg_view of bus_reg_t;
-    signal m_reg : view m_reg_view of bus_reg_t
+  procedure lcl_attach (
+    signal s_lcl : view s_lcl_view of bus_lcl_t;
+    signal m_lcl : view m_lcl_view of bus_lcl_t
   );
 
   -- ---------------------------------------------------------------------------
@@ -265,12 +265,27 @@ package bus_pkg is
 
   type bus_xact_arr_t is array(natural range <>) of bus_xact_t;
 
+  -- ---------------------------------------------------------------------------
+  -- Base-address type for axil_dec bus decoder
   type bus_baseaddr_t is record
     addr  : std_ulogic_vector(AXIL_ADDR_RANGE);
     width : positive range 2 to AXIL_ADDR_WIDTH;
   end record;
 
   type bus_baseaddr_arr_t is array(natural range <>) of bus_baseaddr_t;
+
+  -- ---------------------------------------------------------------------------
+  -- Register-modes for register_file
+  type bus_reg_mode_t is (
+    REG_RO,  -- Read-only
+    REG_WO,  -- Write-only
+    REG_RW,  -- Read / write
+    REG_WP,  -- Write-pulse
+    REG_RWP, -- Read / write-pulse
+    REG_RW1C -- Read / write 1 to clear
+  );
+
+  type bus_reg_mode_arr_t is array(natural range <>) of bus_reg_mode_t;
 
 end package;
 
@@ -331,20 +346,20 @@ package body bus_pkg is
     s_apb.prdata  <= m_apb.prdata;
   end procedure;
 
-  procedure reg_attach (
-    signal s_reg : view s_reg_view of bus_reg_t;
-    signal m_reg : view m_reg_view of bus_reg_t
+  procedure lcl_attach (
+    signal s_lcl : view s_lcl_view of bus_lcl_t;
+    signal m_lcl : view m_lcl_view of bus_lcl_t
   ) is
   begin
-    m_reg.wen   <= s_reg.wen;
-    m_reg.waddr <= s_reg.waddr;
-    m_reg.wstrb <= s_reg.wstrb;
-    m_reg.wdata <= s_reg.wdata;
-    s_reg.werr  <= m_reg.werr;
-    m_reg.ren   <= s_reg.ren;
-    m_reg.raddr <= s_reg.raddr;
-    s_reg.rdata <= m_reg.rdata;
-    s_reg.rerr  <= m_reg.rerr;
+    m_lcl.wen   <= s_lcl.wen;
+    m_lcl.waddr <= s_lcl.waddr;
+    m_lcl.wstrb <= s_lcl.wstrb;
+    m_lcl.wdata <= s_lcl.wdata;
+    s_lcl.werr  <= m_lcl.werr;
+    m_lcl.ren   <= s_lcl.ren;
+    m_lcl.raddr <= s_lcl.raddr;
+    s_lcl.rdata <= m_lcl.rdata;
+    s_lcl.rerr  <= m_lcl.rerr;
   end procedure;
 
 end package body;

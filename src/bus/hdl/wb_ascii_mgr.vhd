@@ -139,10 +139,10 @@ architecture rtl of wb_ascii_mgr is
 
 begin
 
-  m_axis.tkeep   <= (others => '1');
-  m_axis.tlast   <= '1';
-  m_axis.tuser   <= (others => '0');
-  rx_char        <= to_char(s_axis.tdata);
+  m_axis.tkeep <= (others => '1');
+  m_axis.tlast <= '1';
+  m_axis.tuser <= (others => '0');
+  rx_char      <= to_char(s_axis.tdata);
 
   -- ---------------------------------------------------------------------------
   prc_pipe : process (clk) is begin

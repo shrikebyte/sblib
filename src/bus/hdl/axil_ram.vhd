@@ -35,11 +35,11 @@ end entity;
 
 architecture rtl of axil_ram is
 
-  signal reg : bus_reg_t;
+  signal lcl : bus_lcl_t;
 
 begin
 
-  u_axil_to_reg : entity work.axil_to_reg
+  u_axil_to_lcl : entity work.axil_to_lcl
   generic map (
     G_WR_LATENCY => 1,
     G_RD_LATENCY => G_RD_LATENCY
@@ -48,7 +48,7 @@ begin
     clk    => clk,
     srst   => srst,
     s_axil => s_axil,
-    m_reg  => reg
+    m_lcl  => lcl
   );
 
   u_ram : entity work.ram
@@ -62,18 +62,18 @@ begin
   )
   port map (
     a_clk  => clk,
-    a_wen  => reg.wen and reg.wstrb,
-    a_addr => reg.waddr(G_ADDR_WIDTH - 1 + 2 downto 2),
-    a_wdat => reg.wdata,
+    a_wen  => lcl.wen and lcl.wstrb,
+    a_addr => lcl.waddr(G_ADDR_WIDTH - 1 + 2 downto 2),
+    a_wdat => lcl.wdata,
     a_rdat => open,
     b_clk  => clk,
     b_wen  => (others=> '0'),
-    b_addr => reg.raddr(G_ADDR_WIDTH - 1 + 2 downto 2),
+    b_addr => lcl.raddr(G_ADDR_WIDTH - 1 + 2 downto 2),
     b_wdat => (others=> '0'),
-    b_rdat => reg.rdata
+    b_rdat => lcl.rdata
   );
 
-  reg.werr <= '0';
-  reg.rerr <= '0';
+  lcl.werr <= '0';
+  lcl.rerr <= '0';
 
 end architecture;

@@ -34,13 +34,15 @@ VENV_STAMP := $(VENV_DIR)/.venv_stamp
 
 ifeq ($(OS),Windows_NT)
 	PYTHON_SYS := python.exe
-	PYTHON := $(VENV_DIR)/Scripts/python.exe
+	PYTHON_BIN := $(VENV_DIR)/Scripts
+	PYTHON := $(PYTHON_BIN)/python.exe
 else
 	PYTHON_SYS := python3
-	PYTHON := $(VENV_DIR)/bin/python
+	PYTHON_BIN := $(VENV_DIR)/bin
+	PYTHON := $(PYTHON_BIN)/python
 endif
 PIP := $(PYTHON) -m pip
-VSG := $(PYTHON) -m vsg
+VSG := $(PYTHON_BIN)/vsg
 
 # Phony rules
 .PHONY: release sim regs style style-fix clean synth
