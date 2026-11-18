@@ -24,6 +24,7 @@ entity cdc_bit is
     -- false then src_clk is unused.
     G_USE_SRC_REG : boolean := false;
     -- Number of extra synchronizer flip-flops.
+    -- Total number of sync flops = 2 + G_EXTRA_SYNC
     G_EXTRA_SYNC : natural := 0
   );
   port (

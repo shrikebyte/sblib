@@ -6,7 +6,7 @@
 --# Copyright (C) Shrikebyte, LLC
 --# Licensed under the Apache 2.0 license, see LICENSE for details.
 --# ============================================================================
---! Reset synchronizer.
+--# Reset synchronizer.
 --##############################################################################
 
 library ieee;
@@ -15,13 +15,15 @@ use ieee.numeric_std.all;
 
 entity cdc_reset is
   generic (
-    -- Number of additional synchronizer flip-flops beyond the required 2.
-    -- Ie: if this is set to 2, then there will be 4 sync flip flops.
+    -- Number of extra synchronizer flip-flops.
+    -- Total number of sync flops = 2 + G_EXTRA_SYNC
     G_EXTRA_SYNC : natural := 0
   );
   port (
-    clk  : in    std_ulogic;
+    clk : in    std_ulogic;
+    -- Async reset input
     arst : in    std_ulogic;
+    -- Async assertion / sync de-assertion output
     srst : out   std_ulogic
   );
 end entity;
@@ -31,7 +33,6 @@ architecture rtl of cdc_reset is
   constant SYNC_LEN : positive := 2 + G_EXTRA_SYNC;
 
   signal cdc_regs : std_ulogic_vector(SYNC_LEN - 1 downto 0) := (others=> '1');
-  signal arst_0   : std_ulogic;
 
   attribute async_reg                 : string;
   attribute shreg_extract             : string;
@@ -41,7 +42,7 @@ architecture rtl of cdc_reset is
 begin
 
   -- Async assertion and sync de-assertion
-  prc_arst_0_sync : process (clk, arst_0) is begin
+  prc_arst_0_sync : process (clk, arst) is begin
     if arst then
       cdc_regs <= (others => '1');
     elsif rising_edge(clk) then
